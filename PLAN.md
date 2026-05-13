@@ -159,7 +159,7 @@ Dagster, hosted docs, and professional documentation.
     - Done when: markdown article in repo covering source contracts,
       staging decisions, crosswalk design, test philosophy,
       orchestration approach
-- [ ] P6.4: Polish README, repo structure, final validation
+- [x] P6.4: Polish README, repo structure, final validation
     - Depends on: P6.1, P6.2, P6.3
     - Done when: README is professional with architecture diagram,
       repo structure is clean, `dbt build` runs end-to-end with
@@ -180,13 +180,13 @@ Dagster, hosted docs, and professional documentation.
 
 ## Definition of done for this arc
 
-- [ ] Postgres on Fly.io has all Cinderhaven data loaded
-- [ ] dbt models build clean: staging → intermediate → marts
-- [ ] dbt tests pass with no failures
-- [ ] dbt docs hosted on GitHub Pages with lineage visible
-- [ ] Dagster asset graph visible and running
-- [ ] Architecture diagram on README
-- [ ] Written walkthrough in repo explaining design decisions
+- [x] Postgres on Fly.io has all Cinderhaven data loaded
+- [x] dbt models build clean: staging → intermediate → marts
+- [x] dbt tests pass with no failures
+- [x] dbt docs hosted on GitHub Pages with lineage visible
+- [x] Dagster asset graph visible and running
+- [x] Architecture diagram on README
+- [x] Written walkthrough in repo explaining design decisions
 - [ ] Repo is private, clean, professional — ready to flip public
 - [ ] A technical reviewer browsing the repo sees infrastructure
       capability, not scripts
