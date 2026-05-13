@@ -38,6 +38,24 @@ models:
         description: Primary key — deduction reason code identifier.
         tests: [unique, not_null]
 
+  - name: dim_stores
+    description: >
+      Store dimension with retailer association and geography.
+      Grain: one row per store.
+    columns:
+      - name: store_id
+        description: Primary key — unique store identifier.
+        tests: [unique, not_null]
+      - name: retailer_id
+        description: Foreign key to dim_retailers.
+        tests:
+          - relationships:
+              to: ref('dim_retailers')
+              field: retailer_id
+      - name: retailer_name
+        description: Retailer display name.
+        tests: [not_null]
+
   # ── Facts ──────────────────────────────────────────────
   - name: fct_orders
     description: >
@@ -129,3 +147,83 @@ models:
           - relationships:
               to: ref('dim_retailers')
               field: retailer_id
+
+  - name: fct_scan_data
+    description: >
+      Point-of-sale scan data by SKU, store, and week.
+      Grain: one row per SKU × store × week.
+    columns:
+      - name: sku
+        description: Foreign key to dim_products.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: sku
+      - name: store_id
+        description: Foreign key to dim_stores.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_stores')
+              field: store_id
+      - name: week_ending
+        description: Week-ending date for the scan period.
+        tests: [not_null]
+      - name: units_sold
+        description: Units sold during the scan week.
+        tests: [not_null]
+      - name: dollars_sold
+        description: Dollar sales during the scan week.
+        tests: [not_null]
+
+  - name: fct_promotions
+    description: >
+      Trade promotion events with cost and discount details.
+      Grain: one row per promotion event.
+    columns:
+      - name: promo_id
+        description: Primary key — unique promotion identifier.
+        tests: [unique, not_null]
+      - name: sku
+        description: Foreign key to dim_products.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: sku
+      - name: retailer_id
+        description: Foreign key to dim_retailers.
+        tests:
+          - relationships:
+              to: ref('dim_retailers')
+              field: retailer_id
+      - name: promo_type
+        description: Type of promotion.
+        tests: [not_null]
+
+  - name: fct_distribution
+    description: >
+      SKU-store authorization and deauthorization history.
+      Grain: one row per SKU × store authorization event.
+    columns:
+      - name: sku
+        description: Foreign key to dim_products.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: sku
+      - name: store_id
+        description: Foreign key to dim_stores.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_stores')
+              field: store_id
+      - name: authorized_date
+        description: Date the SKU was authorized at the store.
+        tests: [not_null]
+      - name: is_currently_authorized
+        description: Whether the SKU is still authorized (no deauthorization date).
+        tests: [not_null]
