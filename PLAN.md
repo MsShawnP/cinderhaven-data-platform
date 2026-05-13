@@ -130,15 +130,15 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 5: Dagster Orchestration
 
-- [ ] P5.1: Initialize Dagster project, integrate with dbt
+- [x] P5.1: Initialize Dagster project, integrate with dbt
     - Depends on: P3.1 (need dbt project)
     - Done when: `dagster dev` launches, dbt assets appear in
       Dagster UI
-- [ ] P5.2: Define asset dependencies and lineage
+- [x] P5.2: Define asset dependencies and lineage
     - Depends on: P5.1, P4.3 (need full dbt model graph)
     - Done when: Dagster asset graph shows correct dependency chain
       from raw → staging → intermediate → marts
-- [ ] P5.3: Configure scheduling and capture screenshots
+- [x] P5.3: Configure scheduling and capture screenshots
     - Depends on: P5.2
     - Done when: schedule defined for full pipeline refresh, asset
       graph screenshot saved to repo docs

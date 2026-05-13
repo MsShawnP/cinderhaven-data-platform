@@ -14,3 +14,18 @@ Thumbs.db
 
 # Claude
 .claude-project-url
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Dagster
+.tmp_dagster_home_*/
+logs/
+
+# dbt
+cinderhaven/target/
+cinderhaven/dbt_packages/
+cinderhaven/logs/
