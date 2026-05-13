@@ -63,7 +63,7 @@ Dagster, hosted docs, and professional documentation.
     - Depends on: none (can work locally)
     - Done when: SQL file exists with CREATE TABLE for all 16 data
       tables, column types mapped from SQLite → Postgres
-- [ ] P1.3: Build ingestion script (SQLite → Postgres raw schema)
+- [x] P1.3: Build ingestion script (SQLite → Postgres raw schema)
     - Depends on: P1.1, P1.2
     - Done when: Python script loads all 16 tables from
       cinderhaven-data SQLite into Postgres `raw` schema, row counts
@@ -76,11 +76,11 @@ Dagster, hosted docs, and professional documentation.
     - Done when: written assessment of what exists vs. what the brief
       specifies (Shopify DTC, POS shape, any missing layers), with
       recommendation on what to generate
-- [ ] P2.2: Generate missing synthetic data layers
+- [x] P2.2: Generate missing synthetic data layers
     - Depends on: P2.1 (need gap assessment to know what to build)
     - Done when: new data tables exist in cinderhaven-data SQLite with
       realistic volume and quality, generation scripts documented
-- [ ] P2.3: Load new data into Postgres raw schema
+- [x] P2.3: Load new data into Postgres raw schema
     - Depends on: P1.3, P2.2
     - Done when: all new tables loaded into Postgres `raw` schema,
       row counts verified

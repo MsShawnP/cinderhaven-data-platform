@@ -320,3 +320,40 @@ CREATE TABLE IF NOT EXISTS raw.post_audit_claims (
     claim_type              TEXT,
     lookback_months         INTEGER
 );
+
+-- ============================================================
+-- DTC / E-COMMERCE SOURCES
+-- ============================================================
+
+-- ~10,000 Shopify DTC order headers.
+CREATE TABLE IF NOT EXISTS raw.shopify_orders (
+    order_id                TEXT PRIMARY KEY,
+    order_number            INTEGER NOT NULL,
+    created_at              TEXT NOT NULL,
+    email                   TEXT NOT NULL,
+    financial_status        TEXT NOT NULL,
+    fulfillment_status      TEXT NOT NULL,
+    shipping_first_name     TEXT NOT NULL,
+    shipping_last_name      TEXT NOT NULL,
+    shipping_state          TEXT NOT NULL,
+    discount_code           TEXT,
+    discount_amount         NUMERIC(10,2) NOT NULL DEFAULT 0.0,
+    subtotal                NUMERIC(10,2) NOT NULL,
+    shipping_cost           NUMERIC(10,2) NOT NULL,
+    total_tax               NUMERIC(10,2) NOT NULL,
+    total                   NUMERIC(10,2) NOT NULL,
+    carrier                 TEXT,
+    tracking_number         TEXT,
+    fulfilled_at            TEXT
+);
+
+-- ~19,000 Shopify DTC order line items.
+CREATE TABLE IF NOT EXISTS raw.shopify_order_lines (
+    line_id                 INTEGER PRIMARY KEY,
+    order_id                TEXT NOT NULL,
+    sku                     TEXT NOT NULL,
+    product_name            TEXT NOT NULL,
+    quantity                INTEGER NOT NULL,
+    unit_price              NUMERIC(8,2) NOT NULL,
+    line_total              NUMERIC(10,2) NOT NULL
+);

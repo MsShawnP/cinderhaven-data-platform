@@ -46,6 +46,34 @@ Each entry:
 
 ## Data & Schema
 
+### 2026-05-12 — Scale Fly.io machine temporarily for bulk ingestion, then scale back
+- **Why:** The shared-cpu-1x (256MB) Fly.io Postgres machine crashes under
+  bulk COPY loads — specifically scan_data (1.1M rows). Scaling to 1GB for
+  the load and back to 256MB after is cheaper and faster than engineering
+  around the memory limit with micro-batches or alternative upload paths.
+- **Scope:** Ingestion — applies any time a full reload is needed.
+- **Do not:** Leave the machine at 1GB permanently. Scale up, load, scale
+  down. The steady-state workload (dbt transforms, queries) fits in 256MB.
+
+### 2026-05-12 — Use Postgres COPY with chunked reconnection for ingestion
+- **Why:** Row-by-row INSERT (via execute_batch) was too slow and connection-
+  heavy over the Fly.io proxy tunnel. COPY is 10-50x faster for bulk loading.
+  Reconnecting between 25k-row chunks prevents any single transaction from
+  overwhelming the server. Script supports --resume to skip already-loaded
+  tables after partial failures.
+- **Scope:** scripts/ingest_sqlite_to_postgres.py
+- **Do not:** Switch back to execute_batch. If chunk size needs tuning,
+  adjust CHUNK_ROWS, don't change the COPY approach.
+
+### 2026-05-12 — Shopify DTC as two normalized tables, not a flat Shopify CSV export
+- **Why:** Shopify exports are a single flat CSV with denormalized line items.
+  We split into shopify_orders (10k headers) and shopify_order_lines (19k lines)
+  to match the existing orders/order_lines pattern. This makes the dbt staging
+  layer consistent — same header/line shape for both B2B and DTC channels.
+- **Scope:** Data generation + raw schema (shopify_orders, shopify_order_lines).
+- **Do not:** Flatten into a single wide table. The normalized shape is
+  intentional for downstream joins and the order-to-cash mart.
+
 ### 2026-05-12 — cinderhaven-data repo is bootstrap source; platform becomes permanent home
 - **Why:** The platform should be the single source of truth. cinderhaven-data
   (SQLite + generation scripts) bootstraps the initial load. Once the platform

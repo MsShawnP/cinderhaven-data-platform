@@ -9,6 +9,33 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-12 (continued, session 3)
+
+**Phase:** Phase 2 — build it right (infrastructure + data generation)
+**Goal:** Complete Phases 1 and 2 — ingestion, data generation, full load.
+**Completed:**
+- P1.3 DONE: Ingestion script built (scripts/ingest_sqlite_to_postgres.py)
+  - Uses Postgres COPY for bulk loading, chunked with reconnection
+  - Supports --resume to skip already-loaded tables
+  - Required scaling Fly.io to 1GB for scan_data (1.1M rows), scaled back after
+- P2.2 DONE: Shopify DTC orders generated (scripts/generate_shopify_orders.py)
+  - 10,000 orders, 19,347 line items, $426k total DTC revenue
+  - 3,610 unique customers, 2.8 avg orders/customer
+  - 18-month window with seasonal patterns, discounts, fulfillment statuses
+  - Two normalized tables: shopify_orders + shopify_order_lines
+- P2.3 DONE: New Shopify tables loaded into Postgres raw schema
+  - raw_schema.sql updated with DTC/e-commerce section
+  - All 23 tables verified — 1,217,942 total rows
+- Phases 1 and 2 fully complete
+**Tried, didn't work:** 256MB Fly instance crashes under scan_data COPY load.
+  Tried smaller batches (5k, 500 rows) — still crashed. Fixed by scaling to 1GB
+  temporarily. See FAILURES.md.
+**State:** All data in Postgres. Ready for Phase 3 (dbt).
+**Next concrete action:** P3.1 — Initialize dbt project and configure connection.
+**Blockers:** None.
+
+---
+
 ## Session — 2026-05-12 (continued)
 
 **Phase:** Phase 2 — build it right (infrastructure)
