@@ -65,6 +65,27 @@ Each entry:
 - **Do not:** Switch back to execute_batch. If chunk size needs tuning,
   adjust CHUNK_ROWS, don't change the COPY approach.
 
+### 2026-05-12 — dbt layer structure: staging (views) → intermediate (views) → marts (tables)
+- **Why:** Views for staging and intermediate keep storage minimal on the
+  256MB Fly.io instance — only mart tables materialize. This is standard
+  dbt practice: views rebuild instantly, tables persist for query performance.
+  Custom schemas (public_staging, public_intermediate, public_marts) keep
+  the namespace clean for docs and lineage.
+- **Scope:** cinderhaven/dbt_project.yml materialization config.
+- **Do not:** Materialize staging as tables unless query performance requires
+  it (unlikely at this data volume).
+
+### 2026-05-12 — fct_orders unifies B2B and DTC into a single fact table
+- **Why:** Downstream consumers (Contract-to-Cash, revenue analysis) need
+  a single order grain regardless of channel. The B2B path (orders +
+  order_lines) and DTC path (shopify_orders + shopify_order_lines) share
+  the same shape: line_id, order_id, sku, quantity, unit_price, line_total.
+  A channel column distinguishes them. This avoids duplicating every
+  downstream query.
+- **Scope:** cinderhaven/models/marts/fct_orders.sql
+- **Do not:** Split into fct_b2b_orders and fct_dtc_orders unless a
+  consumer genuinely needs different grains.
+
 ### 2026-05-12 — Shopify DTC as two normalized tables, not a flat Shopify CSV export
 - **Why:** Shopify exports are a single flat CSV with denormalized line items.
   We split into shopify_orders (10k headers) and shopify_order_lines (19k lines)
