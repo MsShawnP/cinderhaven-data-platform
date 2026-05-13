@@ -11,13 +11,16 @@ models:
           - unique
           - not_null
       - name: product_name
+        description: Display name for the product.
         tests: [not_null]
       - name: product_line
+        description: Top-level product family (Artisan Sauces, Pantry Staples, Specialty Condiments).
         tests:
           - not_null
           - accepted_values:
               values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments']
       - name: subcategory
+        description: Product subcategory within the product line.
         tests:
           - not_null
           - accepted_values:
@@ -27,46 +30,59 @@ models:
     description: Retail locations — 902 stores across 11 retailers.
     columns:
       - name: store_id
+        description: Primary key — unique store identifier.
         tests: [unique, not_null]
       - name: retailer
+        description: Name of the retailer that owns this store.
         tests: [not_null]
       - name: chain_name
+        description: Regional chain or banner name within the retailer.
         tests: [not_null]
 
   - name: stg_retailers
     description: Retailer entities — 11 retailers.
     columns:
       - name: retailer_id
+        description: Primary key — unique retailer identifier.
         tests: [unique, not_null]
       - name: name
+        description: Retailer display name.
         tests: [not_null]
       - name: channel_type
+        description: Retailer channel classification (grocery, mass, club, etc.).
         tests: [not_null]
 
   - name: stg_retailer_rules
     description: Dispute rules by retailer and deduction type.
     columns:
       - name: retailer_id
+        description: Foreign key to retailer entity.
         tests: [not_null]
       - name: deduction_type
+        description: Category of deduction this rule governs.
         tests: [not_null]
 
   - name: stg_deduction_codes
     description: Retailer-specific deduction reason codes.
     columns:
       - name: code_id
+        description: Primary key — unique code identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to retailer that uses this code.
         tests: [not_null]
       - name: deduction_type
+        description: Deduction category this code maps to.
         tests: [not_null]
 
   - name: stg_edi_requirements
     description: EDI compliance requirements by retailer.
     columns:
       - name: requirement_id
+        description: Primary key — unique requirement identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to retailer with this EDI requirement.
         tests: [not_null]
 
   # ── Pricing ────────────────────────────────────────────
@@ -74,20 +90,26 @@ models:
     description: SKU-level cost and pricing structure.
     columns:
       - name: sku
+        description: Primary key — SKU code, foreign key to product_master.
         tests: [unique, not_null]
       - name: cogs_per_unit
+        description: Cost of goods sold per unit in USD.
         tests: [not_null]
       - name: landed_cost_per_unit
+        description: Fully loaded cost per unit including freight and handling, in USD.
         tests: [not_null]
 
   - name: stg_price_history
     description: Historical wholesale price changes by SKU/retailer.
     columns:
       - name: sku
+        description: SKU code — foreign key to product_master.
         tests: [not_null]
       - name: retailer
+        description: Retailer name for this price record.
         tests: [not_null]
       - name: effective_date
+        description: Date this price became effective.
         tests: [not_null]
 
   # ── Distribution & Promotion ───────────────────────────
@@ -95,20 +117,26 @@ models:
     description: SKU-store authorization records.
     columns:
       - name: sku
+        description: SKU code authorized for distribution.
         tests: [not_null]
       - name: store_id
+        description: Store where the SKU is authorized.
         tests: [not_null]
       - name: authorized_date
+        description: Date the SKU was authorized at this store.
         tests: [not_null]
 
   - name: stg_promotions
     description: Promotional events with discount and funding details.
     columns:
       - name: promo_id
+        description: Unique promotion identifier.
         tests: [not_null]
       - name: sku
+        description: SKU on promotion.
         tests: [not_null]
       - name: retailer
+        description: Retailer running the promotion.
         tests: [not_null]
 
   # ── Transactions ───────────────────────────────────────
@@ -116,40 +144,52 @@ models:
     description: B2B purchase orders from retailers.
     columns:
       - name: order_id
+        description: Primary key — unique purchase order identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to the ordering retailer.
         tests: [not_null]
       - name: po_date
+        description: Date the purchase order was placed.
         tests: [not_null]
       - name: total_value
+        description: Total order value in USD.
         tests: [not_null]
 
   - name: stg_order_lines
     description: B2B order line items.
     columns:
       - name: order_line_id
+        description: Primary key — unique line item identifier.
         tests: [unique, not_null]
       - name: order_id
+        description: Foreign key to the parent order.
         tests: [not_null]
       - name: sku
+        description: Product ordered on this line.
         tests: [not_null]
 
   - name: stg_shipments
     description: Shipment records with compliance flags.
     columns:
       - name: shipment_id
+        description: Primary key — unique shipment identifier.
         tests: [unique, not_null]
       - name: order_id
+        description: Foreign key to the order being fulfilled.
         tests: [not_null]
       - name: ship_date
+        description: Date the shipment was dispatched.
         tests: [not_null]
 
   - name: stg_pack_records
     description: Pack/label compliance records.
     columns:
       - name: pack_record_id
+        description: Primary key — unique pack record identifier.
         tests: [unique, not_null]
       - name: order_id
+        description: Foreign key to the order this pack record covers.
         tests: [not_null]
 
   # ── Sales / POS ────────────────────────────────────────
@@ -157,18 +197,23 @@ models:
     description: Weekly POS scan data — 1.1M rows.
     columns:
       - name: sku
+        description: Product scanned at point of sale.
         tests: [not_null]
       - name: store_id
+        description: Store where the scan occurred.
         tests: [not_null]
       - name: week_ending
+        description: Saturday date ending the reporting week.
         tests: [not_null]
 
   - name: stg_chargebacks
     description: Legacy chargeback events.
     columns:
       - name: retailer
+        description: Retailer that issued the chargeback.
         tests: [not_null]
       - name: amount
+        description: Chargeback amount in USD.
         tests: [not_null]
 
   # ── Deductions / Disputes ──────────────────────────────
@@ -176,24 +221,32 @@ models:
     description: Deduction records from retailer remittances.
     columns:
       - name: deduction_id
+        description: Primary key — unique deduction identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to the deducting retailer.
         tests: [not_null]
       - name: deduction_type
+        description: Category of deduction (shortage, pricing, promotion, quality, logistics).
         tests: [not_null]
       - name: amount
+        description: Deduction amount in USD.
         tests: [not_null]
       - name: deduction_date
+        description: Date the deduction was applied.
         tests: [not_null]
 
   - name: stg_disputes
     description: Dispute filing records.
     columns:
       - name: dispute_id
+        description: Primary key — unique dispute identifier.
         tests: [unique, not_null]
       - name: deduction_id
+        description: Foreign key to the deduction being disputed.
         tests: [not_null]
       - name: outcome
+        description: Resolution outcome of the dispute.
         tests:
           - not_null
           - accepted_values:
@@ -211,26 +264,33 @@ models:
     description: Evidence items linked to disputes.
     columns:
       - name: evidence_id
+        description: Primary key — unique evidence item identifier.
         tests: [unique, not_null]
       - name: dispute_id
+        description: Foreign key to the parent dispute.
         tests: [not_null]
 
   - name: stg_remittances
     description: Remittance payment bundles from retailers.
     columns:
       - name: remittance_id
+        description: Primary key — unique remittance identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to the paying retailer.
         tests: [not_null]
       - name: received_date
+        description: Date the remittance was received.
         tests: [not_null]
 
   - name: stg_post_audit_claims
     description: Retroactive post-audit claims.
     columns:
       - name: claim_id
+        description: Primary key — unique claim identifier.
         tests: [unique, not_null]
       - name: deduction_id
+        description: Foreign key to the original deduction.
         tests: [not_null]
 
   # ── DTC / E-Commerce ──────────────────────────────────
@@ -238,19 +298,25 @@ models:
     description: Shopify DTC order headers.
     columns:
       - name: order_id
+        description: Primary key — Shopify order ID.
         tests: [unique, not_null]
       - name: order_number
+        description: Customer-facing order number.
         tests: [unique, not_null]
       - name: created_at
+        description: Timestamp when the order was placed.
         tests: [not_null]
       - name: email
+        description: Customer email address.
         tests: [not_null]
       - name: financial_status
+        description: Payment status of the order.
         tests:
           - not_null
           - accepted_values:
               values: ['paid', 'partially_refunded', 'refunded']
       - name: fulfillment_status
+        description: Fulfillment status of the order.
         tests:
           - not_null
           - accepted_values:
@@ -260,8 +326,11 @@ models:
     description: Shopify DTC line items.
     columns:
       - name: line_id
+        description: Primary key — unique line item identifier.
         tests: [unique, not_null]
       - name: order_id
+        description: Foreign key to the parent Shopify order.
         tests: [not_null]
       - name: sku
+        description: Product SKU ordered.
         tests: [not_null]

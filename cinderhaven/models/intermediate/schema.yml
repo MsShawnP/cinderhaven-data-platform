@@ -7,8 +7,10 @@ models:
       Grain: one row per code_id.
     columns:
       - name: code_id
+        description: Primary key — deduction reason code identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to the retailer that uses this code.
         tests: [not_null]
 
   - name: int_product_retailers
@@ -17,8 +19,10 @@ models:
       Grain: one row per SKU × retailer.
     columns:
       - name: sku
+        description: Product SKU — part of composite key with retailer.
         tests: [not_null]
       - name: retailer
+        description: Retailer name — part of composite key with SKU.
         tests: [not_null]
 
   - name: int_retailer_payments
@@ -27,6 +31,8 @@ models:
       Grain: one row per deduction_id.
     columns:
       - name: deduction_id
+        description: Primary key — unique deduction identifier.
         tests: [unique, not_null]
       - name: retailer_id
+        description: Foreign key to the retailer that issued the deduction.
         tests: [not_null]

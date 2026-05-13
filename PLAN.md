@@ -150,7 +150,7 @@ Dagster, hosted docs, and professional documentation.
     - Done when: SVG/PNG diagram showing source → ingestion →
       warehouse → transformation → marts → consumers, included
       in README
-- [ ] P6.2: Generate and host dbt docs on GitHub Pages
+- [x] P6.2: Generate and host dbt docs on GitHub Pages
     - Depends on: P4.4 (need complete models with descriptions)
     - Done when: dbt docs site live on GitHub Pages, lineage
       graph navigable, every model and column has a description

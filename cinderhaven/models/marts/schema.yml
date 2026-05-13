@@ -8,10 +8,13 @@ models:
       Grain: one row per SKU.
     columns:
       - name: sku
+        description: Primary key — Cinderhaven SKU code.
         tests: [unique, not_null]
       - name: product_name
+        description: Display name for the product.
         tests: [not_null]
       - name: product_line
+        description: Top-level product family.
         tests: [not_null]
 
   - name: dim_retailers
@@ -20,8 +23,10 @@ models:
       Grain: one row per retailer.
     columns:
       - name: retailer_id
+        description: Primary key — unique retailer identifier.
         tests: [unique, not_null]
       - name: retailer_name
+        description: Retailer display name.
         tests: [not_null]
 
   - name: dim_deduction_reasons
@@ -30,6 +35,7 @@ models:
       Grain: one row per code_id.
     columns:
       - name: code_id
+        description: Primary key — deduction reason code identifier.
         tests: [unique, not_null]
 
   # ── Facts ──────────────────────────────────────────────
@@ -39,8 +45,10 @@ models:
       Grain: one row per order line item.
     columns:
       - name: line_id
+        description: Unique line item identifier (order_line_id for B2B, line_id for DTC).
         tests: [not_null]
       - name: order_id
+        description: Parent order identifier.
         tests: [not_null]
       - name: sku
         description: Foreign key to dim_products.
@@ -50,6 +58,7 @@ models:
               to: ref('dim_products')
               field: sku
       - name: channel
+        description: Sales channel — B2B (wholesale) or DTC (Shopify).
         tests:
           - not_null
           - accepted_values:
@@ -61,8 +70,10 @@ models:
       Grain: one row per shipment.
     columns:
       - name: shipment_id
+        description: Primary key — unique shipment identifier.
         tests: [unique, not_null]
       - name: order_id
+        description: Foreign key to the fulfilled order.
         tests: [not_null]
       - name: retailer_id
         description: Foreign key to dim_retailers.
@@ -78,6 +89,7 @@ models:
       Grain: one row per deduction.
     columns:
       - name: deduction_id
+        description: Primary key — unique deduction identifier.
         tests: [unique, not_null]
       - name: retailer_id
         description: Foreign key to dim_retailers.
@@ -87,6 +99,7 @@ models:
               to: ref('dim_retailers')
               field: retailer_id
       - name: deduction_amount
+        description: Original deduction amount in USD.
         tests: [not_null]
 
   - name: fct_chargebacks
@@ -95,8 +108,10 @@ models:
       Grain: one row per chargeback.
     columns:
       - name: retailer
+        description: Retailer name that issued the chargeback.
         tests: [not_null]
       - name: amount
+        description: Chargeback amount in USD.
         tests: [not_null]
 
   - name: fct_payments
@@ -105,6 +120,7 @@ models:
       Grain: one row per remittance.
     columns:
       - name: remittance_id
+        description: Primary key — unique remittance identifier.
         tests: [unique, not_null]
       - name: retailer_id
         description: Foreign key to dim_retailers.
