@@ -55,11 +55,11 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 1: Infrastructure
 
-- [ ] P1.1: Provision Postgres on Fly.io
+- [x] P1.1: Provision Postgres on Fly.io
     - Depends on: none
     - Done when: `psql` connects to remote database, can CREATE TABLE
       and INSERT a test row
-- [ ] P1.2: Design raw schema DDL from existing SQLite tables
+- [x] P1.2: Design raw schema DDL from existing SQLite tables
     - Depends on: none (can work locally)
     - Done when: SQL file exists with CREATE TABLE for all 16 data
       tables, column types mapped from SQLite → Postgres
@@ -71,7 +71,7 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 2: Data Gap Assessment + Generation
 
-- [ ] P2.1: Audit existing data for gaps against brief
+- [x] P2.1: Audit existing data for gaps against brief
     - Depends on: none
     - Done when: written assessment of what exists vs. what the brief
       specifies (Shopify DTC, POS shape, any missing layers), with

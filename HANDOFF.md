@@ -9,6 +9,33 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-12 (continued)
+
+**Phase:** Phase 2 — build it right (infrastructure)
+**Goal:** Begin infrastructure buildout — Postgres, raw schema, data audit.
+**Completed:**
+- P1.1 DONE: Postgres 17.7 provisioned on Fly.io (cinderhaven-db, iad region, shared-cpu-1x)
+  - Database `cinderhaven` created, schema `raw` created
+  - Verified: CREATE TABLE, INSERT, SELECT all working
+  - Credentials saved to .env (gitignored)
+- P1.2 DONE: Raw schema DDL written (sql/raw_schema.sql)
+  - All 21 data tables mapped SQLite → Postgres with type annotations
+  - Organized by domain: reference, pricing, distribution, transactions, sales, deductions
+- P2.1 DONE: Data gap assessment written (docs/data-gap-assessment.md)
+  - 21 of 21 tables ready to ingest as-is
+  - 1 real gap: Shopify DTC orders (needs generation)
+  - 1 partial gap: Payment records (remittances covers v1, defer)
+  - 1 deferred by design: EDI (from EDI Pre-flight)
+- Existing cinderhaven-data DB path confirmed: C:\Users\mssha\projects\active\cinderhaven-data\data\cinderhaven_product_master.db
+- psycopg2-binary installed for Python ingestion
+- Enabled remoteControlAtStartup in global settings
+**Tried, didn't work:** Nothing notable.
+**State:** Infrastructure up, schema designed, gaps assessed. Ready for P1.3.
+**Next concrete action:** P1.3 — Build ingestion script (SQLite → Postgres raw schema).
+**Blockers:** None.
+
+---
+
 ## Session — 2026-05-12
 
 **Phase:** Phase 1 — build the right thing (clarify complete, gates skipped)
