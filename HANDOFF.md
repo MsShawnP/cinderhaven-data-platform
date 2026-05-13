@@ -9,6 +9,45 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-13 (session 5)
+
+**Phase:** All 6 phases complete. Arc nearly done.
+**Goal:** Fix Dagster UI, complete Phase 5, execute full Phase 6.
+**Completed:**
+- P5.3 DONE: Dagster schedule + asset graph verified in UI
+  - Root cause of empty graph: Dagster launched from repo root but
+    cinderhaven_orchestration package lives under orchestration/. Fixed
+    by adding `--working-directory orchestration` to dagster dev args.
+  - Daily schedule (6 AM UTC) visible on Automation page
+  - 34 assets with full lineage rendered in Global Asset Lineage view
+  - .claude/launch.json updated with the fix
+- P6.1 DONE: Architecture diagram (Mermaid in docs/architecture.md + README)
+- P6.2 DONE: dbt docs generated with 100% description coverage
+  - 34/34 models described, 96/96 columns described
+  - Site files (index.html + manifest.json + catalog.json) in docs/dbt-docs/
+  - Needs: enable GitHub Pages in repo settings (Source: main, /docs folder)
+- P6.3 DONE: Walkthrough article (docs/walkthrough.md)
+  - Covers source contracts, staging conventions, crosswalk design,
+    test philosophy, orchestration approach
+- P6.4 DONE: Professional README with architecture diagram, repo structure,
+  stack table, documentation links. Removed dbt scaffold boilerplate.
+- Final validation: `dbt build` 166/166 PASS (34 models + 132 tests)
+- 2 new decisions logged (Dagster working directory, manifest parse pattern)
+**Tried, didn't work:** Nothing notable — one clean session.
+**State:** All 19 plan tasks complete. `dbt build` green. Dagster running.
+**Remaining for arc completion (user actions):**
+1. Enable GitHub Pages: repo Settings → Pages → Source: main, /docs folder
+2. Final review and flip repo to public
+**Environment notes:**
+- flyctl proxy is running (PID 12660) — will die on reboot
+- Dagster dev was running on port 3000 — may need restart
+- dbt.exe full path: C:\Users\mssha\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\dbt.exe
+- Must cd into cinderhaven/ and set POSTGRES_PASSWORD for dbt commands
+**Next concrete action:** Enable GitHub Pages, review repo, flip public.
+**Blockers:** None.
+
+---
+
 ## Session — 2026-05-12 (continued, session 4)
 
 **Phase:** Phases 3 and 4 complete. Ready for Phase 5 (Dagster).
