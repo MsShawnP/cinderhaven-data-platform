@@ -106,6 +106,32 @@ Each entry:
 
 ---
 
+## Orchestration
+
+### 2026-05-13 — Dagster requires --working-directory pointing to orchestration/
+- **Why:** `dagster dev -m cinderhaven_orchestration.definitions` resolves modules
+  from the CWD. When launched from the repo root, Python can't find the
+  `cinderhaven_orchestration` package because it lives under `orchestration/`.
+  Adding `--working-directory orchestration` fixes the import. Without this,
+  the Dagster webserver starts but the code location fails to load (empty
+  asset graph, repeated "Error loading repository location" warnings).
+- **Scope:** .claude/launch.json, any Dagster launch command.
+- **Do not:** Move the orchestration package to the repo root or install it
+  as a pip package just to avoid the flag. The explicit working directory
+  keeps the project structure clean.
+
+### 2026-05-13 — dbt manifest parsed at Dagster load time via DbtCliResource.cli(["parse"])
+- **Why:** dagster-dbt needs the dbt manifest.json to build the asset graph.
+  Parsing at module load time (in assets.py) ensures the manifest is always
+  fresh — no stale artifact to maintain. The parse runs once when Dagster
+  starts, not on every materialization. This is the dagster-dbt recommended
+  pattern.
+- **Scope:** orchestration/cinderhaven_orchestration/assets.py
+- **Do not:** Check in a static manifest.json or use a pre-built manifest
+  path. The parse-at-load pattern keeps the graph in sync with the dbt project.
+
+---
+
 ## Visualization
 
 [Chart conventions, palette decisions, interactivity choices]
