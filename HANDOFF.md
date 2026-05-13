@@ -11,29 +11,33 @@ For things that didn't work, see FAILURES.md.
 
 ## Session — 2026-05-12 (continued, session 4)
 
-**Phase:** Phase 3 complete, starting Phase 4
-**Goal:** Complete dbt foundation + staging, begin transformations.
+**Phase:** Phases 3 and 4 complete. Ready for Phase 5 (Dagster).
+**Goal:** Build full dbt pipeline — staging through marts.
 **Completed:**
 - P3.1 DONE: dbt project initialized (dbt-core 1.11.9, dbt-postgres 1.10.0)
-  - profiles.yml configured for localhost proxy to Fly.io
+  - profiles.yml at ~/.dbt/profiles.yml, uses env_var for password
   - dbt_project.yml: staging (views), intermediate (views), marts (tables)
-  - `dbt debug` passes
-- P3.2 DONE: Sources defined (models/staging/sources.yml)
-  - All 23 raw tables defined with descriptions
-  - `dbt compile` finds 23 sources
-- P3.3 DONE: 23 staging models built
-  - One per source table, cast dates/timestamps, boolean conversions
-  - `dbt run` PASS=23 ERROR=0
-- P3.4 DONE: 93 staging tests written and passing
-  - unique keys, not_null, accepted_values on all critical columns
-  - `dbt test` PASS=93 ERROR=0
-- Phase 3 fully complete
-**Tried, didn't work:** Initial dispute outcome accepted_values had wrong
-  values (used generic won/lost/partial vs actual won_full/lost_deadline/etc).
-  Fixed by checking actual data.
-**State:** Staging layer complete. Ready for Phase 4 (intermediate + marts).
-**Next concrete action:** P4.1 — Build intermediate models.
-**Blockers:** None. Fly proxy must be running for dbt commands.
+  - dbt.exe at C:\Users\mssha\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\dbt.exe
+  - Must cd into cinderhaven/ dir before running dbt commands
+  - Must set POSTGRES_PASSWORD env var and have flyctl proxy running
+- P3.2 DONE: 23 sources defined (models/staging/sources.yml)
+- P3.3 DONE: 23 staging models (views) — date casts, boolean conversions
+- P3.4 DONE: 93 staging tests passing
+- P4.1 DONE: 3 intermediate models
+  - int_deduction_code_crosswalk (codes → rules → retailers)
+  - int_product_retailers (SKU × retailer with pricing, margins, distribution)
+  - int_retailer_payments (deductions → remittances → retailers → disputes)
+- P4.2 DONE: 3 dimension tables (dim_products, dim_retailers, dim_deduction_reasons)
+- P4.3 DONE: 5 fact tables (fct_orders, fct_shipments, fct_deductions, fct_chargebacks, fct_payments)
+  - fct_orders unifies B2B + DTC (49,474 rows)
+- P4.4 DONE: 132 total tests passing (93 staging + 6 intermediate + 33 mart)
+  - Referential integrity: fct_orders.sku → dim_products, fct_*.retailer_id → dim_retailers
+- Phases 1-4 fully complete
+**Tried, didn't work:** Initial dispute outcome accepted_values wrong — fixed
+  by checking actual data values in SQLite.
+**State:** Full dbt pipeline running. 34 models, 132 tests, zero errors.
+**Next concrete action:** P5.1 — Initialize Dagster project, integrate with dbt.
+**Blockers:** None.
 
 ---
 

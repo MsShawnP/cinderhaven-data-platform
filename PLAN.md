@@ -106,23 +106,23 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 4: dbt Transformation + Marts
 
-- [ ] P4.1: Build intermediate models (entity resolution, crosswalks)
+- [x] P4.1: Build intermediate models (entity resolution, crosswalks)
     - Depends on: P3.3
     - Done when: deduction reason code crosswalk, SKU-across-systems
       resolution, and retailer-payment joins modeled as intermediate
       models, `dbt run` succeeds
-- [ ] P4.2: Build dimension marts (dim_products, dim_retailers,
+- [x] P4.2: Build dimension marts (dim_products, dim_retailers,
       dim_deduction_reasons)
     - Depends on: P4.1
     - Done when: dimension tables materialized, GTIN hierarchy
       modeled, retailer-specific attributes included, `dbt run`
       succeeds
-- [ ] P4.3: Build fact marts (fct_orders, fct_shipments,
+- [x] P4.3: Build fact marts (fct_orders, fct_shipments,
       fct_chargebacks, fct_deductions, fct_payments)
     - Depends on: P4.1, P4.2
     - Done when: fact tables materialized with correct foreign keys
       to dimensions, `dbt run` succeeds
-- [ ] P4.4: Write mart tests (data contracts on critical joins)
+- [x] P4.4: Write mart tests (data contracts on critical joins)
     - Depends on: P4.2, P4.3
     - Done when: `dbt test` passes — referential integrity between
       facts and dimensions, deduction-to-order lineage valid,
