@@ -145,7 +145,7 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 6: Documentation + Polish
 
-- [ ] P6.1: Create architecture diagram
+- [x] P6.1: Create architecture diagram
     - Depends on: none (can draft early, finalize after Phase 4)
     - Done when: SVG/PNG diagram showing source → ingestion →
       warehouse → transformation → marts → consumers, included
@@ -154,7 +154,7 @@ Dagster, hosted docs, and professional documentation.
     - Depends on: P4.4 (need complete models with descriptions)
     - Done when: dbt docs site live on GitHub Pages, lineage
       graph navigable, every model and column has a description
-- [ ] P6.3: Write walkthrough article
+- [x] P6.3: Write walkthrough article
     - Depends on: P4.4, P5.3 (need complete platform to write about)
     - Done when: markdown article in repo covering source contracts,
       staging decisions, crosswalk design, test philosophy,
