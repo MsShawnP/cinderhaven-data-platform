@@ -1,0 +1,267 @@
+version: 2
+
+models:
+  # ── Reference / Dimension ──────────────────────────────
+  - name: stg_product_master
+    description: Cleaned product catalog — 90 SKUs across 3 product lines.
+    columns:
+      - name: sku
+        description: Primary key — Cinderhaven SKU code (e.g. CHP-0001).
+        tests:
+          - unique
+          - not_null
+      - name: product_name
+        tests: [not_null]
+      - name: product_line
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments']
+      - name: subcategory
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['sauce', 'dry', 'oil', 'vinegar', 'condiment', 'hot_sauce']
+
+  - name: stg_stores
+    description: Retail locations — 902 stores across 11 retailers.
+    columns:
+      - name: store_id
+        tests: [unique, not_null]
+      - name: retailer
+        tests: [not_null]
+      - name: chain_name
+        tests: [not_null]
+
+  - name: stg_retailers
+    description: Retailer entities — 11 retailers.
+    columns:
+      - name: retailer_id
+        tests: [unique, not_null]
+      - name: name
+        tests: [not_null]
+      - name: channel_type
+        tests: [not_null]
+
+  - name: stg_retailer_rules
+    description: Dispute rules by retailer and deduction type.
+    columns:
+      - name: retailer_id
+        tests: [not_null]
+      - name: deduction_type
+        tests: [not_null]
+
+  - name: stg_deduction_codes
+    description: Retailer-specific deduction reason codes.
+    columns:
+      - name: code_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: deduction_type
+        tests: [not_null]
+
+  - name: stg_edi_requirements
+    description: EDI compliance requirements by retailer.
+    columns:
+      - name: requirement_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+
+  # ── Pricing ────────────────────────────────────────────
+  - name: stg_sku_costs
+    description: SKU-level cost and pricing structure.
+    columns:
+      - name: sku
+        tests: [unique, not_null]
+      - name: cogs_per_unit
+        tests: [not_null]
+      - name: landed_cost_per_unit
+        tests: [not_null]
+
+  - name: stg_price_history
+    description: Historical wholesale price changes by SKU/retailer.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+      - name: effective_date
+        tests: [not_null]
+
+  # ── Distribution & Promotion ───────────────────────────
+  - name: stg_distribution_log
+    description: SKU-store authorization records.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: store_id
+        tests: [not_null]
+      - name: authorized_date
+        tests: [not_null]
+
+  - name: stg_promotions
+    description: Promotional events with discount and funding details.
+    columns:
+      - name: promo_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+
+  # ── Transactions ───────────────────────────────────────
+  - name: stg_orders
+    description: B2B purchase orders from retailers.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: po_date
+        tests: [not_null]
+      - name: total_value
+        tests: [not_null]
+
+  - name: stg_order_lines
+    description: B2B order line items.
+    columns:
+      - name: order_line_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+
+  - name: stg_shipments
+    description: Shipment records with compliance flags.
+    columns:
+      - name: shipment_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: ship_date
+        tests: [not_null]
+
+  - name: stg_pack_records
+    description: Pack/label compliance records.
+    columns:
+      - name: pack_record_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+
+  # ── Sales / POS ────────────────────────────────────────
+  - name: stg_scan_data
+    description: Weekly POS scan data — 1.1M rows.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: store_id
+        tests: [not_null]
+      - name: week_ending
+        tests: [not_null]
+
+  - name: stg_chargebacks
+    description: Legacy chargeback events.
+    columns:
+      - name: retailer
+        tests: [not_null]
+      - name: amount
+        tests: [not_null]
+
+  # ── Deductions / Disputes ──────────────────────────────
+  - name: stg_deductions
+    description: Deduction records from retailer remittances.
+    columns:
+      - name: deduction_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: deduction_type
+        tests: [not_null]
+      - name: amount
+        tests: [not_null]
+      - name: deduction_date
+        tests: [not_null]
+
+  - name: stg_disputes
+    description: Dispute filing records.
+    columns:
+      - name: dispute_id
+        tests: [unique, not_null]
+      - name: deduction_id
+        tests: [not_null]
+      - name: outcome
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - won_full
+                - won_partial
+                - lost_deadline
+                - lost_evidence
+                - lost_no_response
+                - lost_other
+                - pending
+                - abandoned
+
+  - name: stg_dispute_evidence
+    description: Evidence items linked to disputes.
+    columns:
+      - name: evidence_id
+        tests: [unique, not_null]
+      - name: dispute_id
+        tests: [not_null]
+
+  - name: stg_remittances
+    description: Remittance payment bundles from retailers.
+    columns:
+      - name: remittance_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: received_date
+        tests: [not_null]
+
+  - name: stg_post_audit_claims
+    description: Retroactive post-audit claims.
+    columns:
+      - name: claim_id
+        tests: [unique, not_null]
+      - name: deduction_id
+        tests: [not_null]
+
+  # ── DTC / E-Commerce ──────────────────────────────────
+  - name: stg_shopify_orders
+    description: Shopify DTC order headers.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: order_number
+        tests: [unique, not_null]
+      - name: created_at
+        tests: [not_null]
+      - name: email
+        tests: [not_null]
+      - name: financial_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['paid', 'partially_refunded', 'refunded']
+      - name: fulfillment_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['fulfilled', 'unfulfilled', 'partial']
+
+  - name: stg_shopify_order_lines
+    description: Shopify DTC line items.
+    columns:
+      - name: line_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]

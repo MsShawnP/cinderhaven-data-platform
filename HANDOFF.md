@@ -9,6 +9,34 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-12 (continued, session 4)
+
+**Phase:** Phase 3 complete, starting Phase 4
+**Goal:** Complete dbt foundation + staging, begin transformations.
+**Completed:**
+- P3.1 DONE: dbt project initialized (dbt-core 1.11.9, dbt-postgres 1.10.0)
+  - profiles.yml configured for localhost proxy to Fly.io
+  - dbt_project.yml: staging (views), intermediate (views), marts (tables)
+  - `dbt debug` passes
+- P3.2 DONE: Sources defined (models/staging/sources.yml)
+  - All 23 raw tables defined with descriptions
+  - `dbt compile` finds 23 sources
+- P3.3 DONE: 23 staging models built
+  - One per source table, cast dates/timestamps, boolean conversions
+  - `dbt run` PASS=23 ERROR=0
+- P3.4 DONE: 93 staging tests written and passing
+  - unique keys, not_null, accepted_values on all critical columns
+  - `dbt test` PASS=93 ERROR=0
+- Phase 3 fully complete
+**Tried, didn't work:** Initial dispute outcome accepted_values had wrong
+  values (used generic won/lost/partial vs actual won_full/lost_deadline/etc).
+  Fixed by checking actual data.
+**State:** Staging layer complete. Ready for Phase 4 (intermediate + marts).
+**Next concrete action:** P4.1 — Build intermediate models.
+**Blockers:** None. Fly proxy must be running for dbt commands.
+
+---
+
 ## Session — 2026-05-12 (continued, session 3)
 
 **Phase:** Phase 2 — build it right (infrastructure + data generation)

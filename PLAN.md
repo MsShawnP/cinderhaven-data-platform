@@ -87,19 +87,19 @@ Dagster, hosted docs, and professional documentation.
 
 ### Phase 3: dbt Foundation + Staging
 
-- [ ] P3.1: Initialize dbt project and configure connection
+- [x] P3.1: Initialize dbt project and configure connection
     - Depends on: P1.1 (need Postgres running)
     - Done when: `dbt debug` passes, profiles.yml configured,
       project compiles with no errors
-- [ ] P3.2: Define dbt sources (raw schema tables)
+- [x] P3.2: Define dbt sources (raw schema tables)
     - Depends on: P3.1, P1.3 (need dbt project + data in Postgres)
     - Done when: `sources.yml` defines all raw tables, `dbt compile`
       succeeds
-- [ ] P3.3: Build staging models (raw → typed, cleaned, deduped)
+- [x] P3.3: Build staging models (raw → typed, cleaned, deduped)
     - Depends on: P3.2
     - Done when: one staging model per source table, `dbt run`
       materializes all staging models without errors
-- [ ] P3.4: Write staging tests
+- [x] P3.4: Write staging tests
     - Depends on: P3.3
     - Done when: `dbt test` passes — unique keys, not-null on
       required columns, accepted values where applicable
