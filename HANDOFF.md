@@ -9,6 +9,30 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-15 (session 6)
+
+**Phase:** Dirty dataset arc — complete.
+**Goal:** Execute dirty dataset generator plan — build cinderhaven-data-dirty repo with 6 root-cause degraders.
+**Completed:**
+- U1+U2: Pipeline framework + RC1 Excel/CSV damage with P0 cascade fix (sku_whitespace)
+- U3: RC2 governance decay (near-duplicate SKUs, temporal drift, casing)
+- U4: RC3 retailer integration gaps + RC4 ETL pipeline failures
+- U5: RC5 manual process errors + RC6 business process gaps
+- U6: README, defect manifest generator, 18 tests (all passing)
+- GitHub repo created and pushed: MsShawnP/cinderhaven-data-dirty (private)
+- Feature branch merged to main, default branch set
+- Plan status flipped to completed
+- 2 decisions logged, 2 failures logged
+**Tried, didn't work:**
+- Plan's cascade model assumed UPC/GTIN damage breaks joins — actually all downstream tables join on `sku`. Fixed with sku_whitespace defect.
+- UPDATE week_ending hit UNIQUE constraint — fixed with UPDATE OR IGNORE.
+- PowerShell inline Python with SQL `||` operator caused parser errors — used temp .py files.
+**State:** Dirty dataset arc fully shipped. Both arcs (platform + dirty dataset) complete.
+**Next concrete action:** No active arc. User chooses next work (data-hygiene portfolio piece, or other).
+**Blockers:** None.
+
+---
+
 ## Session — 2026-05-13 (session 5)
 
 **Phase:** All 6 phases complete. Arc nearly done.

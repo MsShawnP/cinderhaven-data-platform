@@ -132,6 +132,32 @@ Each entry:
 
 ---
 
+## Dirty Dataset
+
+### 2026-05-15 — SKU whitespace damage is the real cascade path, not UPC/GTIN
+
+- **Why:** The plan's central narrative assumed corrupting UPC/GTIN would cascade
+  into join failures downstream. In reality, all downstream tables (scan_data,
+  order_lines, orders, deductions) join on `sku`, not `upc`/`gtin14`. UPC/GTIN
+  damage only affects the product_master table itself. The fix: RC1 adds a
+  `sku_whitespace` defect that introduces trailing/leading spaces on `sku` in
+  scan_data and order_lines, creating real orphan records (22K+ at moderate).
+- **Scope:** cinderhaven-data-dirty — RC1 cascade design.
+- **Do not:** Assume UPC/GTIN corruption alone proves join damage in demos.
+  Always demonstrate via SKU-based orphan queries.
+
+### 2026-05-15 — Dirty dataset lives in a separate repo, fully isolated
+
+- **Why:** The dirty generators have no shared code with the clean data repo or
+  the platform repo. Separate repo keeps concerns clean: clean data stays
+  pristine, platform stays focused on infrastructure, dirty data is a standalone
+  tool. No submodules, no cross-imports. The only connection is the clean SQLite
+  file path passed as `--input`.
+- **Scope:** Repository structure — cinderhaven-data-dirty.
+- **Do not:** Add degrader code to cinderhaven-data or cinderhaven-data-platform.
+
+---
+
 ## Visualization
 
 [Chart conventions, palette decisions, interactivity choices]

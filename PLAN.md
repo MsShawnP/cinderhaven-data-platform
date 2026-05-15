@@ -5,7 +5,21 @@ session. For session-by-session state, see HANDOFF.md.
 
 ---
 
-## Goal
+## Goal (2026-05-15 — dirty dataset arc, COMPLETE)
+
+Create a standalone repository containing a realistically degraded
+clone of the Cinderhaven dataset. Generators take the clean SQLite as
+input and introduce root-cause-organized defects (Excel damage,
+governance decay, integration gaps) with configurable severity and
+deterministic output. Purpose: supply future data-hygiene portfolio
+pieces with data that is genuinely hard to clean.
+
+Requirements: docs/brainstorms/dirty-dataset-requirements.md
+Plan: docs/plans/2026-05-15-001-feat-dirty-dataset-generators-plan.md
+Repo: github.com/MsShawnP/cinderhaven-data-dirty
+Tier: Medium
+
+## Goal (2026-05-12 — platform arc, COMPLETE)
 
 Build a portfolio-quality modern data platform (Postgres + dbt +
 Dagster) that demonstrates the practice can build data infrastructure.
@@ -198,3 +212,16 @@ Dagster, hosted docs, and professional documentation.
 When an arc completes, archive its goal, completion date, and outcome
 here. Then start a new arc above. Provides continuity without bloating
 the active plan.
+
+### 2026-05-15 — Dirty dataset arc
+
+Shipped cinderhaven-data-dirty: 6 root-cause degraders, 3 severity
+levels, deterministic output, 18 tests passing. Repo at
+github.com/MsShawnP/cinderhaven-data-dirty. Key learning: cascade
+model must follow actual join keys (sku), not assumed ones (upc/gtin).
+
+### 2026-05-13 — Platform arc
+
+Shipped cinderhaven-data-platform: Postgres on Fly.io, 34 dbt models,
+132 tests, Dagster orchestration, dbt docs on GitHub Pages. All 19
+tasks complete.
