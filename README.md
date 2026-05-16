@@ -1,8 +1,11 @@
 # Cinderhaven Data Platform
 
+[![CI](https://github.com/MsShawnP/cinderhaven-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/MsShawnP/cinderhaven-data-platform/actions/workflows/ci.yml)
+[![dbt docs](https://img.shields.io/badge/dbt%20docs-live-blue)](https://msshawnp.github.io/cinderhaven-data-platform/)
+
 Modern data platform for a fictional $25M specialty food brand.
 Postgres + dbt + Dagster pipeline covering 23 source tables, 34
-transformation models, and 132 data quality tests. Built to
+transformation models, and 135+ data quality tests. Built to
 demonstrate that the practice can ship real data infrastructure,
 not analytical scripts on bundled files.
 

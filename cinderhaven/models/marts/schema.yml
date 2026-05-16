@@ -16,6 +16,16 @@ models:
       - name: product_line
         description: Top-level product family.
         tests: [not_null]
+      - name: msrp
+        description: Manufacturer's suggested retail price.
+        tests:
+          - positive_value
+      - name: msrp_margin_pct
+        description: Margin as a fraction of MSRP — expected between 0 and 1.
+        tests:
+          - ratio_within_bounds:
+              min_value: 0
+              max_value: 1
 
   - name: dim_retailers
     description: >
@@ -100,7 +110,9 @@ models:
               field: retailer_id
       - name: deduction_amount
         description: Original deduction amount in USD.
-        tests: [not_null]
+        tests:
+          - not_null
+          - positive_value
 
   - name: fct_chargebacks
     description: >

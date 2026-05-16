@@ -158,6 +158,33 @@ Each entry:
 
 ---
 
+## CI & DevEx
+
+### 2026-05-16 — CI validates project structure (dbt parse), not full build
+
+- **Why:** A full `dbt build` in CI would require a live Postgres
+  instance with loaded data — complex to provision in GitHub Actions
+  and brittle. `dbt parse` validates all model references, Jinja
+  compilation, and schema correctness without a database connection.
+  This catches real errors (broken refs, invalid YAML, syntax issues)
+  while staying fast and free.
+- **Scope:** .github/workflows/ci.yml
+- **Do not:** Add a Postgres service container unless a specific model
+  bug requires integration testing in CI. The production `dbt build`
+  runs against Fly.io Postgres locally.
+
+### 2026-05-16 — Use shutil.which for dbt executable, not hardcoded path
+
+- **Why:** The original `project.py` hardcoded a Windows App Store
+  Python path. Any reviewer reading that file sees "built on one
+  machine" instead of "production infrastructure." `shutil.which("dbt")`
+  resolves the correct binary on any platform where dbt is installed.
+- **Scope:** orchestration/cinderhaven_orchestration/project.py
+- **Do not:** Add platform-detection logic or multiple fallback paths.
+  If dbt isn't on PATH, the error from Dagster is clear enough.
+
+---
+
 ## Visualization
 
 [Chart conventions, palette decisions, interactivity choices]
