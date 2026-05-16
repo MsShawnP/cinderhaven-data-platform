@@ -201,8 +201,8 @@ Dagster, hosted docs, and professional documentation.
 - [x] Dagster asset graph visible and running
 - [x] Architecture diagram on README
 - [x] Written walkthrough in repo explaining design decisions
-- [ ] Repo is private, clean, professional — ready to flip public
-- [ ] A technical reviewer browsing the repo sees infrastructure
+- [x] Repo is private, clean, professional — ready to flip public
+- [x] A technical reviewer browsing the repo sees infrastructure
       capability, not scripts
 
 ---

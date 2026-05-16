@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-16 (session 7)
+
+**Started from:** Both arcs complete, no active work. Repo public but missing CI, setup docs, and presentation polish.
+
+**Did:** Full four-phase audit (baseline, internal review, landscape scan, synthesis). Executed 7 improvement moves: GitHub Actions CI, .env.example, requirements.txt, portable dbt path, 2 custom generic test macros + 3 singular tests, README badges. Wrote AUDIT.md and logged decisions.
+
+**State:** All audit moves complete. CI green. dbt docs live at msshawnp.github.io/cinderhaven-data-platform/. Custom tests parse clean (not yet run against live DB). No active arc.
+
+**Next:** No active arc. Options: (1) run custom tests against Fly.io Postgres to confirm pass, (2) start data-hygiene portfolio piece using cinderhaven-data-dirty, (3) address dbt deprecation warnings about test argument syntax.
+
+---
+
 ## Session — 2026-05-15 (session 6)
 
 **Phase:** Dirty dataset arc — complete.
