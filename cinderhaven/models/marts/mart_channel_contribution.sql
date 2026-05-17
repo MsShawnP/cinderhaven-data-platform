@@ -20,7 +20,12 @@ with revenue as (
             else r.channel_type
         end as channel_type,
         sum(o.line_total) as gross_revenue,
-        sum(o.quantity * p.cogs_per_unit) as total_cogs
+        sum(
+            case when o.channel = 'DTC'
+                then o.quantity * p.cogs_per_unit
+                else o.quantity * p.case_pack_qty * p.cogs_per_unit
+            end
+        ) as total_cogs
     from {{ ref('fct_orders') }} o
     left join {{ ref('dim_retailers') }} r
         on o.retailer_id = r.retailer_id
