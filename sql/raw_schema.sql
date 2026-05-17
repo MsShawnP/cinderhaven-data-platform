@@ -15,7 +15,7 @@ CREATE SCHEMA IF NOT EXISTS raw;
 -- REFERENCE / DIMENSION SOURCES
 -- ============================================================
 
--- 90 SKUs across 3 product lines. Contains intentional data quality
+-- 50 SKUs across 3 product lines. Contains intentional data quality
 -- defects (invalid GTINs, missing brand_owner, inconsistent serving_size).
 CREATE TABLE IF NOT EXISTS raw.product_master (
     sku                     TEXT,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS raw.edi_requirements (
 -- PRICING SOURCES
 -- ============================================================
 
--- 90 SKU-level cost and pricing structure.
+-- 50 SKU-level cost and pricing structure.
 CREATE TABLE IF NOT EXISTS raw.sku_costs (
     sku                         TEXT PRIMARY KEY,
     cogs_per_unit               NUMERIC(8,2) NOT NULL,
@@ -115,12 +115,14 @@ CREATE TABLE IF NOT EXISTS raw.sku_costs (
     wholesale_whole_foods       NUMERIC(8,2) NOT NULL,
     wholesale_regional          NUMERIC(8,2) NOT NULL,
     wholesale_unfi              NUMERIC(8,2) NOT NULL,
+    wholesale_kehe              NUMERIC(8,2) NOT NULL,
     wholesale_dtc               NUMERIC(8,2) NOT NULL,
     trade_spend_pct_walmart     NUMERIC(5,4) NOT NULL,
     trade_spend_pct_costco      NUMERIC(5,4) NOT NULL,
     trade_spend_pct_whole_foods NUMERIC(5,4) NOT NULL,
     trade_spend_pct_regional    NUMERIC(5,4) NOT NULL,
     trade_spend_pct_unfi        NUMERIC(5,4) NOT NULL,
+    trade_spend_pct_kehe        NUMERIC(5,4) NOT NULL,
     trade_spend_pct_dtc         NUMERIC(5,4) NOT NULL
 );
 
@@ -166,7 +168,7 @@ CREATE TABLE IF NOT EXISTS raw.promotions (
 -- TRANSACTION SOURCES
 -- ============================================================
 
--- 5,838 purchase orders.
+-- 11,634 purchase orders.
 CREATE TABLE IF NOT EXISTS raw.orders (
     order_id                        TEXT PRIMARY KEY,
     retailer_id                     TEXT NOT NULL,
@@ -190,7 +192,7 @@ CREATE TABLE IF NOT EXISTS raw.order_lines (
     line_total              NUMERIC(10,2) NOT NULL
 );
 
--- 5,838 shipment records.
+-- 11,634 shipment records.
 CREATE TABLE IF NOT EXISTS raw.shipments (
     shipment_id             TEXT PRIMARY KEY,
     order_id                TEXT NOT NULL,
@@ -208,7 +210,7 @@ CREATE TABLE IF NOT EXISTS raw.shipments (
     asn_sent_late           INTEGER NOT NULL DEFAULT 0
 );
 
--- 5,838 pack/label compliance records.
+-- 11,634 pack/label compliance records.
 CREATE TABLE IF NOT EXISTS raw.pack_records (
     pack_record_id              INTEGER PRIMARY KEY,
     order_id                    TEXT NOT NULL,
@@ -230,7 +232,7 @@ CREATE TABLE IF NOT EXISTS raw.pack_records (
 -- SALES / POS SOURCES
 -- ============================================================
 
--- 1,118,009 weekly scan data (POS) records.
+-- ~977K weekly scan data (POS) records.
 CREATE TABLE IF NOT EXISTS raw.scan_data (
     sku                     TEXT NOT NULL,
     store_id                TEXT NOT NULL,
@@ -253,7 +255,7 @@ CREATE TABLE IF NOT EXISTS raw.chargebacks (
 -- DEDUCTION / DISPUTE SOURCES
 -- ============================================================
 
--- 3,087 deduction records.
+-- 13,496 deduction records.
 CREATE TABLE IF NOT EXISTS raw.deductions (
     deduction_id            TEXT PRIMARY KEY,
     retailer_id             TEXT NOT NULL,
@@ -325,7 +327,7 @@ CREATE TABLE IF NOT EXISTS raw.post_audit_claims (
 -- DTC / E-COMMERCE SOURCES
 -- ============================================================
 
--- ~10,000 Shopify DTC order headers.
+-- ~79,000 Shopify DTC order headers.
 CREATE TABLE IF NOT EXISTS raw.shopify_orders (
     order_id                TEXT PRIMARY KEY,
     order_number            INTEGER NOT NULL,

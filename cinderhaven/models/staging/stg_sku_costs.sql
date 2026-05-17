@@ -13,12 +13,14 @@ staged as (
         wholesale_whole_foods,
         wholesale_regional,
         wholesale_unfi,
+        wholesale_kehe,
         wholesale_dtc,
         trade_spend_pct_walmart,
         trade_spend_pct_costco,
         trade_spend_pct_whole_foods,
         trade_spend_pct_regional,
         trade_spend_pct_unfi,
+        trade_spend_pct_kehe,
         trade_spend_pct_dtc
     from source
 )

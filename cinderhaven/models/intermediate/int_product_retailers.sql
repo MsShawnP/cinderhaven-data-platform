@@ -25,6 +25,8 @@ retailer_prices as (
     union all
     select sku, 'UNFI', wholesale_unfi, trade_spend_pct_unfi from costs
     union all
+    select sku, 'KeHE', wholesale_kehe, trade_spend_pct_kehe from costs
+    union all
     select sku, 'DTC', wholesale_dtc, trade_spend_pct_dtc from costs
 ),
 
