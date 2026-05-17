@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-05-17 14:25
+
+**What changed:** Committing to data integrity arc after four-phase audit.
+
+**Why:** Downstream projects show bad math. Audit found root cause: SQLite dataset rebuilt (50 SKUs, 11.6K orders, 79K Shopify, 13.5K deductions) but Postgres never re-loaded — still has old data (90 SKUs, 5.8K orders). Also missing source freshness, reconciliation tests, and reload procedure.
+
+**State:** AUDIT.md written (4 phases). PLAN.md updated with new arc (4 steps, 13 tasks). No code changes yet — all findings are documented, no fixes applied. Postgres still stale.
+
+**Next:** Start Step 1 — scale Fly.io to 1GB, start proxy, apply DDL, re-run ingestion, run dbt build.
+
+---
+
 ## Session — 2026-05-16 (session 7)
 
 **Started from:** Both arcs complete, no active work. Repo public but missing CI, setup docs, and presentation polish.

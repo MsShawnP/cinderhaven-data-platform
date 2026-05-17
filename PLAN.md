@@ -5,6 +5,97 @@ session. For session-by-session state, see HANDOFF.md.
 
 ---
 
+## Goal (2026-05-17 — data integrity arc)
+
+Fix pipeline drift and add the integrity layer that prevents it
+from recurring. Prompted by bad math in downstream projects caused
+by a dataset rebuild that was never propagated to Postgres.
+
+**Source:** Audit Phase 4 (2026-05-17)
+**Tier:** Medium
+
+### Why this arc, why now
+
+Every downstream portfolio project depends on this platform for
+consistent financial figures. The dataset was rebuilt (50 SKUs,
+11.6K orders, 79K Shopify, 13.5K deductions) but Postgres still
+has the old data (90 SKUs, 5.8K orders). Nothing else can ship
+with correct numbers until this is fixed.
+
+### Tasks
+
+#### Step 1: Reload Postgres from SQLite
+
+- [ ] S1.1: Scale Fly.io to 1GB, start proxy
+    - Done when: `flyctl proxy 5432` is running
+- [ ] S1.2: Apply DDL changes to Postgres (KeHE columns)
+    - Done when: `raw.sku_costs` has `wholesale_kehe` and
+      `trade_spend_pct_kehe` columns
+- [ ] S1.3: Re-run ingestion script (full reload, not --resume)
+    - Done when: row counts match SQLite source (50 SKUs,
+      11.6K orders, 79K Shopify, ~977K scan_data)
+- [ ] S1.4: Run `dbt build` and verify all tests pass
+    - Done when: zero failures, mart_channel_contribution
+      materialized with sane COGS margins
+- [ ] S1.5: Scale Fly.io back to 256MB
+    - Done when: machine is back at steady-state size
+
+#### Step 2: Add integrity layer (packages + freshness + descriptions)
+
+- [ ] S2.1: Create packages.yml with dbt_utils and dbt_expectations
+    - Done when: `dbt deps` installs both packages
+- [ ] S2.2: Configure source freshness in sources.yml
+    - Done when: `dbt source freshness` runs without errors,
+      warn/error thresholds set on key tables
+- [ ] S2.3: Update stale descriptions in sources.yml and schema.yml
+    - Done when: row counts and descriptions match the rebuilt
+      dataset (50 SKUs, 79K Shopify, 11.6K orders, etc.)
+- [ ] S2.4: Add row-count sanity tests on key tables
+    - Done when: `dbt test` includes row-count-between tests
+      on product_master, orders, shopify_orders, deductions
+
+#### Step 3: Add cross-layer reconciliation tests
+
+- [ ] S3.1: assert_fct_orders_revenue_matches_staging
+    - Done when: singular test validates fct_orders line_total
+      sum equals stg_order_lines + stg_shopify_order_lines sums
+- [ ] S3.2: assert_mart_revenue_matches_fct
+    - Done when: singular test validates mart_channel_contribution
+      gross_revenue by channel equals fct_orders by channel
+- [ ] S3.3: assert_deduction_totals_agree
+    - Done when: singular test validates fct_deductions total
+      equals stg_deductions total
+- [ ] S3.4: assert_cogs_positive_margin
+    - Done when: singular test validates no channel has negative
+      gross margin in mart_channel_contribution
+
+#### Step 4: Create reload script
+
+- [ ] S4.1: Write reload script that chains full pipeline
+    - Done when: single command runs DDL → ingest → dbt build,
+      with status output and error handling
+- [ ] S4.2: Document reload procedure in README
+    - Done when: README has a "Reloading Data" section with
+      prerequisites and usage
+
+### Definition of done
+
+- [ ] Postgres row counts match SQLite source
+- [ ] All dbt tests pass (existing + new reconciliation tests)
+- [ ] Source freshness configured and reporting
+- [ ] Source/schema descriptions accurate
+- [ ] Reload script exists and works
+- [ ] Downstream projects can verify agreement with platform numbers
+
+### Out of scope
+
+- Elementary / dynamic anomaly detection (needs recurring loads)
+- Model contracts (future enhancement, after integrity layer works)
+- Ingestion script refactoring (hardcoded paths are cosmetic)
+- audit_helper package (no migration use case)
+
+---
+
 ## Goal (2026-05-15 — dirty dataset arc, COMPLETE)
 
 Create a standalone repository containing a realistically degraded
