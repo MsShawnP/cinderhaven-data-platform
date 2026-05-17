@@ -13,14 +13,14 @@ sources:
       # ── Reference / Dimension ──────────────────────────────
       - name: product_master
         description: >
-          90 SKUs across 3 product lines (Artisan Sauces, Pantry Staples,
+          50 SKUs across 3 product lines (Artisan Sauces, Pantry Staples,
           Specialty Condiments). Contains intentional data quality defects
           for staging-layer cleaning (invalid GTINs, missing brand_owner,
           inconsistent serving_size).
 
       - name: stores
         description: >
-          902 retail locations across 11 retailers. Includes aggregated
+          903 retail locations across 11 retailers. Includes aggregated
           channel rows for e-commerce and warehouse-direct.
 
       - name: retailers
@@ -47,92 +47,124 @@ sources:
       # ── Pricing ────────────────────────────────────────────
       - name: sku_costs
         description: >
-          90 SKU-level cost and pricing structure. Includes COGS,
-          landed cost, retailer-specific wholesale prices, and
-          trade spend percentages.
+          50 SKU-level cost and pricing structure. Includes COGS,
+          landed cost, retailer-specific wholesale prices (including
+          KeHE and DTC), and trade spend percentages.
 
       - name: price_history
         description: >
-          398 historical wholesale price changes by SKU/retailer.
+          234 historical wholesale price changes by SKU/retailer.
+        loaded_at_field: effective_date
+        freshness:
+          warn_after: {count: 90, period: day}
+          error_after: {count: 180, period: day}
 
       # ── Distribution & Promotion ───────────────────────────
       - name: distribution_log
         description: >
-          12,507 SKU-store authorization records. Tracks when SKUs
+          7,210 SKU-store authorization records. Tracks when SKUs
           were authorized and deauthorized at each store.
+        loaded_at_field: authorized_date
+        freshness:
+          warn_after: {count: 90, period: day}
+          error_after: {count: 180, period: day}
 
       - name: promotions
         description: >
-          188 promotional events with discount depth, duration,
+          185 promotional events with discount depth, duration,
           cost, and funding mechanism.
 
       # ── Transactions ───────────────────────────────────────
       - name: orders
         description: >
-          5,838 B2B purchase orders from retailers. Grain: one row
+          11,634 B2B purchase orders from retailers. Grain: one row
           per order header.
+        loaded_at_field: po_date
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: order_lines
         description: >
-          30,127 B2B order line items. Grain: one row per SKU per
+          59,496 B2B order line items. Grain: one row per SKU per
           order.
 
       - name: shipments
         description: >
-          5,838 shipment records with carrier, BOL, POD, and ASN
+          11,634 shipment records with carrier, BOL, POD, and ASN
           compliance flags.
+        loaded_at_field: ship_date
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: pack_records
         description: >
-          5,838 pack/label compliance records. Tracks pick-pack
+          11,634 pack/label compliance records. Tracks pick-pack
           accuracy, label scannability, and evidence documentation.
 
       # ── Sales / POS ────────────────────────────────────────
       - name: scan_data
         description: >
-          1,118,009 weekly POS scan records. Grain: SKU × store ×
+          977,171 weekly POS scan records. Grain: SKU x store x
           week_ending. Covers all retailers via store_id join.
+        loaded_at_field: week_ending
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: chargebacks
         description: >
-          381 chargeback events in legacy flat format. Pre-dates
+          761 chargeback events in legacy flat format. Pre-dates
           the structured deductions pipeline.
 
       # ── Deductions / Disputes ──────────────────────────────
       - name: deductions
         description: >
-          3,087 deduction records from retailer remittances. Includes
+          13,496 deduction records from retailer remittances. Includes
           type classification, vagueness flags, double-dip detection,
           and post-audit markers.
+        loaded_at_field: deduction_date
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: disputes
         description: >
-          1,410 dispute filing records. Tracks evidence quality,
+          6,105 dispute filing records. Tracks evidence quality,
           filing timeliness, outcome, and labor hours.
 
       - name: dispute_evidence
         description: >
-          3,092 evidence items linked to disputes. Tracks what was
+          11,525 evidence items linked to disputes. Tracks what was
           submitted vs. required per dispute.
 
       - name: remittances
         description: >
-          515 remittance (payment) bundles from retailers. Includes
+          1,278 remittance (payment) bundles from retailers. Includes
           gross/net amounts, total deductions, and clarity rating.
+        loaded_at_field: received_date
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: post_audit_claims
         description: >
-          45 retroactive post-audit claims from third-party auditors.
+          38 retroactive post-audit claims from third-party auditors.
           Tracks lookback period and claim type.
 
       # ── DTC / E-Commerce ───────────────────────────────────
       - name: shopify_orders
         description: >
-          10,000 Shopify DTC order headers. Synthetic data covering
-          the 18-month window with seasonal patterns, discount codes,
-          and fulfillment tracking.
+          79,000 Shopify DTC order headers. Synthetic data covering
+          Jan 2024 through Dec 2026 with seasonal patterns, discount
+          codes, and fulfillment tracking.
+        loaded_at_field: created_at
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 90, period: day}
 
       - name: shopify_order_lines
         description: >
-          19,347 Shopify DTC line items. Joins to shopify_orders on
+          189,714 Shopify DTC line items. Joins to shopify_orders on
           order_id and to product_master on SKU.

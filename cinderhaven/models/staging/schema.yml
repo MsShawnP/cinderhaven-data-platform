@@ -3,7 +3,11 @@ version: 2
 models:
   # ── Reference / Dimension ──────────────────────────────
   - name: stg_product_master
-    description: Cleaned product catalog — 90 SKUs across 3 product lines.
+    description: Cleaned product catalog — 50 SKUs across 3 product lines.
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 40
+          max_value: 60
     columns:
       - name: sku
         description: Primary key — Cinderhaven SKU code (e.g. CHP-0001).
@@ -27,7 +31,7 @@ models:
               values: ['sauce', 'dry', 'oil', 'vinegar', 'condiment', 'hot_sauce']
 
   - name: stg_stores
-    description: Retail locations — 902 stores across 11 retailers.
+    description: Retail locations — 903 stores across 11 retailers.
     columns:
       - name: store_id
         description: Primary key — unique store identifier.
@@ -87,7 +91,7 @@ models:
 
   # ── Pricing ────────────────────────────────────────────
   - name: stg_sku_costs
-    description: SKU-level cost and pricing structure.
+    description: SKU-level cost and pricing structure — 50 SKUs.
     columns:
       - name: sku
         description: Primary key — SKU code, foreign key to product_master.
@@ -100,7 +104,7 @@ models:
         tests: [not_null]
 
   - name: stg_price_history
-    description: Historical wholesale price changes by SKU/retailer.
+    description: Historical wholesale price changes by SKU/retailer — 234 records.
     columns:
       - name: sku
         description: SKU code — foreign key to product_master.
@@ -114,7 +118,7 @@ models:
 
   # ── Distribution & Promotion ───────────────────────────
   - name: stg_distribution_log
-    description: SKU-store authorization records.
+    description: SKU-store authorization records — 7,210 records.
     columns:
       - name: sku
         description: SKU code authorized for distribution.
@@ -127,7 +131,7 @@ models:
         tests: [not_null]
 
   - name: stg_promotions
-    description: Promotional events with discount and funding details.
+    description: Promotional events with discount and funding details — 185 records.
     columns:
       - name: promo_id
         description: Unique promotion identifier.
@@ -141,7 +145,11 @@ models:
 
   # ── Transactions ───────────────────────────────────────
   - name: stg_orders
-    description: B2B purchase orders from retailers.
+    description: B2B purchase orders from retailers — 11,634 orders.
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 10000
+          max_value: 15000
     columns:
       - name: order_id
         description: Primary key — unique purchase order identifier.
@@ -157,7 +165,7 @@ models:
         tests: [not_null]
 
   - name: stg_order_lines
-    description: B2B order line items.
+    description: B2B order line items — 59,496 lines.
     columns:
       - name: order_line_id
         description: Primary key — unique line item identifier.
@@ -170,7 +178,7 @@ models:
         tests: [not_null]
 
   - name: stg_shipments
-    description: Shipment records with compliance flags.
+    description: Shipment records with compliance flags — 11,634 shipments.
     columns:
       - name: shipment_id
         description: Primary key — unique shipment identifier.
@@ -183,7 +191,7 @@ models:
         tests: [not_null]
 
   - name: stg_pack_records
-    description: Pack/label compliance records.
+    description: Pack/label compliance records — 11,634 records.
     columns:
       - name: pack_record_id
         description: Primary key — unique pack record identifier.
@@ -194,7 +202,7 @@ models:
 
   # ── Sales / POS ────────────────────────────────────────
   - name: stg_scan_data
-    description: Weekly POS scan data — 1.1M rows.
+    description: Weekly POS scan data — 977K rows.
     columns:
       - name: sku
         description: Product scanned at point of sale.
@@ -207,7 +215,7 @@ models:
         tests: [not_null]
 
   - name: stg_chargebacks
-    description: Legacy chargeback events.
+    description: Legacy chargeback events — 761 records.
     columns:
       - name: retailer
         description: Retailer that issued the chargeback.
@@ -218,7 +226,11 @@ models:
 
   # ── Deductions / Disputes ──────────────────────────────
   - name: stg_deductions
-    description: Deduction records from retailer remittances.
+    description: Deduction records from retailer remittances — 13,496 records.
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 12000
+          max_value: 16000
     columns:
       - name: deduction_id
         description: Primary key — unique deduction identifier.
@@ -237,7 +249,7 @@ models:
         tests: [not_null]
 
   - name: stg_disputes
-    description: Dispute filing records.
+    description: Dispute filing records — 6,105 disputes.
     columns:
       - name: dispute_id
         description: Primary key — unique dispute identifier.
@@ -261,7 +273,7 @@ models:
                 - abandoned
 
   - name: stg_dispute_evidence
-    description: Evidence items linked to disputes.
+    description: Evidence items linked to disputes — 11,525 records.
     columns:
       - name: evidence_id
         description: Primary key — unique evidence item identifier.
@@ -271,7 +283,7 @@ models:
         tests: [not_null]
 
   - name: stg_remittances
-    description: Remittance payment bundles from retailers.
+    description: Remittance payment bundles from retailers — 1,278 records.
     columns:
       - name: remittance_id
         description: Primary key — unique remittance identifier.
@@ -284,7 +296,7 @@ models:
         tests: [not_null]
 
   - name: stg_post_audit_claims
-    description: Retroactive post-audit claims.
+    description: Retroactive post-audit claims — 38 records.
     columns:
       - name: claim_id
         description: Primary key — unique claim identifier.
@@ -295,7 +307,11 @@ models:
 
   # ── DTC / E-Commerce ──────────────────────────────────
   - name: stg_shopify_orders
-    description: Shopify DTC order headers.
+    description: Shopify DTC order headers — 79,000 orders.
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 70000
+          max_value: 90000
     columns:
       - name: order_id
         description: Primary key — Shopify order ID.
@@ -323,7 +339,7 @@ models:
               values: ['fulfilled', 'unfulfilled', 'partial']
 
   - name: stg_shopify_order_lines
-    description: Shopify DTC line items.
+    description: Shopify DTC line items — 189,714 lines.
     columns:
       - name: line_id
         description: Primary key — unique line item identifier.
