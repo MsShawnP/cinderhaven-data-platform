@@ -4,8 +4,8 @@
 [![dbt docs](https://img.shields.io/badge/dbt%20docs-live-blue)](https://msshawnp.github.io/cinderhaven-data-platform/)
 
 Modern data platform for a fictional $25M specialty food brand.
-Postgres + dbt + Dagster pipeline covering 23 source tables, 35
-transformation models, and 188 data quality tests. Built to
+Postgres + dbt + Dagster pipeline covering 30 source tables, 42
+transformation models, and 184 data quality tests. Built to
 demonstrate that the practice can ship real data infrastructure,
 not analytical scripts on bundled files.
 
@@ -27,17 +27,17 @@ graph LR
     end
 
     subgraph "dbt"
-        D1["Staging<br/>23 views"]
+        D1["Staging<br/>30 views"]
         D2["Intermediate<br/>3 views"]
         D3["Marts<br/>9 tables"]
     end
 
     subgraph Quality
-        T["188 tests<br/>unique · not_null<br/>reconciliation · freshness"]
+        T["184 tests<br/>unique · not_null<br/>reconciliation · freshness"]
     end
 
     subgraph Orchestration
-        G["Dagster<br/>34 assets<br/>daily schedule"]
+        G["Dagster<br/>42 assets<br/>daily schedule"]
     end
 
     S1 --> I
@@ -54,8 +54,8 @@ graph LR
 
 | Layer | Count | Materialization | Purpose |
 |-------|-------|-----------------|---------|
-| Raw | 23 tables | table | Faithful copy of source data |
-| Staging | 23 models | view | Type casting, cleaning, null handling |
+| Raw | 30 tables | table | Faithful copy of source data |
+| Staging | 30 models | view | Type casting, cleaning, null handling |
 | Intermediate | 3 models | view | Crosswalks, entity resolution, payment joins |
 | Marts | 9 models | table | Dimensions + facts + channel contribution |
 
@@ -70,7 +70,7 @@ graph LR
 
 ## Data quality
 
-188 dbt tests validate the pipeline:
+184 dbt tests validate the pipeline:
 
 - **Unique keys** on every primary key
 - **Not-null** on required business columns
@@ -88,7 +88,7 @@ graph LR
 cinderhaven-data-platform/
   cinderhaven/              # dbt project
     models/
-      staging/              # 23 staging views + schema.yml
+      staging/              # 30 staging views + schema.yml
       intermediate/         # 3 crosswalk/resolution views
       marts/                # 3 dims + 5 facts (tables)
     dbt_project.yml
@@ -103,7 +103,7 @@ cinderhaven-data-platform/
     ingest_sqlite_to_postgres.py   # COPY-based bulk loader
     generate_shopify_orders.py     # DTC data generation
   sql/
-    raw_schema.sql          # 23 CREATE TABLE statements
+    raw_schema.sql          # 30 CREATE TABLE statements
   docs/
     architecture.md         # Architecture diagram + pipeline flow
     walkthrough.md          # Design decisions walkthrough

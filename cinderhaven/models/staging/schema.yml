@@ -43,6 +43,19 @@ models:
         description: Regional chain or banner name within the retailer.
         tests: [not_null]
 
+  - name: stg_distributors
+    description: Distributor entities — 2 distributors (UNFI, KeHE).
+    columns:
+      - name: distributor_id
+        description: Primary key — unique distributor identifier.
+        tests: [unique, not_null]
+      - name: name
+        description: Distributor display name.
+        tests: [not_null]
+      - name: type
+        description: Distributor type classification.
+        tests: [not_null]
+
   - name: stg_retailers
     description: Retailer entities — 11 retailers.
     columns:
@@ -77,6 +90,29 @@ models:
         tests: [not_null]
       - name: deduction_type
         description: Deduction category this code maps to.
+        tests: [not_null]
+
+  - name: stg_retailer_requirements
+    description: Retailer field-level requirements — 180 records.
+    columns:
+      - name: retailer
+        description: Retailer name.
+        tests: [not_null]
+      - name: field
+        description: Requirement field name.
+        tests: [not_null]
+      - name: is_required
+        description: Whether this field is required (boolean, cast from integer).
+        tests: [not_null]
+
+  - name: stg_sku_distributors
+    description: SKU-to-distributor assignments — 55 records.
+    columns:
+      - name: sku
+        description: Foreign key to product_master SKU.
+        tests: [not_null]
+      - name: distributor_id
+        description: Foreign key to distributors.
         tests: [not_null]
 
   - name: stg_edi_requirements
@@ -337,6 +373,76 @@ models:
           - not_null
           - accepted_values:
               values: ['fulfilled', 'unfulfilled', 'partial']
+
+  - name: stg_shopify_transactions
+    description: Shopify payment transactions — 29,533 records.
+    columns:
+      - name: transaction_id
+        description: Primary key — unique transaction identifier.
+        tests: [unique, not_null]
+      - name: order_id
+        description: Foreign key to the Shopify order.
+        tests: [not_null]
+      - name: transaction_date
+        description: Date the transaction was processed.
+        tests: [not_null]
+      - name: payment_method
+        description: Payment method used (credit_card, debit_card, etc.).
+        tests: [not_null]
+      - name: status
+        description: Transaction status.
+        tests: [not_null]
+
+  - name: stg_shopify_payouts
+    description: Shopify payout batches — 191 records.
+    columns:
+      - name: payout_id
+        description: Primary key — unique payout identifier.
+        tests: [unique, not_null]
+      - name: payout_date
+        description: Date the payout was disbursed.
+        tests: [not_null]
+      - name: status
+        description: Payout status.
+        tests: [not_null]
+
+  - name: stg_shopify_refunds
+    description: Shopify DTC refunds — 1,184 records.
+    columns:
+      - name: refund_id
+        description: Primary key — unique refund identifier.
+        tests: [unique, not_null]
+      - name: order_id
+        description: Foreign key to the original Shopify order.
+        tests: [not_null]
+      - name: refund_date
+        description: Date the refund was processed.
+        tests: [not_null]
+      - name: refund_amount
+        description: Refund amount in USD.
+        tests: [not_null]
+      - name: refund_type
+        description: Type of refund (full or partial).
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['full', 'partial']
+
+  - name: stg_shopify_chargebacks
+    description: Shopify DTC chargebacks — 232 records.
+    columns:
+      - name: chargeback_id
+        description: Primary key — unique chargeback identifier.
+        tests: [unique, not_null]
+      - name: order_id
+        description: Foreign key to the disputed Shopify order.
+        tests: [not_null]
+      - name: chargeback_date
+        description: Date the chargeback was filed.
+        tests: [not_null]
+      - name: chargeback_amount
+        description: Disputed amount in USD.
+        tests: [not_null]
 
   - name: stg_shopify_order_lines
     description: Shopify DTC line items — 189,714 lines.

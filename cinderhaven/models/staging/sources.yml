@@ -23,6 +23,11 @@ sources:
           903 retail locations across 11 retailers. Includes aggregated
           channel rows for e-commerce and warehouse-direct.
 
+      - name: distributors
+        description: >
+          2 distributor entities (UNFI and KeHE). Includes margin
+          percentages, payment terms, and coverage area.
+
       - name: retailers
         description: >
           11 retailer entities (6 contracted + 5 regional chains).
@@ -38,6 +43,16 @@ sources:
         description: >
           97 retailer-specific deduction reason codes. Maps retailer
           code IDs to human-readable names and deduction types.
+
+      - name: retailer_requirements
+        description: >
+          180 retailer field-level requirements for labeling, packaging,
+          and compliance. Grain: one row per retailer × field.
+
+      - name: sku_distributors
+        description: >
+          55 SKU-to-distributor assignments. Junction table linking
+          product_master SKUs to distributors.
 
       - name: edi_requirements
         description: >
@@ -163,6 +178,26 @@ sources:
         freshness:
           warn_after: {count: 30, period: day}
           error_after: {count: 90, period: day}
+
+      - name: shopify_transactions
+        description: >
+          29,533 Shopify payment transactions. Grain: one row per
+          payment attempt. Includes processing fees and net amounts.
+
+      - name: shopify_payouts
+        description: >
+          191 Shopify payout batches. Aggregated disbursements from
+          Shopify Payments to bank account.
+
+      - name: shopify_refunds
+        description: >
+          1,184 Shopify DTC refund records. Tracks refund amount,
+          type (full/partial), and reason per order.
+
+      - name: shopify_chargebacks
+        description: >
+          232 Shopify DTC chargeback events. Tracks disputed charges,
+          fees, and outcomes.
 
       - name: shopify_order_lines
         description: >

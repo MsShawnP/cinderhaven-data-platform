@@ -1,5 +1,5 @@
 -- Cinderhaven Data Platform: Raw Schema DDL
--- Maps all 21 data tables from cinderhaven-data SQLite to Postgres.
+-- Maps all 30 data tables from cinderhaven-data SQLite to Postgres.
 -- Schema: raw (landing zone, mirrors source structure)
 --
 -- Type mapping rationale:
@@ -56,6 +56,18 @@ CREATE TABLE IF NOT EXISTS raw.stores (
     is_aggregated_channel   INTEGER NOT NULL DEFAULT 0
 );
 
+-- 2 distributor entities (UNFI and KeHE).
+CREATE TABLE IF NOT EXISTS raw.distributors (
+    distributor_id          TEXT PRIMARY KEY,
+    name                    TEXT NOT NULL,
+    type                    TEXT NOT NULL,
+    coverage                TEXT,
+    margin_pct              NUMERIC(5,4),
+    payment_terms_days      INTEGER,
+    headquarters            TEXT,
+    notes                   TEXT
+);
+
 -- 11 retailer entities (6 contracted + 5 regional chains).
 CREATE TABLE IF NOT EXISTS raw.retailers (
     retailer_id             TEXT PRIMARY KEY,
@@ -87,6 +99,21 @@ CREATE TABLE IF NOT EXISTS raw.deduction_codes (
     name                    TEXT NOT NULL,
     deduction_type          TEXT NOT NULL,
     is_published            INTEGER NOT NULL DEFAULT 0
+);
+
+-- 180 retailer field-level requirements (labeling, packaging, compliance).
+CREATE TABLE IF NOT EXISTS raw.retailer_requirements (
+    retailer                TEXT NOT NULL,
+    field                   TEXT NOT NULL,
+    required                INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (retailer, field)
+);
+
+-- 55 SKU-to-distributor assignments.
+CREATE TABLE IF NOT EXISTS raw.sku_distributors (
+    sku                     TEXT NOT NULL,
+    distributor_id          TEXT NOT NULL,
+    PRIMARY KEY (sku, distributor_id)
 );
 
 -- 42 EDI compliance requirements by retailer.
@@ -347,6 +374,52 @@ CREATE TABLE IF NOT EXISTS raw.shopify_orders (
     carrier                 TEXT,
     tracking_number         TEXT,
     fulfilled_at            TEXT
+);
+
+-- 29,533 Shopify payment transactions.
+CREATE TABLE IF NOT EXISTS raw.shopify_transactions (
+    transaction_id          TEXT PRIMARY KEY,
+    order_id                TEXT NOT NULL,
+    transaction_date        DATE NOT NULL,
+    order_amount            NUMERIC(10,2) NOT NULL,
+    processing_fee          NUMERIC(10,2) NOT NULL,
+    net_amount              NUMERIC(10,2) NOT NULL,
+    payment_method          TEXT NOT NULL,
+    status                  TEXT NOT NULL
+);
+
+-- 191 Shopify payout batches.
+CREATE TABLE IF NOT EXISTS raw.shopify_payouts (
+    payout_id               TEXT PRIMARY KEY,
+    payout_date             DATE NOT NULL,
+    gross_amount            NUMERIC(12,2) NOT NULL,
+    fees_amount             NUMERIC(10,2) NOT NULL,
+    refunds_amount          NUMERIC(10,2) NOT NULL,
+    chargebacks_amount      NUMERIC(10,2) NOT NULL,
+    net_amount              NUMERIC(12,2) NOT NULL,
+    transaction_count       INTEGER NOT NULL,
+    status                  TEXT NOT NULL
+);
+
+-- 1,184 Shopify DTC refund records.
+CREATE TABLE IF NOT EXISTS raw.shopify_refunds (
+    refund_id               TEXT PRIMARY KEY,
+    order_id                TEXT NOT NULL,
+    refund_date             DATE NOT NULL,
+    refund_amount           NUMERIC(10,2) NOT NULL,
+    refund_type             TEXT NOT NULL,
+    reason                  TEXT
+);
+
+-- 232 Shopify DTC chargeback events.
+CREATE TABLE IF NOT EXISTS raw.shopify_chargebacks (
+    chargeback_id           TEXT PRIMARY KEY,
+    order_id                TEXT NOT NULL,
+    chargeback_date         DATE NOT NULL,
+    chargeback_amount       NUMERIC(10,2) NOT NULL,
+    chargeback_fee          NUMERIC(10,2) NOT NULL,
+    reason                  TEXT,
+    outcome                 TEXT
 );
 
 -- ~19,000 Shopify DTC order line items.
