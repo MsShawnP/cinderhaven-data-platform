@@ -1,8 +1,11 @@
 """Generate synthetic Shopify DTC orders for the Cinderhaven platform.
 
-Produces ~10,000 orders over the 18-month window (Dec 2024 - May 2026)
+Produces ~79,000 orders over the full data window (Jan 2024 - Dec 2026)
 with realistic e-commerce patterns: repeat customers, seasonal demand,
-discount codes, and Shopify-style export fields.
+discount codes, and Shopify-style export fields. Calibrated so annual
+DTC revenue lands in the $1.0-1.8M range with AOV of $48-58, matching
+specialty foods F&B benchmarks. Downstream reports filter to current_date
+at query time.
 
 Writes two tables into the cinderhaven-data SQLite database:
   - shopify_orders:      order headers
@@ -25,9 +28,9 @@ from pathlib import Path
 DB_PATH = Path(r"C:\Users\mssha\projects\active\cinderhaven-data\data\cinderhaven_product_master.db")
 SEED = 42
 
-WINDOW_START = date(2024, 12, 1)
-WINDOW_END = date(2026, 5, 31)
-TARGET_ORDERS = 10_000
+WINDOW_START = date(2024, 1, 1)
+WINDOW_END = date(2026, 12, 31)
+TARGET_ORDERS = 79_000
 
 # Seasonal multipliers by month (1.0 = baseline).
 # Higher in Nov-Dec (holiday), lower in Jan-Feb (post-holiday).
@@ -214,7 +217,7 @@ def main():
         )
     """)
 
-    customers = generate_customers(rng)
+    customers = generate_customers(rng, n=15_000)
     month_counts = distribute_orders_by_month(TARGET_ORDERS, rng)
 
     orders = []
@@ -227,8 +230,8 @@ def main():
             customer = rng.choice(customers)
             created_at = random_datetime_in_month(year, month, rng)
 
-            # 1-4 line items per order, weighted toward 1-2.
-            num_lines = rng.choices([1, 2, 3, 4], weights=[40, 35, 18, 7], k=1)[0]
+            # 1-4 line items per order, weighted toward 2-3 (DTC bundle buying).
+            num_lines = rng.choices([1, 2, 3, 4], weights=[22, 33, 28, 17], k=1)[0]
             chosen_skus = rng.sample(skus, min(num_lines, len(skus)))
 
             discount_code, discount_depth = pick_discount(rng)
@@ -237,7 +240,7 @@ def main():
             order_lines = []
             for sku_row in chosen_skus:
                 sku, product_name, msrp = sku_row
-                qty = rng.choices([1, 2, 3], weights=[60, 30, 10], k=1)[0]
+                qty = rng.choices([1, 2, 3], weights=[48, 35, 17], k=1)[0]
                 line_total = round(msrp * qty, 2)
                 subtotal += line_total
                 order_lines.append((sku, product_name, qty, msrp, line_total))
@@ -332,10 +335,15 @@ def main():
     cur.execute("SELECT MIN(created_at), MAX(created_at) FROM shopify_orders")
     date_range = cur.fetchone()
 
+    annual_revenue = total_revenue / 3
+    avg_order_value = total_revenue / order_count if order_count else 0
+
     print(f"\nGenerated:")
     print(f"  {order_count:,} orders")
     print(f"  {line_count_db:,} line items")
     print(f"  ${total_revenue:,.2f} total DTC revenue")
+    print(f"  ${annual_revenue:,.0f} annualized   (target $1.0–1.8M)")
+    print(f"  ${avg_order_value:,.2f} AOV          (target $48–58)")
     print(f"  Date range: {date_range[0][:10]} to {date_range[1][:10]}")
 
     # Repeat buyer stats.
