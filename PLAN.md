@@ -40,8 +40,9 @@ with correct numbers until this is fixed.
     - mart_channel_contribution: 11 channels, $70.2M total revenue
     - fct_orders ↔ mart revenue: $0.00 delta
     - DTC margin 73.2%, B2B margins 40-49% — sane
-- [ ] S1.5: Scale Fly.io back to 256MB
-    - Deferred until all steps complete
+- [x] S1.5: Scale Fly.io back to 256MB
+    - Machine 4d895990fe0668 scaled to 256MB (2026-05-17)
+    - Also wired 7 new tables into dbt staging (30 sources, 42 models)
 
 #### Step 2: Add integrity layer (packages + freshness + descriptions)
 

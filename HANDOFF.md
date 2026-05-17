@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-05-17 19:20
+
+**Started from:** Data integrity arc complete (4 steps done). Worktree branch had 2 unpushed commits. Two loose ends: Fly.io at 1GB, 7 new Postgres tables not in dbt.
+
+**Did:** Pushed integrity-layer commits to main. Scaled Fly.io to 256MB. Wired 7 new tables (distributors, sku_distributors, retailer_requirements, shopify_transactions/payouts/refunds/chargebacks) into dbt with staging models, sources, schema, DDL. dbt build: 226 PASS (42 models + 184 tests). Committed and pushed.
+
+**State:** All 30 source tables have staging models. 42 models, 184 tests, all passing. Fly.io at 256MB. Everything pushed to main.
+
+**Next:** Data integrity arc's only remaining DoD item is "downstream projects can verify agreement with platform numbers" — happens as each downstream project is touched. No immediate platform work. Consider archiving this arc or starting next.
+
+---
+
 ## 2026-05-17 14:25
 
 **What changed:** Committing to data integrity arc after four-phase audit.

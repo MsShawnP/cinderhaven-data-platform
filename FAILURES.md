@@ -93,3 +93,40 @@ scaled back to 256MB. Completed in ~4.5 minutes for all 21 tables.
 **Status:** Resolved
 
 **Tags:** fly.io, postgres, memory, ingestion, scan_data, COPY, OOM
+
+---
+
+### 2026-05-17 — .env file missing in git worktrees breaks dbt auth
+
+**Attempted:** Run `dbt build` from a git worktree
+(`claude/modest-kepler-142242`). profiles.yml reads
+`POSTGRES_PASSWORD` via `env_var()`.
+
+**Why it didn't work:** `.env` is in `.gitignore`, so it only exists
+in the main working copy, not in worktrees. dbt failed with
+"password authentication failed for user postgres."
+
+**What we tried instead:** Set `$env:POSTGRES_PASSWORD` manually in
+the PowerShell session before running dbt. Worked immediately.
+
+**Status:** Resolved (workaround — not a permanent fix)
+
+**Tags:** worktree, .env, dbt, auth, postgres, gitignore
+
+---
+
+### 2026-05-17 — python -m dbt entry point broken in dbt 1.11
+
+**Attempted:** Run `python -m dbt build` to invoke dbt from
+PowerShell.
+
+**Why it didn't work:** dbt 1.11 errors with "'dbt' is a package
+and cannot be directly executed." The `__main__.py` entry point
+doesn't exist or isn't wired up.
+
+**What we tried instead:** `python -m dbt.cli.main build` works
+(with a RuntimeWarning about import order, but executes correctly).
+
+**Status:** Resolved
+
+**Tags:** dbt, python, entry-point, cli, powershell
