@@ -114,6 +114,31 @@ models:
           - not_null
           - positive_value
 
+  - name: mart_channel_contribution
+    description: >
+      Channel-level profitability with layered cost attribution.
+      Grain: one row per channel (retailer or DTC).
+      Layers: revenue → gross margin → post-deduction → post-compliance → net contribution.
+    columns:
+      - name: channel_id
+        description: >
+          Channel identifier — retailer_id for B2B channels, 'DTC' for direct-to-consumer.
+        tests: [unique, not_null]
+      - name: channel_name
+        description: Display name for the channel (retailer name or "DTC").
+        tests: [unique, not_null]
+      - name: gross_revenue
+        description: Total revenue for this channel (sum of order line totals).
+        tests: [not_null]
+      - name: total_cogs
+        description: Total cost of goods sold (quantity × cogs_per_unit).
+        tests: [not_null]
+      - name: layer_4_net_contribution
+        description: >
+          Final net contribution after all cost layers applied
+          (gross margin - deductions - compliance fines - operational overhead).
+        tests: [not_null]
+
   - name: fct_chargebacks
     description: >
       Legacy chargeback events.
