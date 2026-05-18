@@ -30,3 +30,6 @@ logs/
 cinderhaven/target/
 cinderhaven/dbt_packages/
 cinderhaven/logs/
+
+# Generated exports
+output/
