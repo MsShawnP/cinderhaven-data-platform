@@ -26,7 +26,7 @@ import psycopg2
 from datetime import date, timedelta
 
 from seed_config import (
-    ALL_SKUS, DATABASE_URL, RETAILERS, SEASONALITY,
+    ALL_SKUS, CHANNEL_VELOCITY_MULT, DATABASE_URL, RETAILERS, SEASONALITY,
     WINDOW_START, WINDOW_END, init_rng,
 )
 
@@ -41,6 +41,17 @@ DELIST_RISK_SKUS = {
     "RET-REGIONAL": ["CHP-PS-010", "CHP-AS-007", "CHP-SC-006"],
 }
 
+# 1-2 SKUs per retailer in the warning zone: above threshold but declining.
+# These started healthy and are losing velocity — early warning signal.
+BORDERLINE_SKUS = {
+    "RET-WALMART": ["CHP-AS-002", "CHP-SC-004"],
+    "RET-COSTCO": ["CHP-PS-009", "CHP-SC-007"],
+    "RET-WHOLEFOODS": ["CHP-SC-002", "CHP-AS-008"],
+    "RET-SPROUTS": ["CHP-SC-001", "CHP-PS-003"],
+    "RET-KROGER": ["CHP-AS-005", "CHP-SC-001"],
+    "RET-REGIONAL": ["CHP-PS-001", "CHP-SC-009"],
+}
+
 
 def get_week_endings(start: date, end: date) -> list[date]:
     """Generate Saturday week-ending dates covering the window."""
@@ -52,47 +63,79 @@ def get_week_endings(start: date, end: date) -> list[date]:
     return weeks
 
 
-def generate_healthy_velocity(rng, sku_info, week: date, volume_tier: str) -> tuple[int, float]:
+def generate_healthy_velocity(rng, sku_info, week: date, volume_tier: str,
+                              channel_mult: float = 1.0) -> tuple[int, float]:
     """Generate normal healthy scan data for a SKU-store-week."""
     base_units = {"high": 15, "medium": 8, "low": 4}[volume_tier]
     seasonal = SEASONALITY.get(week.month, 1.0)
 
-    # Some product lines sell better
     line_mult = {
         "Artisan Sauces": 1.2,
         "Pantry Staples": 1.0,
         "Specialty Condiments": 0.85,
     }.get(sku_info["product_line"], 1.0)
 
-    units = max(1, int(rng.gauss(base_units * seasonal * line_mult, base_units * 0.3)))
+    adjusted = base_units * seasonal * line_mult * channel_mult
+    units = max(1, int(rng.gauss(adjusted, base_units * 0.3 * channel_mult)))
     unit_price = sku_info["msrp"]
     dollars = round(units * unit_price * rng.uniform(0.85, 1.05), 2)
     return units, dollars
 
 
 def generate_delist_risk_velocity(rng, sku_info, week: date, volume_tier: str,
-                                  week_index: int, total_weeks: int) -> tuple[int, float] | None:
+                                  week_index: int, total_weeks: int,
+                                  channel_mult: float = 1.0) -> tuple[int, float] | None:
     """Generate declining/sparse velocity for delist-risk SKUs.
 
     Returns None to simulate a missing week (sparse reporting).
     """
-    # Sparse weeks: 15-30% chance of no data, increasing over time
     sparsity_rate = 0.15 + 0.15 * (week_index / total_weeks)
     if rng.random() < sparsity_rate:
         return None
 
-    # Low baseline: 1-4 units (vs healthy 5-20)
-    base = rng.uniform(1.5, 3.5)
+    base = rng.uniform(1.5, 3.5) * channel_mult
 
-    # Declining trend: units decrease over time
     decline_factor = 1.0 - 0.5 * (week_index / total_weeks)
     decline_factor = max(0.2, decline_factor)
 
     seasonal = SEASONALITY.get(week.month, 1.0)
-    units = max(1, int(base * decline_factor * seasonal + rng.gauss(0, 0.5)))
+    units = max(1, int(base * decline_factor * seasonal + rng.gauss(0, 0.5 * channel_mult)))
 
     unit_price = sku_info["msrp"]
     dollars = round(units * unit_price * rng.uniform(0.80, 1.0), 2)
+    return units, dollars
+
+
+# Per-retailer target velocity for borderline SKUs (just above threshold).
+# These values land in the warning zone: threshold < velocity < 1.5 * threshold.
+_BORDERLINE_TARGETS = {
+    "RET-WALMART": 3.0,     # threshold 2.5, warning zone 2.5-3.75
+    "RET-COSTCO": 12.0,     # threshold 10.0, warning zone 10.0-15.0
+    "RET-WHOLEFOODS": 2.1,  # threshold 1.5, warning zone 1.5-2.25 (higher to survive int rounding)
+    "RET-KROGER": 3.0,      # threshold 2.5, warning zone 2.5-3.75
+    "RET-SPROUTS": 2.1,     # threshold 1.5, warning zone 1.5-2.25
+    "RET-REGIONAL": 2.1,    # threshold 1.5, warning zone 1.5-2.25
+}
+
+
+def generate_borderline_velocity(rng, sku_info, week: date, volume_tier: str,
+                                 week_index: int, total_weeks: int,
+                                 target_v: float) -> tuple[int, float]:
+    """Generate velocity that starts healthy and declines into the warning zone.
+
+    Recent weeks produce velocity near target_v (just above threshold).
+    Earlier weeks produce higher velocity (so trailing > current = declining).
+    No seasonality — a product losing traction doesn't bounce back for holidays.
+    Low noise so the decline signal is clear in the 8-week rolling averages.
+    """
+    progress = week_index / total_weeks
+    period_mult = 3.0 - 2.0 * progress
+
+    base = target_v * period_mult
+    units = max(1, int(rng.gauss(base, base * 0.08)))
+
+    unit_price = sku_info["msrp"]
+    dollars = round(units * unit_price * rng.uniform(0.88, 1.02), 2)
     return units, dollars
 
 
@@ -135,7 +178,6 @@ def main():
 
     for week_idx, week in enumerate(weeks):
         for store_id, retailer_id, volume_tier in stores:
-            # Find SKUs authorized at this store during this week
             store_skus = [
                 sku for sku in sku_map
                 if (sku, store_id) in authorized
@@ -143,6 +185,9 @@ def main():
             ]
 
             delist_skus = set(DELIST_RISK_SKUS.get(retailer_id, []))
+            border_skus = set(BORDERLINE_SKUS.get(retailer_id, []))
+            ch_mult = CHANNEL_VELOCITY_MULT.get(retailer_id, 1.0)
+            border_target = _BORDERLINE_TARGETS.get(retailer_id, 2.0)
 
             for sku in store_skus:
                 sku_info = sku_map[sku]
@@ -150,14 +195,19 @@ def main():
                 if sku in delist_skus:
                     result = generate_delist_risk_velocity(
                         rng, sku_info, week, volume_tier or "medium",
-                        week_idx, total_weeks
+                        week_idx, total_weeks, ch_mult
                     )
                     if result is None:
                         continue
                     units, dollars = result
+                elif sku in border_skus:
+                    units, dollars = generate_borderline_velocity(
+                        rng, sku_info, week, volume_tier or "medium",
+                        week_idx, total_weeks, border_target
+                    )
                 else:
                     units, dollars = generate_healthy_velocity(
-                        rng, sku_info, week, volume_tier or "medium"
+                        rng, sku_info, week, volume_tier or "medium", ch_mult
                     )
 
                 rows_buf.append((sku, store_id, str(week), units, dollars))

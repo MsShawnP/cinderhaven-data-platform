@@ -103,6 +103,16 @@ RETAILER_STORE_COUNTS = {
     "RET-REGIONAL": 40,
 }
 
+# Club-channel stores (Costco) move 2.5x the units per location vs grocery.
+CHANNEL_VELOCITY_MULT = {
+    "RET-WALMART": 1.0,
+    "RET-COSTCO": 2.5,
+    "RET-WHOLEFOODS": 1.0,
+    "RET-SPROUTS": 1.0,
+    "RET-KROGER": 1.0,
+    "RET-REGIONAL": 1.0,
+}
+
 VOLUME_TIERS = ["high", "medium", "low"]
 REGIONS = ["Northeast", "Southeast", "Midwest", "West", "Southwest"]
 STATES_BY_REGION = {
