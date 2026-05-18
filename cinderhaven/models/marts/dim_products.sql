@@ -1,8 +1,3 @@
--- dim_products: Product dimension with GTIN hierarchy, pricing, and cost.
---
--- Grain: one row per SKU.
--- Combines product_master with sku_costs for a single product lookup.
-
 with products as (
     select * from {{ ref('stg_product_master') }}
 ),
@@ -11,42 +6,48 @@ costs as (
     select * from {{ ref('stg_sku_costs') }}
 ),
 
-final as (
-    select
-        products.sku,
-        products.product_name,
-        products.product_line,
-        products.subcategory,
-        products.gtin14,
-        products.upc,
-        -- GTIN hierarchy: GTIN-14 → UPC (GTIN-12) → SKU
-        case
-            when products.gtin14 is not null and length(products.gtin14) = 14
-            then true else false
-        end as has_valid_gtin,
-        products.case_pack_qty,
-        products.unit_weight_lbs,
-        products.case_weight_lbs,
-        products.case_length_in,
-        products.case_width_in,
-        products.case_height_in,
-        products.msrp,
-        costs.cogs_per_unit,
-        costs.landed_cost_per_unit,
-        costs.wholesale_price as wholesale_price_base,
-        products.msrp - coalesce(costs.cogs_per_unit, 0) as msrp_margin,
-        case
-            when products.msrp > 0
-            then (products.msrp - coalesce(costs.cogs_per_unit, 0)) / products.msrp
-        end as msrp_margin_pct,
-        products.serving_size,
-        products.calories_per_serving,
-        products.brand_owner,
-        products.country_of_origin,
-        products.oneworldsync_status,
-        products.last_updated
-    from products
-    left join costs on products.sku = costs.sku
+retailer_distribution as (
+    select sku, count(distinct retailer_id) as retailer_count
+    from {{ ref('int_product_retailers') }}
+    group by sku
+),
+
+distributor_distribution as (
+    select sku, count(distinct distributor_id) as distributor_count
+    from {{ ref('int_product_distributors') }}
+    group by sku
+),
+
+store_distribution as (
+    select sku, count(distinct store_id) as authorized_store_count
+    from {{ ref('stg_distribution_log') }}
+    where deauthorized_date is null
+    group by sku
 )
 
-select * from final
+select
+    p.sku,
+    p.product_name,
+    p.product_line,
+    p.subcategory,
+    p.case_pack_qty,
+    p.msrp,
+    c.cogs_per_unit,
+    c.landed_cost_per_unit,
+    c.wholesale_price,
+    c.wholesale_dtc,
+    p.msrp - c.cogs_per_unit as dtc_margin_per_unit,
+    case
+        when p.msrp > 0
+        then round((p.msrp - c.cogs_per_unit) / p.msrp, 4)
+        else 0
+    end as dtc_margin_pct,
+    coalesce(rd.retailer_count, 0) as retailer_count,
+    coalesce(dd.distributor_count, 0) as distributor_count,
+    coalesce(sd.authorized_store_count, 0) as authorized_store_count
+
+from products p
+inner join costs c on p.sku = c.sku
+left join retailer_distribution rd on p.sku = rd.sku
+left join distributor_distribution dd on p.sku = dd.sku
+left join store_distribution sd on p.sku = sd.sku

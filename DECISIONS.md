@@ -183,6 +183,20 @@ Each entry:
 - **Do not:** Add platform-detection logic or multiple fallback paths.
   If dbt isn't on PATH, the error from Dagster is clear enough.
 
+### 2026-05-17 — mart_channel_contribution COGS must be channel-aware
+
+- **Why:** fct_orders unifies B2B and DTC into one table, but the
+  quantity column has different semantics per channel. B2B quantity is
+  cases (needs case_pack_qty × cogs_per_unit). DTC quantity is
+  individual units from Shopify (needs cogs_per_unit only). A uniform
+  formula either under-counts B2B COGS (3.4%) or inflates DTC (457%).
+  The fix: `CASE WHEN channel = 'DTC' THEN quantity * cogs_per_unit
+  ELSE quantity * case_pack_qty * cogs_per_unit END`.
+- **Scope:** cinderhaven/models/marts/mart_channel_contribution.sql —
+  and any future mart that computes COGS from fct_orders × dim_products.
+- **Do not:** Apply case_pack_qty uniformly across channels. Any new
+  COGS calculation must check channel first.
+
 ---
 
 ## Visualization

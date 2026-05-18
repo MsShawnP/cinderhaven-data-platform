@@ -1,168 +1,210 @@
 version: 2
 
 models:
-  # ── Dimensions ─────────────────────────────────────────
-  - name: dim_products
-    description: >
-      Product dimension with GTIN hierarchy, pricing, cost, and margins.
-      Grain: one row per SKU.
-    columns:
-      - name: sku
-        description: Primary key — Cinderhaven SKU code.
-        tests: [unique, not_null]
-      - name: product_name
-        description: Display name for the product.
-        tests: [not_null]
-      - name: product_line
-        description: Top-level product family.
-        tests: [not_null]
-      - name: msrp
-        description: Manufacturer's suggested retail price.
-        tests:
-          - positive_value
-      - name: msrp_margin_pct
-        description: Margin as a fraction of MSRP — expected between 0 and 1.
-        tests:
-          - ratio_within_bounds:
-              min_value: 0
-              max_value: 1
-
+  # ── Retailer marts ────────────────────────────────────
   - name: dim_retailers
-    description: >
-      Retailer dimension with store counts and dispute metadata.
-      Grain: one row per retailer.
+    description: Retailer dimension with store counts and order summary.
     columns:
       - name: retailer_id
-        description: Primary key — unique retailer identifier.
         tests: [unique, not_null]
       - name: retailer_name
-        description: Retailer display name.
         tests: [not_null]
 
-  - name: dim_deduction_reasons
-    description: >
-      Deduction reason code dimension from crosswalk.
-      Grain: one row per code_id.
+  - name: fct_retailer_orders
+    description: Retailer order fact with line counts and shipment details.
     columns:
-      - name: code_id
-        description: Primary key — deduction reason code identifier.
-        tests: [unique, not_null]
-
-  # ── Facts ──────────────────────────────────────────────
-  - name: fct_orders
-    description: >
-      Unified order lines across B2B and DTC channels.
-      Grain: one row per order line item.
-    columns:
-      - name: line_id
-        description: Unique line item identifier (order_line_id for B2B, line_id for DTC).
-        tests: [not_null]
       - name: order_id
-        description: Parent order identifier.
+        tests: [unique, not_null]
+      - name: retailer_id
         tests: [not_null]
-      - name: sku
-        description: Foreign key to dim_products.
-        tests:
-          - not_null
-          - relationships:
-              to: ref('dim_products')
-              field: sku
-      - name: channel
-        description: Sales channel — B2B (wholesale) or DTC (Shopify).
+      - name: total_value
+        tests: [not_null]
+
+  - name: fct_retailer_deductions
+    description: Retailer deduction lifecycle — amount, dispute, recovery.
+    columns:
+      - name: deduction_id
+        tests: [unique, not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: deduction_amount
+        tests: [not_null]
+      - name: deduction_status
         tests:
           - not_null
           - accepted_values:
-              values: ['B2B', 'DTC']
+              values: ['disputed', 'expired', 'open']
 
-  - name: fct_shipments
-    description: >
-      Shipment fact with compliance flags.
-      Grain: one row per shipment.
+  - name: fct_retailer_shipments
+    description: Retailer shipment performance with on-time metrics.
     columns:
       - name: shipment_id
-        description: Primary key — unique shipment identifier.
-        tests: [unique, not_null]
-      - name: order_id
-        description: Foreign key to the fulfilled order.
-        tests: [not_null]
-      - name: retailer_id
-        description: Foreign key to dim_retailers.
-        tests:
-          - not_null
-          - relationships:
-              to: ref('dim_retailers')
-              field: retailer_id
-
-  - name: fct_deductions
-    description: >
-      Deduction fact with dispute outcomes and financial impact.
-      Grain: one row per deduction.
-    columns:
-      - name: deduction_id
-        description: Primary key — unique deduction identifier.
         tests: [unique, not_null]
       - name: retailer_id
-        description: Foreign key to dim_retailers.
-        tests:
-          - not_null
-          - relationships:
-              to: ref('dim_retailers')
-              field: retailer_id
-      - name: deduction_amount
-        description: Original deduction amount in USD.
-        tests:
-          - not_null
-          - positive_value
-
-  - name: mart_channel_contribution
-    description: >
-      Channel-level profitability with layered cost attribution.
-      Grain: one row per channel (retailer or DTC).
-      Layers: revenue → gross margin → post-deduction → post-compliance → net contribution.
-    columns:
-      - name: channel_id
-        description: >
-          Channel identifier — retailer_id for B2B channels, 'DTC' for direct-to-consumer.
-        tests: [unique, not_null]
-      - name: channel_name
-        description: Display name for the channel (retailer name or "DTC").
-        tests: [unique, not_null]
-      - name: gross_revenue
-        description: Total revenue for this channel (sum of order line totals).
         tests: [not_null]
-      - name: total_cogs
-        description: Total cost of goods sold (quantity × cogs_per_unit).
-        tests: [not_null]
-      - name: layer_4_net_contribution
-        description: >
-          Final net contribution after all cost layers applied
-          (gross margin - deductions - compliance fines - operational overhead).
+      - name: ship_date
         tests: [not_null]
 
-  - name: fct_chargebacks
-    description: >
-      Legacy chargeback events.
-      Grain: one row per chargeback.
-    columns:
-      - name: retailer
-        description: Retailer name that issued the chargeback.
-        tests: [not_null]
-      - name: amount
-        description: Chargeback amount in USD.
-        tests: [not_null]
-
-  - name: fct_payments
-    description: >
-      Remittance (payment) fact with deduction summaries.
-      Grain: one row per remittance.
+  - name: fct_retailer_payments
+    description: Retailer remittance-level payments with deduction summary.
     columns:
       - name: remittance_id
-        description: Primary key — unique remittance identifier.
         tests: [unique, not_null]
       - name: retailer_id
-        description: Foreign key to dim_retailers.
+        tests: [not_null]
+      - name: gross_amount
+        tests: [not_null]
+
+  - name: mart_retailer_reconciliation
+    description: Retailer pipeline reconciliation — orders vs remittances vs deductions.
+    columns:
+      - name: retailer_id
+        tests: [unique, not_null]
+
+  # ── Distributor marts ─────────────────────────────────
+  - name: dim_distributors
+    description: Distributor dimension with SKU counts and order summary.
+    columns:
+      - name: distributor_id
+        tests: [unique, not_null]
+      - name: distributor_name
+        tests: [not_null]
+
+  - name: fct_distributor_orders
+    description: Distributor order fact with line counts and shipment details.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: distributor_id
+        tests: [not_null]
+      - name: total_value
+        tests: [not_null]
+
+  - name: fct_distributor_deductions
+    description: Distributor deduction lifecycle — amount, dispute, recovery.
+    columns:
+      - name: deduction_id
+        tests: [unique, not_null]
+      - name: distributor_id
+        tests: [not_null]
+      - name: deduction_amount
+        tests: [not_null]
+      - name: deduction_status
         tests:
           - not_null
-          - relationships:
-              to: ref('dim_retailers')
-              field: retailer_id
+          - accepted_values:
+              values: ['disputed', 'open']
+
+  - name: fct_distributor_shipments
+    description: Distributor shipment records.
+    columns:
+      - name: shipment_id
+        tests: [unique, not_null]
+      - name: distributor_id
+        tests: [not_null]
+
+  - name: fct_distributor_payments
+    description: Distributor remittance-level payments with deduction summary.
+    columns:
+      - name: remittance_id
+        tests: [unique, not_null]
+      - name: distributor_id
+        tests: [not_null]
+
+  - name: mart_distributor_reconciliation
+    description: Distributor pipeline reconciliation.
+    columns:
+      - name: distributor_id
+        tests: [unique, not_null]
+
+  # ── DTC marts ─────────────────────────────────────────
+  - name: dim_dtc_channels
+    description: DTC channel dimension — Shopify summary statistics.
+    columns:
+      - name: channel_id
+        tests: [unique, not_null]
+
+  - name: fct_dtc_orders
+    description: DTC order fact with COGS, fees, refunds, and net revenue.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: gross_revenue
+        tests: [not_null]
+      - name: net_revenue
+        tests: [not_null]
+
+  - name: fct_dtc_transactions
+    description: DTC payment transactions with fee rates.
+    columns:
+      - name: transaction_id
+        tests: [unique, not_null]
+      - name: order_amount
+        tests: [not_null]
+
+  - name: fct_dtc_refunds
+    description: DTC refund records with order context.
+    columns:
+      - name: refund_id
+        tests: [unique, not_null]
+      - name: refund_amount
+        tests: [not_null]
+
+  - name: fct_dtc_chargebacks
+    description: DTC chargeback records with order context.
+    columns:
+      - name: chargeback_id
+        tests: [unique, not_null]
+      - name: chargeback_amount
+        tests: [not_null]
+
+  - name: mart_dtc_reconciliation
+    description: DTC pipeline reconciliation — orders vs transactions vs payouts.
+    columns:
+      - name: channel_id
+        tests: [unique, not_null]
+
+  # ── Shared marts ──────────────────────────────────────
+  - name: dim_products
+    description: Product dimension with COGS, pricing, and distribution breadth.
+    columns:
+      - name: sku
+        tests: [unique, not_null]
+      - name: product_name
+        tests: [not_null]
+      - name: product_line
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments']
+
+  - name: fct_distribution
+    description: SKU-store authorization with scan velocity metrics.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: store_id
+        tests: [not_null]
+      - name: retailer_id
+        tests: [not_null]
+
+  - name: dim_category_benchmarks
+    description: Product line benchmarks — velocity, margin, and revenue.
+    columns:
+      - name: product_line
+        tests: [unique, not_null]
+
+  # ── Cross-channel rollup ──────────────────────────────
+  - name: mart_channel_contribution
+    description: >
+      Cross-channel revenue rollup — the only place where retailer,
+      distributor, and DTC pipelines merge.
+    columns:
+      - name: channel
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              values: ['Retailer', 'Distributor', 'DTC']
+      - name: gross_revenue
+        tests: [not_null]

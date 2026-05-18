@@ -93,3 +93,50 @@ scaled back to 256MB. Completed in ~4.5 minutes for all 21 tables.
 **Status:** Resolved
 
 **Tags:** fly.io, postgres, memory, ingestion, scan_data, COPY, OOM
+
+---
+
+### 2026-05-17 — mart_channel_contribution COGS was 3.4% instead of ~50-60%
+
+**Attempted:** `sum(o.quantity * p.cogs_per_unit)` in
+mart_channel_contribution.sql — treating quantity as individual units.
+
+**Why it didn't work:** fct_orders.quantity for B2B is *cases*, not
+individual units. cogs_per_unit is per individual unit. Missing the
+case_pack_qty multiplier produced COGS at 3.4% of revenue instead of
+the expected 50-60% for wholesale CPG.
+
+**What we tried instead:** Added `p.case_pack_qty` multiplier. Then
+discovered a second bug: DTC quantity is individual units (from Shopify),
+so applying case_pack_qty uniformly inflated DTC COGS to 457%. Final
+fix is channel-aware: `case when o.channel = 'DTC' then quantity *
+cogs_per_unit else quantity * case_pack_qty * cogs_per_unit end`.
+
+**Status:** Resolved
+
+**Tags:** dbt, cogs, mart, case-pack, dtc, channel-contribution, units
+
+---
+
+### 2026-05-17 — contract-to-cash headline showed 114 cents per dollar (impossible)
+
+**Attempted:** export_json.py computed "cents per dollar" as
+`net_payments / orders_invoiced`, where orders came from fct_orders
+filtered by order_date and payments from fct_payments filtered by
+received_date, both over CY2025.
+
+**Why it didn't work:** Payment lag means payments received in CY2025
+include payments for orders placed in late 2024. The two date filters
+capture different cohorts — $16.3M invoiced but $21.6M received,
+producing a ratio > 1.0 (114.4 cents per dollar received for every
+dollar invoiced).
+
+**What we tried instead:** Changed denominator from orders-based
+`b2b_invoiced` to payments-based `pay["b2b_gross"]` so both sides of
+the ratio come from the same remittance records. Ratio is now 86.8
+cents per dollar — internally consistent. Headline changed from
+"invoiced" to "collected" to match.
+
+**Status:** Resolved
+
+**Tags:** temporal-mismatch, cohort, contract-to-cash, date-filter, payments

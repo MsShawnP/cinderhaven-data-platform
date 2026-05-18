@@ -5,134 +5,122 @@ sources:
     database: cinderhaven
     schema: raw
     description: >
-      Landing zone for data ingested from cinderhaven-data SQLite.
-      Mirrors source structure with minimal type enforcement.
-      Staging models clean, type, and deduplicate these tables.
+      Landing zone for Cinderhaven data. Channel-isolated pipelines
+      (retailer, distributor, DTC) plus shared cross-channel tables.
+      38 tables total. Staging models clean, type, and standardize.
 
     tables:
-      # ── Reference / Dimension ──────────────────────────────
+      # ── Shared tables ─────────────────────────────────────
       - name: product_master
-        description: >
-          90 SKUs across 3 product lines (Artisan Sauces, Pantry Staples,
-          Specialty Condiments). Contains intentional data quality defects
-          for staging-layer cleaning (invalid GTINs, missing brand_owner,
-          inconsistent serving_size).
+        description: 30 SKUs across 3 product lines (Artisan Sauces, Pantry Staples, Specialty Condiments).
+
+      - name: sku_costs
+        description: SKU-level COGS, landed cost, and per-channel wholesale pricing + trade spend.
 
       - name: stores
-        description: >
-          902 retail locations across 11 retailers. Includes aggregated
-          channel rows for e-commerce and warehouse-direct.
+        description: 640 retail locations across 6 retailers.
 
-      - name: retailers
-        description: >
-          11 retailer entities (6 contracted + 5 regional chains).
-          Includes dispute portal metadata.
-
-      - name: retailer_rules
-        description: >
-          90 retailer-specific dispute rules per deduction type.
-          Defines dispute windows, auto-deduct flags, evidence
-          requirements, and typical recovery rates.
-
-      - name: deduction_codes
-        description: >
-          97 retailer-specific deduction reason codes. Maps retailer
-          code IDs to human-readable names and deduction types.
-
-      - name: edi_requirements
-        description: >
-          42 EDI compliance requirements by retailer. Covers label,
-          ASN, routing, and documentation standards.
-
-      # ── Pricing ────────────────────────────────────────────
-      - name: sku_costs
-        description: >
-          90 SKU-level cost and pricing structure. Includes COGS,
-          landed cost, retailer-specific wholesale prices, and
-          trade spend percentages.
+      - name: distribution_log
+        description: SKU-store authorization records with auth/deauth dates.
 
       - name: price_history
-        description: >
-          398 historical wholesale price changes by SKU/retailer.
-
-      # ── Distribution & Promotion ───────────────────────────
-      - name: distribution_log
-        description: >
-          12,507 SKU-store authorization records. Tracks when SKUs
-          were authorized and deauthorized at each store.
+        description: Historical wholesale price changes by SKU and retailer.
 
       - name: promotions
-        description: >
-          188 promotional events with discount depth, duration,
-          cost, and funding mechanism.
+        description: Promotional events with discount depth, cost, and funding mechanism.
 
-      # ── Transactions ───────────────────────────────────────
-      - name: orders
-        description: >
-          5,838 B2B purchase orders from retailers. Grain: one row
-          per order header.
-
-      - name: order_lines
-        description: >
-          30,127 B2B order line items. Grain: one row per SKU per
-          order.
-
-      - name: shipments
-        description: >
-          5,838 shipment records with carrier, BOL, POD, and ASN
-          compliance flags.
-
-      - name: pack_records
-        description: >
-          5,838 pack/label compliance records. Tracks pick-pack
-          accuracy, label scannability, and evidence documentation.
-
-      # ── Sales / POS ────────────────────────────────────────
       - name: scan_data
-        description: >
-          1,118,009 weekly POS scan records. Grain: SKU × store ×
-          week_ending. Covers all retailers via store_id join.
+        description: ~880K weekly POS scan records. Grain is SKU × store × week_ending.
 
-      - name: chargebacks
-        description: >
-          381 chargeback events in legacy flat format. Pre-dates
-          the structured deductions pipeline.
+      # ── Retailer pipeline ─────────────────────────────────
+      - name: retailers
+        description: 6 retailer entities with dispute portal metadata.
 
-      # ── Deductions / Disputes ──────────────────────────────
-      - name: deductions
-        description: >
-          3,087 deduction records from retailer remittances. Includes
-          type classification, vagueness flags, double-dip detection,
-          and post-audit markers.
+      - name: retailer_rules
+        description: Dispute rules by retailer and deduction type.
 
-      - name: disputes
-        description: >
-          1,410 dispute filing records. Tracks evidence quality,
-          filing timeliness, outcome, and labor hours.
+      - name: retailer_requirements
+        description: Per-retailer field requirements (what data fields each retailer demands).
 
-      - name: dispute_evidence
-        description: >
-          3,092 evidence items linked to disputes. Tracks what was
-          submitted vs. required per dispute.
+      - name: retailer_deduction_codes
+        description: Retailer-specific deduction reason codes mapping to deduction types.
 
-      - name: remittances
-        description: >
-          515 remittance (payment) bundles from retailers. Includes
-          gross/net amounts, total deductions, and clarity rating.
+      - name: retailer_edi_requirements
+        description: EDI compliance requirements by retailer and category.
 
-      - name: post_audit_claims
-        description: >
-          45 retroactive post-audit claims from third-party auditors.
-          Tracks lookback period and claim type.
+      - name: retailer_orders
+        description: ~7,200 retailer purchase orders.
 
-      # ── DTC / E-Commerce ───────────────────────────────────
+      - name: retailer_order_lines
+        description: ~19,000 retailer order line items. Grain is order × SKU.
+
+      - name: retailer_remittances
+        description: ~144 monthly remittance payment bundles from retailers.
+
+      - name: retailer_deductions
+        description: ~2,000 deduction records from retailer remittances.
+
+      - name: retailer_disputes
+        description: ~800 dispute filings against retailer deductions.
+
+      - name: retailer_dispute_evidence
+        description: ~2,400 evidence items linked to retailer disputes.
+
+      - name: retailer_shipments
+        description: ~7,200 retailer shipment records.
+
+      - name: retailer_chargebacks
+        description: ~450 legacy chargeback events by month/retailer/reason/SKU.
+
+      - name: retailer_post_audit_claims
+        description: ~42 retroactive post-audit claims from third-party auditors.
+
+      - name: retailer_pack_records
+        description: ~7,200 pack/label compliance records.
+
+      # ── Distributor pipeline ──────────────────────────────
+      - name: distributors
+        description: 3 distributor entities (UNFI, KeHE, DPI Northwest).
+
+      - name: sku_distributors
+        description: SKU-to-distributor mapping (which distributors carry which SKUs).
+
+      - name: distributor_orders
+        description: ~1,400 distributor purchase orders.
+
+      - name: distributor_order_lines
+        description: ~7,400 distributor order line items.
+
+      - name: distributor_remittances
+        description: ~72 monthly remittance bundles from distributors.
+
+      - name: distributor_deductions
+        description: ~300 deduction records from distributor remittances.
+
+      - name: distributor_disputes
+        description: ~100 dispute filings against distributor deductions.
+
+      - name: distributor_shipments
+        description: ~1,400 distributor shipment records.
+
+      - name: distributor_chargebacks
+        description: ~93 distributor chargeback events.
+
+      # ── DTC / Shopify pipeline ────────────────────────────
       - name: shopify_orders
-        description: >
-          10,000 Shopify DTC order headers. Synthetic data covering
-          the 18-month window with seasonal patterns, discount codes,
-          and fulfillment tracking.
+        description: ~11,600 Shopify DTC order headers.
 
       - name: shopify_order_lines
-        description: >
-          19,347 Shopify DTC line items. Joins to shopify_orders on
-          order_id and to product_master on SKU.
+        description: ~22,300 Shopify DTC line items.
+
+      - name: shopify_transactions
+        description: ~11,600 payment transactions with processing fees.
+
+      - name: shopify_payouts
+        description: ~60 bi-weekly payout batches.
+
+      - name: shopify_refunds
+        description: ~550 order refunds.
+
+      - name: shopify_chargebacks
+        description: ~52 DTC chargebacks.
