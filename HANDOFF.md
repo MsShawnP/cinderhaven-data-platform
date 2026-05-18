@@ -9,6 +9,25 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## Session — 2026-05-18 (session 8)
+
+**Started from:** Previous schema had 23 generic tables with no channel isolation. Consumer projects couldn't reconcile across channels because everything was merged at staging.
+
+**Did:** Greenfield rebuild of entire Postgres schema and dbt project.
+- Rewrote raw DDL: 23 tables → 37 tables across 3 isolated pipelines (retailer, distributor, DTC) + shared
+- Built 7 Python seed generators producing ~1M deterministic rows with realistic patterns (seasonal orders, delist-risk velocity, correlated deductions/disputes)
+- Rebuilt all dbt layers: 37 staging views (142 tests), 5 intermediate views (27 tests), 22 mart tables (75 tests)
+- Per-channel reconciliation marts (retailer, distributor, DTC) + mart_channel_contribution cross-channel rollup
+- Full `dbt build`: 308/308 PASS
+- Regenerated dbt docs for GitHub Pages
+- Force-pushed to remote (superseded 4 stale data-integrity-arc commits)
+
+**State:** Channel-isolated schema live in Postgres. All 64 models and 244 tests green. dbt docs updated. GitHub Pages will rebuild automatically. Branch protection re-enabled.
+
+**Next:** Update consumer projects (7 repos) to use new channel-prefixed table names. Old names like stg_orders, stg_deductions, fct_orders are gone — replaced by stg_retailer_orders, stg_retailer_deductions, fct_retailer_orders, etc. Start in a new session.
+
+---
+
 ## Session — 2026-05-16 (session 7)
 
 **Started from:** Both arcs complete, no active work. Repo public but missing CI, setup docs, and presentation polish.
