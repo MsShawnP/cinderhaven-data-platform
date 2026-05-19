@@ -176,7 +176,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments']
+              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments', 'Dried Goods', 'Snack Bites']
 
   - name: fct_distribution
     description: SKU-store authorization with scan velocity metrics.

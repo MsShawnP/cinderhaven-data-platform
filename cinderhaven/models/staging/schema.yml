@@ -13,7 +13,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments']
+              values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments', 'Dried Goods', 'Snack Bites']
 
   - name: stg_sku_costs
     description: SKU-level cost and per-channel pricing.
