@@ -208,3 +208,15 @@ models:
               values: ['Retailer', 'Distributor', 'DTC']
       - name: gross_revenue
         tests: [not_null]
+
+  # ── Shortage simulation marts ────────────────────────
+  - name: mart_shortage_deduction_link
+    description: >
+      Links deductions to the shortage events that caused them. Joins
+      deduction -> order_id -> order_short and deduction -> retailer/sku -> deauth event.
+      Enables retailer-deduction-recovery to trace a deduction back to Postgres.
+    columns:
+      - name: deduction_id
+        tests: [not_null]
+      - name: deduction_amount
+        tests: [not_null]

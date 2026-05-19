@@ -93,100 +93,186 @@ def query_scan_revenue(cur, start: date, end: date) -> list[dict]:
 
 
 def query_order_revenue(cur, start: date, end: date) -> list[dict]:
-    """Invoiced revenue from fct_orders, by retailer + channel."""
+    """Invoiced revenue from channel-specific order marts, by partner."""
     cur.execute("""
-        SELECT
-            COALESCE(dr.retailer_name, 'DTC') AS retailer,
-            fo.channel,
-            SUM(fo.line_total)::float      AS revenue,
-            SUM(fo.quantity)::float        AS units,
-            COUNT(DISTINCT fo.order_id)::int AS order_count,
-            COUNT(*)::int                  AS line_count,
-            MIN(fo.order_date)::text       AS date_min,
-            MAX(fo.order_date)::text       AS date_max
-        FROM public_marts.fct_orders fo
-        LEFT JOIN public_marts.dim_retailers dr ON dr.retailer_id = fo.retailer_id
-        WHERE fo.order_date BETWEEN %s AND %s
-        GROUP BY COALESCE(dr.retailer_name, 'DTC'), fo.channel
+        SELECT retailer, channel, revenue, units, order_count, line_count, date_min, date_max
+        FROM (
+            SELECT
+                dr.retailer_name            AS retailer,
+                'B2B'                       AS channel,
+                SUM(fo.total_value)::float  AS revenue,
+                SUM(fo.total_units)::float  AS units,
+                COUNT(*)::int               AS order_count,
+                SUM(fo.line_count)::int     AS line_count,
+                MIN(fo.po_date)::text       AS date_min,
+                MAX(fo.po_date)::text       AS date_max
+            FROM public_marts.fct_retailer_orders fo
+            JOIN public_marts.dim_retailers dr ON dr.retailer_id = fo.retailer_id
+            WHERE fo.po_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dr.retailer_name
+
+            UNION ALL
+
+            SELECT
+                dd.distributor_name         AS retailer,
+                'B2B'                       AS channel,
+                SUM(fo.total_value)::float  AS revenue,
+                SUM(fo.total_units)::float  AS units,
+                COUNT(*)::int               AS order_count,
+                SUM(fo.line_count)::int     AS line_count,
+                MIN(fo.po_date)::text       AS date_min,
+                MAX(fo.po_date)::text       AS date_max
+            FROM public_marts.fct_distributor_orders fo
+            JOIN public_marts.dim_distributors dd ON dd.distributor_id = fo.distributor_id
+            WHERE fo.po_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dd.distributor_name
+
+            UNION ALL
+
+            SELECT
+                'DTC'                            AS retailer,
+                'DTC'                            AS channel,
+                SUM(fo.gross_revenue)::float     AS revenue,
+                SUM(fo.total_units)::float       AS units,
+                COUNT(*)::int                    AS order_count,
+                SUM(fo.line_count)::int          AS line_count,
+                MIN(fo.created_at::date)::text   AS date_min,
+                MAX(fo.created_at::date)::text   AS date_max
+            FROM public_marts.fct_dtc_orders fo
+            WHERE fo.created_at::date BETWEEN %(start)s AND %(end)s
+        ) combined
         ORDER BY revenue DESC
-    """, (start, end))
+    """, {"start": start, "end": end})
     return cur.fetchall()
 
 
 def query_payment_revenue(cur, start: date, end: date) -> list[dict]:
-    """Cash received from fct_payments, by retailer."""
+    """Cash received from channel-specific payment marts, by partner."""
     cur.execute("""
-        SELECT
-            fp.retailer_name              AS retailer,
-            SUM(fp.gross_amount)::float   AS gross,
-            SUM(fp.net_amount)::float     AS net,
-            SUM(fp.total_deductions)::float AS deductions_in_remittance,
-            COUNT(*)::int                 AS remittance_count,
-            MIN(fp.received_date)::text   AS date_min,
-            MAX(fp.received_date)::text   AS date_max
-        FROM public_marts.fct_payments fp
-        WHERE fp.received_date BETWEEN %s AND %s
-        GROUP BY fp.retailer_name
+        SELECT retailer, gross, net, deductions_in_remittance, remittance_count, date_min, date_max
+        FROM (
+            SELECT
+                dr.retailer_name                 AS retailer,
+                SUM(fp.gross_amount)::float      AS gross,
+                SUM(fp.net_amount)::float        AS net,
+                SUM(fp.total_deductions)::float  AS deductions_in_remittance,
+                COUNT(*)::int                    AS remittance_count,
+                MIN(fp.received_date)::text      AS date_min,
+                MAX(fp.received_date)::text      AS date_max
+            FROM public_marts.fct_retailer_payments fp
+            JOIN public_marts.dim_retailers dr ON dr.retailer_id = fp.retailer_id
+            WHERE fp.received_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dr.retailer_name
+
+            UNION ALL
+
+            SELECT
+                dd.distributor_name              AS retailer,
+                SUM(fp.gross_amount)::float      AS gross,
+                SUM(fp.net_amount)::float        AS net,
+                SUM(fp.total_deductions)::float  AS deductions_in_remittance,
+                COUNT(*)::int                    AS remittance_count,
+                MIN(fp.received_date)::text      AS date_min,
+                MAX(fp.received_date)::text      AS date_max
+            FROM public_marts.fct_distributor_payments fp
+            JOIN public_marts.dim_distributors dd ON dd.distributor_id = fp.distributor_id
+            WHERE fp.received_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dd.distributor_name
+        ) combined
         ORDER BY gross DESC
-    """, (start, end))
+    """, {"start": start, "end": end})
     return cur.fetchall()
 
 
 def query_deductions(cur, start: date, end: date) -> list[dict]:
-    """Deductions from fct_deductions, by retailer and type."""
+    """Deductions from channel-specific deduction marts, by partner and type."""
     cur.execute("""
-        SELECT
-            fd.retailer_name              AS retailer,
-            fd.deduction_type,
-            SUM(fd.deduction_amount)::float AS amount,
-            SUM(fd.net_recovery)::float   AS recovered,
-            SUM(fd.net_loss)::float       AS net_loss,
-            COUNT(*)::int                 AS deduction_count,
-            MIN(fd.deduction_date)::text  AS date_min,
-            MAX(fd.deduction_date)::text  AS date_max
-        FROM public_marts.fct_deductions fd
-        WHERE fd.deduction_date BETWEEN %s AND %s
-        GROUP BY fd.retailer_name, fd.deduction_type
+        SELECT retailer, deduction_type, amount, recovered, net_loss, deduction_count, date_min, date_max
+        FROM (
+            SELECT
+                dr.retailer_name                      AS retailer,
+                fd.deduction_type,
+                SUM(fd.deduction_amount)::float       AS amount,
+                SUM(fd.recovered_amount)::float       AS recovered,
+                SUM(fd.net_deduction_amount)::float   AS net_loss,
+                COUNT(*)::int                         AS deduction_count,
+                MIN(fd.deduction_date)::text          AS date_min,
+                MAX(fd.deduction_date)::text          AS date_max
+            FROM public_marts.fct_retailer_deductions fd
+            JOIN public_marts.dim_retailers dr ON dr.retailer_id = fd.retailer_id
+            WHERE fd.deduction_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dr.retailer_name, fd.deduction_type
+
+            UNION ALL
+
+            SELECT
+                dd.distributor_name                   AS retailer,
+                fd.deduction_type,
+                SUM(fd.deduction_amount)::float       AS amount,
+                SUM(fd.recovered_amount)::float       AS recovered,
+                SUM(fd.net_deduction_amount)::float   AS net_loss,
+                COUNT(*)::int                         AS deduction_count,
+                MIN(fd.deduction_date)::text          AS date_min,
+                MAX(fd.deduction_date)::text          AS date_max
+            FROM public_marts.fct_distributor_deductions fd
+            JOIN public_marts.dim_distributors dd ON dd.distributor_id = fd.distributor_id
+            WHERE fd.deduction_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dd.distributor_name, fd.deduction_type
+        ) combined
         ORDER BY amount DESC
-    """, (start, end))
+    """, {"start": start, "end": end})
     return cur.fetchall()
 
 
 def query_deduction_totals(cur, start: date, end: date) -> list[dict]:
-    """Deduction totals by retailer (no type breakdown)."""
+    """Deduction totals by partner (no type breakdown)."""
     cur.execute("""
-        SELECT
-            fd.retailer_name              AS retailer,
-            SUM(fd.deduction_amount)::float AS amount,
-            SUM(fd.net_recovery)::float   AS recovered,
-            SUM(fd.net_loss)::float       AS net_loss,
-            COUNT(*)::int                 AS deduction_count
-        FROM public_marts.fct_deductions fd
-        WHERE fd.deduction_date BETWEEN %s AND %s
-        GROUP BY fd.retailer_name
+        SELECT retailer, amount, recovered, net_loss, deduction_count
+        FROM (
+            SELECT
+                dr.retailer_name                      AS retailer,
+                SUM(fd.deduction_amount)::float       AS amount,
+                SUM(fd.recovered_amount)::float       AS recovered,
+                SUM(fd.net_deduction_amount)::float   AS net_loss,
+                COUNT(*)::int                         AS deduction_count
+            FROM public_marts.fct_retailer_deductions fd
+            JOIN public_marts.dim_retailers dr ON dr.retailer_id = fd.retailer_id
+            WHERE fd.deduction_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dr.retailer_name
+
+            UNION ALL
+
+            SELECT
+                dd.distributor_name                   AS retailer,
+                SUM(fd.deduction_amount)::float       AS amount,
+                SUM(fd.recovered_amount)::float       AS recovered,
+                SUM(fd.net_deduction_amount)::float   AS net_loss,
+                COUNT(*)::int                         AS deduction_count
+            FROM public_marts.fct_distributor_deductions fd
+            JOIN public_marts.dim_distributors dd ON dd.distributor_id = fd.distributor_id
+            WHERE fd.deduction_date BETWEEN %(start)s AND %(end)s
+            GROUP BY dd.distributor_name
+        ) combined
         ORDER BY amount DESC
-    """, (start, end))
+    """, {"start": start, "end": end})
     return cur.fetchall()
 
 
 def query_channel_contribution(cur) -> list[dict]:
-    """Full waterfall from mart_channel_contribution (no date filter — it's pre-aggregated)."""
+    """Cross-channel waterfall from mart_channel_contribution (no date filter — pre-aggregated)."""
     cur.execute("""
         SELECT
-            channel_name                    AS retailer,
-            channel_type,
+            channel                         AS retailer,
             gross_revenue::float,
             total_cogs::float,
-            layer_1_gross_margin::float,
-            trade_deductions::float,
-            quality_fines::float,
-            logistics_fines::float,
+            gross_margin::float,
             total_deductions::float,
-            promo_costs::float,
-            operational_overhead::float,
-            layer_2_post_deductions::float,
-            layer_3_post_compliance::float,
-            layer_4_net_contribution::float
+            total_recovered::float,
+            total_chargebacks::float,
+            total_trade_spend::float,
+            net_revenue::float,
+            contribution_margin::float,
+            revenue_share::float
         FROM public_marts.mart_channel_contribution
         ORDER BY gross_revenue DESC
     """)
@@ -210,20 +296,48 @@ def query_shopify_dtc(cur, start: date, end: date) -> list[dict]:
 
 
 def query_quarterly(cur) -> list[dict]:
-    """Order revenue by quarter and retailer."""
+    """Order revenue by quarter and partner."""
     cur.execute("""
-        SELECT
-            DATE_TRUNC('quarter', fo.order_date)::date::text AS quarter,
-            COALESCE(dr.retailer_name, 'DTC')                AS retailer,
-            fo.channel,
-            SUM(fo.line_total)::float                        AS revenue,
-            COUNT(DISTINCT fo.order_id)::int                 AS order_count
-        FROM public_marts.fct_orders fo
-        LEFT JOIN public_marts.dim_retailers dr ON dr.retailer_id = fo.retailer_id
-        WHERE fo.order_date <= %s
-        GROUP BY DATE_TRUNC('quarter', fo.order_date), COALESCE(dr.retailer_name, 'DTC'), fo.channel
+        SELECT quarter, retailer, channel, revenue, order_count
+        FROM (
+            SELECT
+                DATE_TRUNC('quarter', fo.po_date)::date::text AS quarter,
+                dr.retailer_name                              AS retailer,
+                'B2B'                                         AS channel,
+                SUM(fo.total_value)::float                    AS revenue,
+                COUNT(*)::int                                 AS order_count
+            FROM public_marts.fct_retailer_orders fo
+            JOIN public_marts.dim_retailers dr ON dr.retailer_id = fo.retailer_id
+            WHERE fo.po_date <= %(today)s
+            GROUP BY DATE_TRUNC('quarter', fo.po_date), dr.retailer_name
+
+            UNION ALL
+
+            SELECT
+                DATE_TRUNC('quarter', fo.po_date)::date::text AS quarter,
+                dd.distributor_name                           AS retailer,
+                'B2B'                                         AS channel,
+                SUM(fo.total_value)::float                    AS revenue,
+                COUNT(*)::int                                 AS order_count
+            FROM public_marts.fct_distributor_orders fo
+            JOIN public_marts.dim_distributors dd ON dd.distributor_id = fo.distributor_id
+            WHERE fo.po_date <= %(today)s
+            GROUP BY DATE_TRUNC('quarter', fo.po_date), dd.distributor_name
+
+            UNION ALL
+
+            SELECT
+                DATE_TRUNC('quarter', fo.created_at)::date::text AS quarter,
+                'DTC'                                            AS retailer,
+                'DTC'                                            AS channel,
+                SUM(fo.gross_revenue)::float                     AS revenue,
+                COUNT(*)::int                                    AS order_count
+            FROM public_marts.fct_dtc_orders fo
+            WHERE fo.created_at <= %(today)s
+            GROUP BY DATE_TRUNC('quarter', fo.created_at)
+        ) combined
         ORDER BY quarter, revenue DESC
-    """, (TODAY,))
+    """, {"today": TODAY})
     return cur.fetchall()
 
 
@@ -316,8 +430,8 @@ def export_all():
         total = next((r for r in rows if r["retailer"] == "ALL"), {})
         print(f"  {window_name}: ${total.get('revenue', 0):,.2f}")
 
-    # --- Order revenue (fct_orders.line_total) ---
-    print("\n=== Order Revenue (fct_orders.line_total) ===")
+    # --- Order revenue (channel-specific order marts) ---
+    print("\n=== Order Revenue (fct_retailer/distributor/dtc_orders) ===")
     result["order_revenue"] = {}
     for window_name, (start, end) in time_windows.items():
         rows = query_order_revenue(cur, start, end)
@@ -360,8 +474,8 @@ def export_all():
         })
         print(f"  {window_name}: B2B ${b2b_total:,.2f}  DTC ${dtc_total:,.2f}  Combined ${combined:,.2f}")
 
-    # --- Payment revenue (fct_payments) ---
-    print("\n=== Payment Revenue (fct_payments) ===")
+    # --- Payment revenue (channel-specific payment marts) ---
+    print("\n=== Payment Revenue (fct_retailer/distributor_payments) ===")
     result["payment_revenue"] = {}
     for window_name, (start, end) in time_windows.items():
         rows = query_payment_revenue(cur, start, end)
@@ -395,8 +509,8 @@ def export_all():
         total = next((r for r in rows if r["retailer"] == "ALL"), {})
         print(f"  {window_name}: Gross ${total.get('gross', 0):,.2f}  Net ${total.get('net', 0):,.2f}")
 
-    # --- Deductions (fct_deductions) ---
-    print("\n=== Deductions (fct_deductions) ===")
+    # --- Deductions (channel-specific deduction marts) ---
+    print("\n=== Deductions (fct_retailer/distributor_deductions) ===")
     result["deductions"] = {}
     for window_name, (start, end) in time_windows.items():
         detail = query_deductions(cur, start, end)
@@ -463,14 +577,14 @@ def export_all():
             "window_start": None,
             "window_end": None,
             "retailer": r["retailer"],
-            "value": r.get("layer_4_net_contribution"),
+            "value": r.get("contribution_margin"),
             "units": None,
             "row_count": None,
             "date_min": None,
             "date_max": None,
         })
     grand = sum(r.get("gross_revenue") or 0 for r in waterfall)
-    net = sum(r.get("layer_4_net_contribution") or 0 for r in waterfall)
+    net = sum(r.get("contribution_margin") or 0 for r in waterfall)
     print(f"  Gross: ${grand:,.2f}  Net contribution: ${net:,.2f}")
 
     # --- Quarterly breakdowns ---

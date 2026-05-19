@@ -66,6 +66,82 @@ models:
       - name: margin_per_unit
         tests: [not_null]
 
+  - name: int_all_partners
+    description: >
+      Cross-channel partner dimension — retailers and distributors unified
+      with a common partner_id and channel_type discriminator.
+    columns:
+      - name: partner_id
+        tests: [unique, not_null]
+      - name: name
+        tests: [not_null]
+      - name: channel_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['retailer', 'distributor']
+
+  - name: int_all_deductions
+    description: >
+      Cross-channel deductions — retailer and distributor deductions unified
+      with partner_id. Retailer-only columns (code_id, dispute_deadline,
+      is_post_audit) are NULL for distributor rows.
+    columns:
+      - name: deduction_id
+        tests: [unique, not_null]
+      - name: partner_id
+        tests: [not_null]
+      - name: channel_type
+        tests: [not_null]
+      - name: deduction_amount
+        tests: [not_null]
+
+  - name: int_all_orders
+    description: >
+      Cross-channel orders — retailer and distributor orders unified with
+      partner_id. Retailer-only columns (requested_ship_date) are NULL for
+      distributor rows.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: partner_id
+        tests: [not_null]
+      - name: channel_type
+        tests: [not_null]
+
+  - name: int_all_disputes
+    description: >
+      Cross-channel disputes — retailer and distributor disputes unified.
+      Retailer-only columns (filing_method, evidence_quality) are NULL for
+      distributor rows.
+    columns:
+      - name: dispute_id
+        tests: [unique, not_null]
+      - name: deduction_id
+        tests: [not_null]
+
+  - name: int_all_shipments
+    description: >
+      Cross-channel shipments — retailer and distributor shipments unified.
+      Retailer-only columns (bol_number, pallets_shipped, asn_sent,
+      asn_sent_late) are NULL for distributor rows.
+    columns:
+      - name: shipment_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+
+  - name: int_all_remittances
+    description: >
+      Cross-channel remittances — retailer and distributor remittances
+      unified with partner_id. Retailer-only columns (remittance_format,
+      clarity) are NULL for distributor rows.
+    columns:
+      - name: remittance_id
+        tests: [unique, not_null]
+      - name: partner_id
+        tests: [not_null]
+
   - name: int_dtc_order_economics
     description: >
       Order-level DTC economics — each Shopify order with payment processing

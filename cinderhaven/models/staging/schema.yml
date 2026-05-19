@@ -384,3 +384,87 @@ models:
         tests: [not_null]
       - name: chargeback_amount
         tests: [not_null]
+
+  # ── Short-ship-cost shortage simulation ──────────────
+  - name: stg_shortage_order_shorts
+    description: Order lines shorted during triage simulation. Links to orders via order_id.
+    columns:
+      - name: short_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: quantity_shorted
+        tests: [not_null]
+
+  - name: stg_shortage_dtc_outcomes
+    description: DTC order hold/cancel/ship outcomes from triage simulation.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: resolution
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['shipped_complete', 'shipped_partial', 'cancelled_by_customer', 'purchased_in_store']
+
+  - name: stg_shortage_distributor_returns
+    description: Distributor return events from shortage simulation.
+    columns:
+      - name: return_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: credit_amount
+        tests: [not_null]
+
+  - name: stg_shortage_cost_summary
+    description: 8-dimension shortage cost totals.
+    columns:
+      - name: dimension
+        tests: [unique, not_null]
+      - name: total_cost
+        tests: [not_null]
+
+  - name: stg_shortage_deauth_events
+    description: Specific deauthorization events with velocity metrics.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+      - name: annualized_revenue_lost
+        tests: [not_null]
+
+  - name: stg_shortage_cost_by_retailer
+    description: Shortage cost by dimension and retailer.
+    columns:
+      - name: dimension
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+
+  - name: stg_shortage_cost_by_sku
+    description: Shortage cost by dimension and SKU.
+    columns:
+      - name: dimension
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+
+  - name: stg_shortage_cost_by_month
+    description: Shortage cost by dimension and month.
+    columns:
+      - name: dimension
+        tests: [not_null]
+      - name: month
+        tests: [not_null]
+
+  - name: stg_shortage_buffer_scenarios
+    description: What-if fill rate scenarios with cost recovery.
+    columns:
+      - name: target_fill_rate
+        tests: [unique, not_null]
+      - name: total_recovery
+        tests: [not_null]
