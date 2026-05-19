@@ -1,16 +1,16 @@
 """Seed generator for the retailer pipeline.
 
-Tables generated:
-  - retailer_orders (~6,000 orders)
-  - retailer_order_lines (~15,000 lines)
-  - retailer_shipments (~6,000)
-  - retailer_remittances (~500)
-  - retailer_deductions (~3,000)
-  - retailer_disputes (~1,200)
-  - retailer_dispute_evidence (~2,500)
-  - retailer_chargebacks (~400)
-  - retailer_post_audit_claims (~50)
-  - retailer_pack_records (~6,000)
+Tables generated (50 SKUs, 3-year window):
+  - retailer_orders (~45,000 orders)
+  - retailer_order_lines (~110,000 lines)
+  - retailer_shipments (~45,000)
+  - retailer_remittances (~1,500)
+  - retailer_deductions (~11,000)
+  - retailer_disputes (~4,500)
+  - retailer_dispute_evidence (~10,000)
+  - retailer_chargebacks (~1,500)
+  - retailer_post_audit_claims (~220)
+  - retailer_pack_records (~45,000)
 
 Requires seed_shared.py to have been run first (retailers, products, stores exist).
 
@@ -30,16 +30,29 @@ from seed_config import (
 )
 
 
+COPY_CHUNK_SIZE = 50_000
+
 def copy_rows(cur, table: str, columns: list[str], rows: list[tuple]):
-    buf = io.StringIO()
-    for row in rows:
-        line = "\t".join("\\N" if v is None else str(v) for v in row)
-        buf.write(line + "\n")
-    buf.seek(0)
     cols = ", ".join(columns)
     sql = f"COPY {table} ({cols}) FROM STDIN WITH (FORMAT text, NULL '\\N')"
-    cur.copy_expert(sql, buf)
+    for start in range(0, len(rows), COPY_CHUNK_SIZE):
+        chunk = rows[start:start + COPY_CHUNK_SIZE]
+        buf = io.StringIO()
+        for row in chunk:
+            line = "\t".join("\\N" if v is None else str(v) for v in row)
+            buf.write(line + "\n")
+        buf.seek(0)
+        cur.copy_expert(sql, buf)
 
+
+RETAILER_VOLUME_WEIGHT = {
+    "RET-WALMART": 1.3,
+    "RET-COSTCO": 0.8,
+    "RET-WHOLEFOODS": 1.0,
+    "RET-KROGER": 1.2,
+    "RET-SPROUTS": 0.9,
+    "RET-REGIONAL": 0.7,
+}
 
 def generate_orders_and_lines(rng):
     """Generate retailer orders and their line items."""
@@ -51,8 +64,9 @@ def generate_orders_and_lines(rng):
     while current <= WINDOW_END:
         month_mult = SEASONALITY.get(current.month, 1.0)
         for ret in RETAILERS:
-            orders_this_week = int(rng.gauss(12, 3) * month_mult)
-            orders_this_week = max(2, orders_this_week)
+            weight = RETAILER_VOLUME_WEIGHT.get(ret["retailer_id"], 1.0)
+            orders_this_week = int(rng.gauss(50, 10) * month_mult * weight)
+            orders_this_week = max(8, orders_this_week)
 
             for _ in range(orders_this_week):
                 order_num += 1
@@ -62,7 +76,7 @@ def generate_orders_and_lines(rng):
                 if po_date > WINDOW_END:
                     continue
 
-                n_lines = rng.choices([1, 2, 3, 4, 5], weights=[15, 35, 30, 15, 5])[0]
+                n_lines = rng.choices([2, 3, 4, 5, 7], weights=[10, 25, 35, 20, 10])[0]
                 chosen_skus = rng.sample(ALL_SKUS, min(n_lines, len(ALL_SKUS)))
 
                 total_units = 0
@@ -71,8 +85,8 @@ def generate_orders_and_lines(rng):
 
                 for sku_info in chosen_skus:
                     units = rng.choices(
-                        [6, 12, 24, 36, 48, 72],
-                        weights=[10, 30, 30, 15, 10, 5]
+                        [24, 48, 72, 96, 144],
+                        weights=[15, 30, 30, 15, 10]
                     )[0]
                     key = ret["name"].lower().replace(" ", "_")
                     if key == "regional_group":

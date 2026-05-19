@@ -12,7 +12,7 @@ from datetime import date
 
 SEED = 42
 WINDOW_START = date(2024, 1, 1)
-WINDOW_END = date(2025, 12, 31)
+WINDOW_END = date(2027, 1, 2)
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -38,7 +38,7 @@ DISTRIBUTORS = [
     {"distributor_id": "DIST-DPI",   "name": "DPI Northwest", "type": "regional", "margin_pct": 0.18, "payment_terms_days": 21},
 ]
 
-# -- Product lines (~30 SKUs) --
+# -- Product lines (50 SKUs) --
 
 PRODUCT_LINES = {
     "Artisan Sauces": [
@@ -76,6 +76,30 @@ PRODUCT_LINES = {
         ("CHP-SC-008", "Herb Compound Butter", 7.99, 6, 2.40),
         ("CHP-SC-009", "Raspberry Chipotle Glaze", 8.99, 12, 2.25),
         ("CHP-SC-010", "Lemon Curd", 7.49, 12, 1.80),
+    ],
+    "Dried Goods": [
+        ("CHP-DG-001", "Wild Rice Blend", 7.99, 12, 1.85),
+        ("CHP-DG-002", "Quinoa Medley", 8.49, 12, 2.00),
+        ("CHP-DG-003", "Steel Cut Oats", 5.49, 24, 1.10),
+        ("CHP-DG-004", "Organic Lentils", 4.99, 24, 0.95),
+        ("CHP-DG-005", "Sun-Dried Tomatoes", 9.99, 12, 2.60),
+        ("CHP-DG-006", "Roasted Chickpeas", 6.49, 12, 1.40),
+        ("CHP-DG-007", "Trail Mix Premium", 8.99, 12, 2.30),
+        ("CHP-DG-008", "Dried Mango Slices", 7.49, 12, 1.75),
+        ("CHP-DG-009", "Coconut Flakes Unsweetened", 5.99, 12, 1.25),
+        ("CHP-DG-010", "Mixed Nut Butter Granola", 9.49, 12, 2.45),
+    ],
+    "Snack Bites": [
+        ("CHP-SB-001", "Dark Chocolate Sea Salt Bites", 6.99, 24, 1.50),
+        ("CHP-SB-002", "Almond Butter Protein Bites", 7.99, 24, 1.80),
+        ("CHP-SB-003", "Coconut Cashew Clusters", 8.49, 12, 2.10),
+        ("CHP-SB-004", "Spicy Sriracha Crackers", 4.99, 24, 0.95),
+        ("CHP-SB-005", "Rosemary Olive Oil Crisps", 5.49, 24, 1.05),
+        ("CHP-SB-006", "Honey Walnut Bites", 7.49, 12, 1.70),
+        ("CHP-SB-007", "Cheddar Herb Popcorn", 4.49, 24, 0.85),
+        ("CHP-SB-008", "Maple Pecan Clusters", 8.99, 12, 2.25),
+        ("CHP-SB-009", "Everything Seasoning Pretzels", 5.99, 24, 1.15),
+        ("CHP-SB-010", "Tahini Date Energy Bites", 7.99, 12, 1.90),
     ],
 }
 
@@ -145,9 +169,11 @@ WHOLESALE_MULT = {
     "costco": 0.48,
     "whole_foods": 0.58,
     "sprouts": 0.55,
+    "kroger": 0.52,
     "regional": 0.52,
     "unfi": 0.45,
     "kehe": 0.46,
+    "dpi": 0.44,
     "dtc": 1.00,  # DTC sells at MSRP
 }
 
@@ -156,9 +182,11 @@ TRADE_SPEND_PCT = {
     "costco": 0.10,
     "whole_foods": 0.08,
     "sprouts": 0.09,
+    "kroger": 0.10,
     "regional": 0.07,
     "unfi": 0.05,
     "kehe": 0.05,
+    "dpi": 0.05,
     "dtc": 0.03,
 }
 

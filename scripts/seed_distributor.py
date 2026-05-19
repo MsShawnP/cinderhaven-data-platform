@@ -1,13 +1,13 @@
 """Seed generator for the distributor pipeline.
 
-Tables generated:
-  - distributor_orders (~2,000 orders)
-  - distributor_order_lines (~5,000 lines)
-  - distributor_shipments (~2,000)
-  - distributor_remittances (~150)
-  - distributor_deductions (~600)
-  - distributor_disputes (~200)
-  - distributor_chargebacks (~150)
+Tables generated (50 SKUs, 3-year window):
+  - distributor_orders (~9,000 orders)
+  - distributor_order_lines (~40,000 lines)
+  - distributor_shipments (~9,000)
+  - distributor_remittances (~400)
+  - distributor_deductions (~1,800)
+  - distributor_disputes (~600)
+  - distributor_chargebacks (~500)
 
 Requires seed_shared.py to have been run first (distributors, products exist).
 
@@ -28,30 +28,39 @@ from seed_config import (
 )
 
 
+COPY_CHUNK_SIZE = 50_000
+
 def copy_rows(cur, table: str, columns: list[str], rows: list[tuple]):
-    buf = io.StringIO()
-    for row in rows:
-        line = "\t".join("\\N" if v is None else str(v) for v in row)
-        buf.write(line + "\n")
-    buf.seek(0)
     cols = ", ".join(columns)
     sql = f"COPY {table} ({cols}) FROM STDIN WITH (FORMAT text, NULL '\\N')"
-    cur.copy_expert(sql, buf)
+    for start in range(0, len(rows), COPY_CHUNK_SIZE):
+        chunk = rows[start:start + COPY_CHUNK_SIZE]
+        buf = io.StringIO()
+        for row in chunk:
+            line = "\t".join("\\N" if v is None else str(v) for v in row)
+            buf.write(line + "\n")
+        buf.seek(0)
+        cur.copy_expert(sql, buf)
 
+
+DISTRIBUTOR_VOLUME_WEIGHT = {
+    "DIST-UNFI": 1.2,
+    "DIST-KEHE": 1.0,
+    "DIST-DPI": 0.7,
+}
 
 def generate_orders_and_lines(rng):
     orders = []
     lines = []
     order_num = 0
 
-    # Load SKU-distributor mappings at generation time
-    # For now, assume all SKUs available to all distributors
     current = WINDOW_START
     while current <= WINDOW_END:
         month_mult = SEASONALITY.get(current.month, 1.0)
         for dist in DISTRIBUTORS:
-            orders_this_week = int(rng.gauss(5, 2) * month_mult)
-            orders_this_week = max(1, orders_this_week)
+            weight = DISTRIBUTOR_VOLUME_WEIGHT.get(dist["distributor_id"], 1.0)
+            orders_this_week = int(rng.gauss(20, 5) * month_mult * weight)
+            orders_this_week = max(4, orders_this_week)
 
             for _ in range(orders_this_week):
                 order_num += 1
@@ -70,13 +79,13 @@ def generate_orders_and_lines(rng):
 
                 key = dist["name"].lower().replace(" ", "_")
                 if key == "dpi_northwest":
-                    key = "regional"
+                    key = "dpi"
                 mult = WHOLESALE_MULT.get(key, 0.45)
 
                 for sku_info in chosen_skus:
                     units = rng.choices(
-                        [12, 24, 48, 96, 144],
-                        weights=[10, 25, 35, 20, 10]
+                        [48, 72, 144, 240, 360],
+                        weights=[15, 30, 30, 15, 10]
                     )[0]
                     unit_price = round(sku_info["msrp"] * mult, 2)
                     line_total = round(units * unit_price, 2)
