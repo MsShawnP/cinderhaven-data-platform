@@ -142,6 +142,53 @@ models:
       - name: partner_id
         tests: [not_null]
 
+  - name: int_loaded_contribution_by_sku
+    description: >
+      Per-SKU fully loaded contribution (retailer channel). Grain is one row
+      per SKU. Revenue minus COGS, promotional trade spend, chargebacks, and
+      order-level deductions prorated by revenue share.
+      COGS formula: cases_ordered × case_pack_qty × cogs_per_unit (B2B).
+    columns:
+      - name: sku
+        tests: [unique, not_null]
+      - name: product_line
+        tests: [not_null]
+      - name: gross_revenue
+        tests: [not_null]
+      - name: total_cogs
+        tests: [not_null]
+      - name: loaded_contribution
+        tests: [not_null]
+
+  - name: int_shelf_space_cost_by_sku
+    description: >
+      Per-SKU annual cost to maintain shelf presence. Grain is one row per SKU.
+      Combines actual promotional costs from stg_promotions with a $400/store/year
+      proxy for data maintenance and compliance overhead.
+    columns:
+      - name: sku
+        tests: [unique, not_null]
+      - name: product_line
+        tests: [not_null]
+      - name: active_store_count
+        tests: [not_null]
+      - name: annual_shelf_space_cost
+        tests: [not_null]
+
+  - name: int_cannibalization_pairs
+    description: >
+      Per-SKU proxy cannibalization signal using cross-sectional velocity comparison.
+      Grain is one row per SKU. velocity_delta_pct is negative when a SKU's
+      velocity is lower in stores that also carry sibling SKUs from the same
+      product_line. Methodology note is carried on every row.
+    columns:
+      - name: sku
+        tests: [unique, not_null]
+      - name: product_line
+        tests: [not_null]
+      - name: methodology_note
+        tests: [not_null]
+
   - name: int_dtc_order_economics
     description: >
       Order-level DTC economics — each Shopify order with payment processing
