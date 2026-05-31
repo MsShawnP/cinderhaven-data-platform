@@ -30,6 +30,21 @@ CREATE TABLE raw.product_master (
     last_updated            TEXT
 );
 
+-- Point-in-time data quality history (one row per SKU per monthly snapshot).
+-- Used by the chargeback prediction model to reconstruct data quality state
+-- at shipment time (snapshot_date <= ship_date ORDER BY snapshot_date DESC LIMIT 1).
+CREATE TABLE raw.product_master_history (
+    sku                     TEXT NOT NULL REFERENCES raw.product_master(sku),
+    snapshot_date           DATE NOT NULL,
+    gtin14_present          BOOLEAN NOT NULL,
+    upc_present             BOOLEAN NOT NULL,
+    case_dims_present       BOOLEAN NOT NULL,
+    case_weight_present     BOOLEAN NOT NULL,
+    data_quality_score      INTEGER NOT NULL,
+    PRIMARY KEY (sku, snapshot_date)
+);
+CREATE INDEX idx_pmh_sku_date ON raw.product_master_history(sku, snapshot_date DESC);
+
 CREATE TABLE raw.sku_costs (
     sku                         TEXT PRIMARY KEY REFERENCES raw.product_master(sku),
     cogs_per_unit               NUMERIC(8,2) NOT NULL,

@@ -35,6 +35,19 @@ models:
       - name: chain_name
         tests: [not_null]
 
+  - name: stg_product_master_history
+    description: Monthly point-in-time data quality snapshots per SKU (2024-01-01 through 2027-02-01). Used by the chargeback prediction model to reconstruct data quality state at shipment time.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: data_quality_score
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "sku || '|' || snapshot_date::text"
+
   - name: stg_distribution_log
     description: SKU-store authorization records.
     columns:

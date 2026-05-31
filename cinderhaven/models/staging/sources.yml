@@ -20,6 +20,9 @@ sources:
       - name: stores
         description: 640 retail locations across 6 retailers.
 
+      - name: product_master_history
+        description: Monthly point-in-time data quality snapshots per SKU. Synthetic history used by the chargeback prediction model for point-in-time joins at shipment date.
+
       - name: distribution_log
         description: SKU-store authorization records with auth/deauth dates.
 
