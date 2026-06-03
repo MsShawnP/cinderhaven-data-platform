@@ -113,6 +113,20 @@ cinderhaven-data-platform/
 | Orchestration | Dagster + dagster-dbt | 1.13 |
 | Ingestion | Python (psycopg2 COPY) | 3.13 |
 
+
+## Running locally
+
+```bash
+docker compose up -d          # starts Postgres 16 on localhost:5432
+```
+
+The `scripts/init-db.sh` entrypoint restores the Cinderhaven database from a pg_dump. To refresh the dump from Fly.io:
+
+```bash
+./scripts/dump_flyio.sh       # requires flyctl auth
+```
+
+Default credentials: `postgres`/`postgres`, database `cinderhaven`.
 ## Documentation
 
 - **[Architecture](docs/architecture.md)** — pipeline diagram and
