@@ -197,6 +197,12 @@ models:
         tests: [not_null]
       - name: wholesale_price
         tests: [not_null]
+      - name: margin_per_unit
+        description: Wholesale margin per unit (wholesale_price - cogs_per_unit), rounded to 2 decimal places.
+        tests: [not_null]
+      - name: margin_pct
+        description: Wholesale margin percentage ((wholesale_price - cogs_per_unit) / wholesale_price), rounded to 4 decimal places.
+        tests: [not_null]
 
   - name: fct_chargebacks
     description: Retailer chargebacks with retailer name resolved.

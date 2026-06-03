@@ -67,6 +67,12 @@ select
         then round((p.msrp - c.cogs_per_unit) / p.msrp, 4)
         else 0
     end as dtc_margin_pct,
+    round((c.wholesale_price - c.cogs_per_unit)::numeric, 2) as margin_per_unit,
+    case
+        when c.wholesale_price > 0
+        then round((c.wholesale_price - c.cogs_per_unit) / c.wholesale_price, 4)
+        else 0
+    end as margin_pct,
     coalesce(rd.retailer_count, 0) as retailer_count,
     coalesce(dd.distributor_count, 0) as distributor_count,
     coalesce(sd.authorized_store_count, 0) as authorized_store_count
