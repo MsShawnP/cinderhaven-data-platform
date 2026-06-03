@@ -11,13 +11,13 @@ For things that didn't work, see FAILURES.md.
 
 ## 2026-06-03 18:25
 
-**What changed:** Added 5 consumer mart models (fct_chargebacks, dim_stores, fct_scan_data, fct_promotions, dim_retailer_requirements) and expanded dim_products with 19 columns (barcodes, weights, dimensions, per-channel wholesale pricing, trade spend). Updated schema.yml with 6 model definitions.
+**Started from:** No active arc. Mart layer existed but consumers read raw.* instead.
 
-**Why:** Enable downstream consumers to read the mart layer instead of raw.* tables. dim_products is the canonical product-master contract — consumers read it, not raw.product_master + raw.sku_costs.
+**Did:** Added 5 consumer mart models (fct_chargebacks, dim_stores, fct_scan_data, fct_promotions, dim_retailer_requirements), expanded dim_products with 19 columns. Refactored Product Data Health Audit as first consumer — verified output parity. Audited 4 other consumers: CPA and C2C clean, RDR and RVDT need refactors.
 
-**State:** All 19 models materialized (0 errors, 0 warnings). Product Data Health Audit successfully refactored as first consumer. Consumer audit of 4 other projects complete: CPA and C2C are clean; RDR and RVDT need similar refactors. Commit: e1929d5.
+**State:** All new models materialized (0 errors). Audit refactor complete and verified. Not pushed.
 
-**Next:** Retailer Deduction Recovery refactor (reads int_*/stg_* instead of marts — some mart models may need to be created for deduction codes, dispute evidence, pack records). Then Retail Velocity Decision Tool refactor (reads staging, re-derives margins, has SQLite source and write-to-platform scripts).
+**Next:** RDR refactor — repoint from int_all_*/stg_retailer_* to fct_*/dim_* marts. May need new mart models for deduction_codes, dispute_evidence, pack_records, EDI requirements, post_audit_claims. Then RVDT refactor.
 
 ---
 

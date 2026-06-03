@@ -104,6 +104,11 @@ Each entry:
 - **Do not:** Build ongoing sync between SQLite and Postgres. One-time
   ingestion (or scripted re-ingestion), not continuous replication.
 
+### 2026-06-03 — Consumer projects read marts only; staging/intermediate are internal to dbt
+- **Why:** Staging and intermediate models are implementation details of the dbt project — they can be renamed, restructured, or removed without notice. The mart layer (dim_*/fct_*) is the contracted API surface. Reading below it couples consumers to dbt internals. Confirmed during the Product Data Health Audit refactor: switching from raw.* to marts.* produced identical analytical output with fewer transforms in the consumer.
+- **Scope:** All projects that read from the Cinderhaven Data Platform. Applies to new consumers and refactors of existing ones.
+- **Do not:** Read from raw.*, public_staging.stg_*, or public_intermediate.int_* in consumer code. If a consumer needs data that only exists at staging/intermediate, the fix is to promote it to a mart model in the platform — not to reach into the internals.
+
 ---
 
 ## Orchestration

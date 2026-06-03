@@ -118,6 +118,20 @@ cogs_per_unit else quantity * case_pack_qty * cogs_per_unit end`.
 
 ---
 
+### 2026-06-03 — dbt --select without + prefix misses upstream dependencies
+
+**Attempted:** `dbt run --select dim_products fct_chargebacks dim_stores fct_scan_data fct_promotions dim_retailer_requirements` to materialize new/modified mart models.
+
+**Why it didn't work:** dim_products depends on int_product_retailers and int_product_distributors (intermediate views). dim_stores depends on stg_stores (staging view). Without the `+` prefix, dbt only materializes the named models, not their upstream dependencies. If those views don't already exist in the database, the mart models fail with "relation does not exist."
+
+**What we tried instead:** `dbt run --select +dim_products +dim_stores +fct_scan_data +fct_chargebacks +fct_promotions +dim_retailer_requirements` — the `+` prefix includes all upstream ancestors. 19 models materialized (13 staging views, 2 intermediate views, 4 mart tables), 0 errors.
+
+**Status:** Resolved
+
+**Tags:** dbt, select, dependencies, upstream, materialization
+
+---
+
 ### 2026-05-17 — contract-to-cash headline showed 114 cents per dollar (impossible)
 
 **Attempted:** export_json.py computed "cents per dollar" as
