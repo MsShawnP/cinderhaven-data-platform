@@ -33,3 +33,6 @@ cinderhaven/logs/
 
 # Generated exports
 output/
+
+# Database dumps
+data/*.sql
