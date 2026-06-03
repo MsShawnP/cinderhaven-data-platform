@@ -166,7 +166,11 @@ models:
 
   # ── Shared marts ──────────────────────────────────────
   - name: dim_products
-    description: Product dimension with COGS, pricing, and distribution breadth.
+    description: >
+      Product dimension — the canonical product master. Contains physical
+      attributes, barcodes, pricing, cost, trade spend, and distribution
+      breadth. Sole source of truth for product-master fields; downstream
+      consumers read this, not raw tables.
     columns:
       - name: sku
         tests: [unique, not_null]
@@ -177,6 +181,76 @@ models:
           - not_null
           - accepted_values:
               values: ['Artisan Sauces', 'Pantry Staples', 'Specialty Condiments', 'Dried Goods', 'Snack Bites']
+      - name: gtin14
+        description: GS1 GTIN-14 barcode (may be null or invalid — data quality consumers validate this).
+      - name: upc
+        description: UPC-A / EAN-13 barcode (may be null or invalid).
+      - name: unit_weight_lbs
+      - name: case_weight_lbs
+      - name: case_length_in
+      - name: case_width_in
+      - name: case_height_in
+      - name: brand_owner
+      - name: country_of_origin
+      - name: last_updated
+      - name: cogs_per_unit
+        tests: [not_null]
+      - name: wholesale_price
+        tests: [not_null]
+
+  - name: fct_chargebacks
+    description: Retailer chargebacks with retailer name resolved.
+    columns:
+      - name: chargeback_id
+        tests: [unique, not_null]
+      - name: sku
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+      - name: amount
+        tests: [not_null]
+      - name: reason
+        tests: [not_null]
+      - name: month
+        tests: [not_null]
+
+  - name: dim_stores
+    description: Store dimension with retailer name resolved from dim_retailers.
+    columns:
+      - name: store_id
+        tests: [unique, not_null]
+      - name: retailer
+        tests: [not_null]
+
+  - name: fct_scan_data
+    description: Weekly POS scan data at SKU-store grain.
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: store_id
+        tests: [not_null]
+      - name: week_ending
+        tests: [not_null]
+      - name: units_sold
+        tests: [not_null]
+
+  - name: fct_promotions
+    description: Promotional events with retailer name resolved.
+    columns:
+      - name: promo_id
+        tests: [unique, not_null]
+      - name: sku
+        tests: [not_null]
+      - name: retailer
+        tests: [not_null]
+
+  - name: dim_retailer_requirements
+    description: Retailer data-field requirements with retailer name resolved.
+    columns:
+      - name: retailer
+        tests: [not_null]
+      - name: field
+        tests: [not_null]
 
   - name: fct_distribution
     description: SKU-store authorization with scan velocity metrics.
