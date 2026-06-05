@@ -10,6 +10,10 @@ import os
 import random
 from datetime import date
 
+# ── FROZEN (cinderhaven-data-v2) ────────────────────────────────────
+# Editing any value below re-baselines the entire portfolio.
+# Additive regens MUST NOT touch this block.
+# Verified against Postgres SSOT 2026-06-04. See CINDERHAVEN_CANONICAL.md.
 SEED = 42
 WINDOW_START = date(2024, 1, 1)
 WINDOW_END = date(2027, 1, 2)
@@ -162,7 +166,12 @@ SEASONALITY = {
     7: 0.95, 8: 0.90, 9: 1.05, 10: 1.10, 11: 1.35, 12: 1.45,
 }
 
-# -- Wholesale pricing multipliers (off MSRP) --
+# ── FROZEN (cinderhaven-data-v2) ────────────────────────────────────
+# These economic constants drive cited portfolio figures.
+# Editing re-baselines the entire portfolio.
+# Additive regens MUST NOT touch this block.
+
+# Wholesale pricing multipliers (off MSRP)
 # Retailers buy at ~50-65% of MSRP depending on channel
 WHOLESALE_MULT = {
     "walmart": 0.50,
@@ -177,7 +186,7 @@ WHOLESALE_MULT = {
     "dtc": 1.00,  # DTC sells at MSRP
 }
 
-TRADE_SPEND_PCT = {
+TRADE_SPEND_PCT = {  # drives structural trade cost ($8.8M/36mo)
     "walmart": 0.12,
     "costco": 0.10,
     "whole_foods": 0.08,
@@ -189,6 +198,7 @@ TRADE_SPEND_PCT = {
     "dpi": 0.05,
     "dtc": 0.03,
 }
+# ── END FROZEN BLOCK ───────────────────────────────────────────────
 
 
 def init_rng(seed: int = SEED) -> random.Random:
