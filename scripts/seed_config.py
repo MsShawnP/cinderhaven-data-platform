@@ -200,6 +200,28 @@ TRADE_SPEND_PCT = {  # drives structural trade cost ($8.8M/36mo)
 }
 # ── END FROZEN BLOCK ───────────────────────────────────────────────
 
+# ── SCENARIO SUPPORT ──────────────────────────────────────────────
+# "baseline" = canonical v2, read by all portfolio pieces.
+# "distressed" = v1-style operational mess, consumed ONLY by
+# trade-spend-diagnostic. Controlled by env var; default is baseline.
+SCENARIO = os.environ.get("CINDERHAVEN_SCENARIO", "baseline")
+
+DISTRESSED_DEDUCTION_TYPES = DEDUCTION_TYPES + ["vague"]
+
+VAGUE_TEMPLATES = [
+    "Code {code}: {label}",
+    "Promo allowance",
+    "Marketing chargeback",
+    "Audit adjustment",
+    "Misc deduction — see invoice",
+    "Cash discount take-down",
+    "Slotting reconciliation",
+    "Trade spend true-up",
+    "Allowance reconciliation",
+    "Compliance fee",
+]
+# ── END SCENARIO SUPPORT ─────────────────────────────────────────
+
 
 def init_rng(seed: int = SEED) -> random.Random:
     """Create a seeded RNG for deterministic generation."""

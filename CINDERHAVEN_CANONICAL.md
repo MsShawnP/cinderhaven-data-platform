@@ -165,6 +165,68 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 
 ---
 
+## Distressed Scenario -- FIGURES (generated 2026-06-05)
+
+**Source:** `scripts/generate_distressed_scenario.py` (SEED=200), run against
+baseline SQLite post-fixup. Replaces deductions + disputes only; all other
+tables are byte-identical to baseline.
+
+**Consumer:** trade-spend-diagnostic ONLY. No other piece reads this dataset.
+
+**Baseline integrity (provably unchanged):**
+- Chargebacks: 690 retailer (unchanged; 864 total with distributor in Postgres)
+- Orders: 46,414 (unchanged)
+- Scan revenue: $32.54M trailing-52w (unchanged)
+- Structural trade: unchanged (scan_data + sku_costs untouched)
+
+### Headline figures
+
+| Measure | Value | Definition |
+|---------|-------|------------|
+| Total deductions | 15,850 | All types incl promo_billback and slotting |
+| Total deduction value (36mo) | $3.41M | |
+| Operational waste (36mo) | $2.89M | Excl promo_billback |
+| Operational waste (annual) | ~$965K/yr | Recoverable via disputes |
+| All-in waste rate | 3.0% | Of trailing-52w scan revenue ($32.5M) |
+| Vague deductions | 967 | Real vague type with VAGUE_TEMPLATES |
+| Vague value (annual) | ~$419K/yr | Bimodal: 60% $50-600, 40% $800-4500 |
+| Vague with no PO link | 295 | 30.5% of vague (no order_id) |
+| Double-dips | 3 / $19,062 | Explicit injection, is_double_dip=1 |
+| Ghost promos | 3,258 / $361K | promo_billback with no matching promotion |
+| Disputes filed | 5,395 | ~35% of non-slotting deductions |
+| Recovery rate | 20.9% | Low-recovery weights: won=12, lost=45, partial=28, pending=15 |
+| Recovered | $231,758 | |
+
+### By deduction type
+
+| Type | Count | Amount (36mo) |
+|------|-------|---------------|
+| promo_billback | 4,476 | $494,466 |
+| vague | 967 | $1,256,240 |
+| short_ship | 2,321 | $295,065 |
+| spoilage | 2,154 | $459,189 |
+| damaged | 2,089 | $269,189 |
+| late_delivery | 1,726 | $88,203 |
+| label_fine | 957 | $307,334 |
+| pallet_fine | 662 | $117,646 |
+| pricing_error | 478 | $15,931 |
+| slotting | 17 | $85,212 |
+| double_dip | 3 | $19,062 |
+
+### How distressed differs from baseline
+
+| Dimension | Baseline (v2) | Distressed |
+|-----------|---------------|------------|
+| Deduction types | 9 (no "vague") | 10 (+ "vague") |
+| Vague classification | Misclassified spoilage+damaged | Real vague type, VAGUE_TEMPLATES |
+| Double-dips | 0 (none generated) | 3 explicit ($19K) |
+| Recovery rate | ~44% | ~21% |
+| Operational waste | ~$480K/yr | ~$965K/yr |
+| Ghost promos | N/A | 3,258 ($361K) |
+| Evidence quality | Mostly strong | Mostly weak (distressed) |
+
+---
+
 ## What changed from the pre-reconciliation state
 
 | Old value | Correct value | Appears in |
