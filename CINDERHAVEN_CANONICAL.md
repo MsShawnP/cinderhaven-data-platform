@@ -284,7 +284,7 @@ freeze guard (`check_canonical.py`) is the gate.
 | 3 product lines | **5 product lines** | product-data-health-audit old copy |
 | 4 contracted retailers | **6 contracted retailers** | product-data-health-audit old copy |
 | 45 SKUs | **50 SKUs** | the-ten-decisions exec-summary.qmd:33 |
-| ~$361K product data cost | **~$430K** | about/page.tsx (site), old process docs |
+| ~$361K product data cost | **~$461K** | about/page.tsx (site), old process docs |
 | 96% internal OTIF | **95%** | the-ten-decisions copy, old blog |
 | $74.2M shipped (short-ship) | **$53M** | old copy |
 | 44.7% cost-of-shipped | **drop the percentage** (single dimension misapplied) | old copy |
