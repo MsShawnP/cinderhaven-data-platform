@@ -227,6 +227,51 @@ tables are byte-identical to baseline.
 
 ---
 
+## Defect Profile (added 2026-06-06)
+
+**Source:** `compute_defect_profile()` in `scripts/seed_config.py`, seed=300.
+**Rule:** Defect rates are independent of trade economics. Changing the defect
+profile does NOT move any figure in the Trade Economics section above — the
+freeze guard (`check_canonical.py`) is the gate.
+
+### Headline figures
+
+| Measure | Value | Source |
+|---------|-------|--------|
+| GTIN invalid rate | ~20% | `GTIN_INVALID_RATE` in `seed_config.py` |
+| GTIN generation | Valid GS1 check-digit, then ~20% corrupted | `compute_defect_profile()` |
+| Field missingness | Per `MISSING_RATES` dict (5–18% by field) | `seed_config.py` |
+| Quality score | Mean ~70, range 40–95 | Per-SKU, based on actual defects |
+| Chargeback Pareto | Top 10% of SKUs ≈ 48% of chargebacks | Quality-weighted draw, exponent 3.5 |
+| Retailer pass rates | 50–75% (emergent) | Depend on GTIN validity + field completeness per retailer |
+| Defect RNG seed | 300 | Isolated stream — cannot cascade into trade/count generation |
+
+### Field missingness rates
+
+| Field | Rate | Notes |
+|-------|------|-------|
+| case_length_in | 12% | |
+| case_width_in | 12% | |
+| case_height_in | 12% | |
+| unit_weight_lbs | 8% | |
+| case_weight_lbs | 8% | |
+| subcategory | 10% | |
+| country_of_origin | 3% | |
+| brand_owner | 2% | Required field — low rate |
+
+### What changed from the pre-defect-fix state
+
+| Dimension | Before (unrealistic) | After (realistic) |
+|-----------|---------------------|-------------------|
+| GTIN validity | 0% valid (all fake `1234567NNNNNNN`) | ~76% valid GS1 check-digit, ~24% corrupted |
+| Field missingness | 0% (all fields always populated) | 5–18% per field (see table above) |
+| Quality score | Not computed | Mean ~70, range 40–95 |
+| Chargeback SKU distribution | Uniform random | Quality-weighted Pareto |
+| Chargeback total count | 864 (690 ret + 174 dist) | **Unchanged** — RNG isolation preserves counts |
+| Trade economics | $3.4M/yr, 10.8% | **Unchanged** — separate generation path |
+
+---
+
 ## What changed from the pre-reconciliation state
 
 | Old value | Correct value | Appears in |

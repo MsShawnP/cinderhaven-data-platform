@@ -226,3 +226,87 @@ VAGUE_TEMPLATES = [
 def init_rng(seed: int = SEED) -> random.Random:
     """Create a seeded RNG for deterministic generation."""
     return random.Random(seed)
+
+
+# ── DEFECT PROFILE (isolated RNG stream, seed=300) ────────────────
+# Changes here CANNOT cascade into trade/deduction/chargeback-count
+# generation because the defect_rng is a separate stream.
+DEFECT_SEED = 300
+GTIN_INVALID_RATE = 0.20  # ~20% of SKUs get corrupted check digit
+
+MISSING_RATES = {
+    "case_length_in": 0.12,
+    "case_width_in": 0.12,
+    "case_height_in": 0.12,
+    "unit_weight_lbs": 0.08,
+    "case_weight_lbs": 0.08,
+    "brand_owner": 0.02,
+    "country_of_origin": 0.03,
+    "subcategory": 0.10,
+}
+
+
+def _gtin14_check_digit(digits_13: str) -> str:
+    """Compute GS1 check digit for a 13-digit GTIN-14 prefix."""
+    total = 0
+    for i, d in enumerate(digits_13):
+        weight = 3 if i % 2 == 0 else 1
+        total += int(d) * weight
+    return str((10 - total % 10) % 10)
+
+
+def compute_defect_profile(seed: int = DEFECT_SEED) -> dict:
+    """Deterministic defect profile for all 50 SKUs.
+
+    Returns {sku: {gtin14, upc, gtin_valid, missing_fields, quality_score}}
+    where quality_score is 0-100 (mean ~70, range 40-95).
+
+    Called by seed_shared (to populate product_master) and by
+    seed_retailer/seed_distributor (to weight chargeback distribution).
+    Same seed → same result everywhere.
+    """
+    rng = init_rng(seed)
+    profile = {}
+
+    for i, p in enumerate(ALL_SKUS):
+        sku = p["sku"]
+
+        # Valid GTIN-14: indicator "0" + company prefix "061414" + 6-digit item ref + check
+        prefix_13 = f"0061414{i:06d}"
+        check = _gtin14_check_digit(prefix_13)
+        valid_gtin = prefix_13 + check
+
+        # Corrupt ~20% by flipping the check digit
+        is_gtin_valid = rng.random() >= GTIN_INVALID_RATE
+        if is_gtin_valid:
+            gtin14 = valid_gtin
+        else:
+            bad_check = str((int(check) + rng.randint(1, 9)) % 10)
+            gtin14 = prefix_13 + bad_check
+
+        upc = gtin14[1:]  # UPC-13 = GTIN-14 without indicator digit
+
+        # Field missingness per MISSING_RATES
+        missing_fields = {}
+        for field, rate in MISSING_RATES.items():
+            missing_fields[field] = rng.random() < rate
+
+        # Quality score: calibrated to mean ~70, range 40-95
+        score = 82
+        if not is_gtin_valid:
+            score -= rng.randint(20, 35)
+        n_missing = sum(1 for v in missing_fields.values() if v)
+        score -= n_missing * rng.randint(6, 12)
+        score += rng.randint(-3, 5)
+        score = max(40, min(95, score))
+
+        profile[sku] = {
+            "gtin14": gtin14,
+            "upc": upc,
+            "gtin_valid": is_gtin_valid,
+            "missing_fields": missing_fields,
+            "quality_score": score,
+        }
+
+    return profile
+# ── END DEFECT PROFILE ────────────────────────────────────────────

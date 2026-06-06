@@ -26,7 +26,8 @@ from datetime import date, timedelta
 from seed_config import (
     ALL_SKUS, DATABASE_URL, RETAILERS, CARRIERS, DEDUCTION_TYPES,
     DISPUTE_OUTCOMES, EVIDENCE_TYPES, SEASONALITY,
-    WINDOW_START, WINDOW_END, init_rng,
+    WINDOW_START, WINDOW_END, init_rng, compute_defect_profile,
+    DEFECT_SEED,
 )
 
 
@@ -277,7 +278,19 @@ def generate_dispute_evidence(rng, disputes):
 
 
 def generate_chargebacks(rng):
-    """Legacy chargeback records by month/retailer/reason/sku."""
+    """Legacy chargeback records by month/retailer/reason/sku.
+
+    SKU distribution is quality-weighted (lower score → more chargebacks)
+    using an isolated defect_rng stream. Main rng consumption is preserved
+    exactly so the total count stays at 690.
+    """
+    defect = compute_defect_profile()
+    defect_rng = init_rng(DEFECT_SEED + 1)
+
+    # Quality-weighted SKU selection: weight = (101 - score)^2
+    sku_list = [p["sku"] for p in ALL_SKUS]
+    weights = [(101 - defect[s]["quality_score"]) ** 3.5 for s in sku_list]
+
     rows = []
     reasons = ["short_ship", "late_delivery", "label_fine", "damaged", "pricing_error"]
     current = WINDOW_START
@@ -286,9 +299,12 @@ def generate_chargebacks(rng):
         for ret in RETAILERS:
             n_cbs = rng.randint(1, 5)
             for _ in range(n_cbs):
-                sku = rng.choice(ALL_SKUS)["sku"]
+                # Dummy call: preserve main rng stream exactly
+                rng.choice(ALL_SKUS)
                 reason = rng.choice(reasons)
                 amount = round(rng.uniform(50, 2000), 2)
+                # Actual SKU from quality-weighted draw (isolated stream)
+                sku = defect_rng.choices(sku_list, weights=weights)[0]
                 rows.append((str(month_date), ret["retailer_id"], reason, sku, amount))
         if current.month == 12:
             current = date(current.year + 1, 1, 1)

@@ -25,7 +25,7 @@ from seed_config import (
     RETAILERS, RETAILER_STORE_COUNTS, REGIONS, STATES_BY_REGION,
     VOLUME_TIERS, WHOLESALE_MULT, TRADE_SPEND_PCT,
     WINDOW_START, WINDOW_END, DEDUCTION_TYPES, SEASONALITY,
-    init_rng,
+    init_rng, compute_defect_profile,
 )
 
 
@@ -47,23 +47,35 @@ def seed_product_master(cur, rng):
         "case_length_in", "case_width_in", "case_height_in",
         "msrp", "brand_owner", "country_of_origin", "last_updated",
     ]
+
+    defect = compute_defect_profile()
+
     rows = []
     for i, p in enumerate(ALL_SKUS):
+        sku = p["sku"]
+        dp = defect[sku]
+        missing = dp["missing_fields"]
+
+        # Main rng calls preserved exactly (same consumption pattern as before)
         unit_wt = round(rng.uniform(0.4, 2.0), 4)
         cpq = p["case_pack_qty"]
-        gtin = f"1234567{i:07d}"
-        upc = gtin[1:]
+        case_wt = round(unit_wt * cpq * 1.05, 4)
+        case_len = round(rng.uniform(10, 18), 2)
+        case_wid = round(rng.uniform(8, 14), 2)
+        case_ht = round(rng.uniform(6, 12), 2)
+
         rows.append((
-            p["sku"], p["product_name"], p["product_line"],
-            p["product_line"],
-            gtin, upc, cpq,
-            unit_wt, round(unit_wt * cpq * 1.05, 4),
-            round(rng.uniform(10, 18), 2),
-            round(rng.uniform(8, 14), 2),
-            round(rng.uniform(6, 12), 2),
+            sku, p["product_name"], p["product_line"],
+            None if missing.get("subcategory") else p["product_line"],
+            dp["gtin14"], dp["upc"], cpq,
+            None if missing.get("unit_weight_lbs") else unit_wt,
+            None if missing.get("case_weight_lbs") else case_wt,
+            None if missing.get("case_length_in") else case_len,
+            None if missing.get("case_width_in") else case_wid,
+            None if missing.get("case_height_in") else case_ht,
             p["msrp"],
-            "Cinderhaven Provisions",
-            "USA",
+            None if missing.get("brand_owner") else "Cinderhaven Provisions",
+            None if missing.get("country_of_origin") else "USA",
             "2026-01-15",
         ))
     copy_rows(cur, "raw.product_master", cols, rows)

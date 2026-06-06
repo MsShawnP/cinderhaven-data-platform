@@ -25,6 +25,7 @@ from seed_config import (
     ALL_SKUS, DATABASE_URL, DISTRIBUTORS, CARRIERS,
     DISPUTE_OUTCOMES, SEASONALITY,
     WINDOW_START, WINDOW_END, init_rng, WHOLESALE_MULT,
+    compute_defect_profile, DEFECT_SEED,
 )
 
 
@@ -230,6 +231,17 @@ def generate_disputes(rng, deductions):
 
 
 def generate_chargebacks(rng):
+    """Distributor chargebacks with quality-weighted SKU distribution.
+
+    Isolated defect_rng stream for SKU selection; main rng preserved
+    exactly so count stays at 174.
+    """
+    defect = compute_defect_profile()
+    defect_rng = init_rng(DEFECT_SEED + 2)
+
+    sku_list = [p["sku"] for p in ALL_SKUS]
+    weights = [(101 - defect[s]["quality_score"]) ** 3.5 for s in sku_list]
+
     reasons = ["short_ship", "pricing_error", "damaged", "late_delivery"]
     rows = []
     current = WINDOW_START
@@ -238,9 +250,12 @@ def generate_chargebacks(rng):
         for dist in DISTRIBUTORS:
             n_cbs = rng.randint(0, 3)
             for _ in range(n_cbs):
-                sku = rng.choice(ALL_SKUS)["sku"]
+                # Dummy call: preserve main rng stream exactly
+                rng.choice(ALL_SKUS)
                 reason = rng.choice(reasons)
                 amount = round(rng.uniform(100, 3000), 2)
+                # Actual SKU from quality-weighted draw (isolated stream)
+                sku = defect_rng.choices(sku_list, weights=weights)[0]
                 rows.append((str(month_date), dist["distributor_id"], reason, sku, amount))
         if current.month == 12:
             current = date(current.year + 1, 1, 1)
