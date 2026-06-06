@@ -85,7 +85,7 @@ See each repo for derivation details.
 |--------|-------|------------|--------|
 | SKU rationalization — kill candidates | 19 of 50 | sku-rationalization-framework | ✅ Confirmed |
 | SKU rationalization — fix-or-kill | 22 of 50 | sku-rationalization-framework | ✅ Confirmed |
-| Product data — annualized cost | **$430K** | product-data-health-audit | ⚠️ See note |
+| Product data — annualized cost | **$461K** | product-data-health-audit | ✅ Confirmed |
 | Deductions — total backlog | $1.65M | retailer-deduction-recovery | ✅ Confirmed |
 | Deductions — baseline recovery rate | ~16% | retailer-deduction-recovery | ✅ Confirmed |
 | Deductions — max recovery rate | 65% | retailer-deduction-recovery | ✅ Confirmed |
@@ -103,7 +103,7 @@ See each repo for derivation details.
 | Trade — operational waste | ~$480K/yr | trade-spend-data-diagnostic | ✅ Confirmed |
 | Trade — chargebacks | 864 (690 ret + 174 dist) | cinderhaven-data-platform | ✅ Confirmed |
 
-**Product data $430K note:** The 50-SKU reconciliation was completed 2026-05-20. The pipeline ran and the README was updated to $430K. A known stale-cache issue (TTM revenue shows $27.9M vs expected $32.1M from Postgres) means this figure may shift slightly on the next fresh Postgres pull. Do not revise copy until a fresh pipeline run confirms.
+**Product data $461K note:** Fresh Postgres→SQLite export (2026-06-06) and full R pipeline run confirmed: 690 retailer chargebacks totaling $691,338 over 18 months, annualized to $460,892. Rounded to $461K for all downstream copy. Previous $430K was from a stale cache; $296K was from a pre-reseed calibration. Both superseded.
 
 ---
 
@@ -146,6 +146,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 
 | Context | Exact phrasing |
 |---------|----------------|
+| Product data cost (annual) | "~$461K/yr in chargeback cost attributable to data-quality defects" |
 | Trade context (annual) | "~$3.5M/yr all-in trade spend, 10.8% of scan revenue (trailing 52 weeks)" |
 | Recoverable layer | "~$480K/yr operational deduction waste; 864 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$10.26M all-in trade over 36 months" |
@@ -162,6 +163,9 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | "18 months" | Misstatement of data window length | Always was 36 months (2024-01-01 to 2027-01-02) |
 | 3,441 chargebacks | May 2026 SQLite chargeback count | Superseded by regen |
 | 21.5% Walmart trade_spend_pct | Old seed_config value | Now 12.0% in current seed_config |
+| $430K product data cost | Pre-fresh-pull PDHA figure (stale cache) | Fresh Postgres export (2026-06-06) produces $461K |
+| $296K product data cost | Website recalibration (2026-06-02) against pre-reseed data | SSOT reseeded; current pipeline produces $461K |
+| $60K chargebacks | the-ten-decisions early draft figure | Never matched any pipeline output; superseded by $461K |
 
 ---
 
