@@ -132,7 +132,7 @@ See each repo for derivation details.
 | Structural trade (annual) | ~$3.0M/yr | Rate × trailing-52w channel revenue |
 | Structural trade rate | 9.2% | Of trailing-52w scan revenue ($32.5M) |
 | Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.5M) |
-| Chargebacks | 864 | 690 retailer + 174 distributor; gross = net, no reversals |
+| Chargebacks | 837 | 677 retailer + 160 distributor; gross = net, no reversals |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
 | Scan revenue (trailing-52w) | $32.5M | |
 | EBITDA check | 13.7% trade + 11% EBITDA = 24.7% | Leaves 75.3% for COGS+SGA (plausible) |
