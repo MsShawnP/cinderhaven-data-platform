@@ -129,8 +129,8 @@ See each repo for derivation details.
 | Structural trade (36mo) | $8.8M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
 | Operational waste (36mo) | $1.44M | Trailing-365 deductions excl promo_billback |
 | Operational waste (annual) | ~$480K/yr | Recoverable via disputes |
-| Structural trade (annual) | ~$2.9M/yr | Rate × trailing-52w channel revenue |
-| Structural trade rate | 9.0% | Of trailing-52w scan revenue ($32.5M) |
+| Structural trade (annual) | ~$3.0M/yr | Rate × trailing-52w channel revenue |
+| Structural trade rate | 9.2% | Of trailing-52w scan revenue ($32.5M) |
 | Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.5M) |
 | Chargebacks | 864 | 690 retailer + 174 distributor; gross = net, no reversals |
 | Data window | 2024-01-01 to 2027-01-02 | 36 months |
