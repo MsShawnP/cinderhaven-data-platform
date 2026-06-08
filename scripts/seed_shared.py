@@ -76,7 +76,7 @@ def seed_product_master(cur, rng):
             p["msrp"],
             None if missing.get("brand_owner") else "Cinderhaven Provisions",
             None if missing.get("country_of_origin") else "USA",
-            "2026-01-15",
+            "2025-01-15",
         ))
     copy_rows(cur, "raw.product_master", cols, rows)
     print(f"  product_master: {len(rows)} rows")

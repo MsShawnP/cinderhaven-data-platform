@@ -29,7 +29,7 @@ from seed_config import DATABASE_URL, WINDOW_START
 import psycopg2
 
 SEED = 42
-SNAPSHOT_END = date(2027, 2, 1)
+SNAPSHOT_END = date(2026, 2, 1)
 
 ALL_SKUS = [
     "CHP-AS-001", "CHP-AS-002", "CHP-AS-003", "CHP-AS-004", "CHP-AS-005",
@@ -73,7 +73,7 @@ def build_sku_profiles(rng: random.Random) -> dict[str, dict[str, date | None]]:
     # Hardcoded profiles for test verifiability
     profiles: dict[str, dict[str, date | None]] = {
         "CHP-AS-001": {
-            "gtin14": date(2025, 3, 1),   # missing until 2025-03-01
+            "gtin14": date(2024, 3, 1),   # missing until 2024-03-01
             "upc": None,
             "case_dims": None,
             "case_weight": None,
@@ -81,7 +81,7 @@ def build_sku_profiles(rng: random.Random) -> dict[str, dict[str, date | None]]:
         "CHP-SC-002": {
             "gtin14": None,
             "upc": None,
-            "case_dims": date(2025, 7, 1),  # missing until 2025-07-01
+            "case_dims": date(2024, 7, 1),  # missing until 2024-07-01
             "case_weight": None,
         },
     }

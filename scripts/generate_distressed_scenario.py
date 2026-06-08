@@ -27,7 +27,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 DISTRESSED_SEED = 200
-DATE_CAP = date(2027, 1, 2)
+DATE_CAP = date(2026, 1, 2)
 
 RETAILER_KEY_MAP = {
     "RET-WALMART": "walmart",

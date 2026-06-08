@@ -19,7 +19,7 @@ metadata:
 |------|-------|-------|
 | Brand name | Cinderhaven Provisions | |
 | Brand type | Fictional / synthetic | Do not describe as "real" |
-| Annual revenue | ~$25M | CY2025 from platform data; acceptable range $23M–$27M |
+| Annual revenue | ~$25M | CY2024 from platform data; acceptable range $23M–$27M |
 | Description | A $25M specialty food brand | Use this phrasing |
 
 ---
@@ -125,7 +125,7 @@ See each repo for derivation details.
 | All-in trade cost (annualized) | $3.4M/yr | Structural trade + operational waste excl promo_billback |
 | All-in trade cost (trailing-52w) | $3.5M/yr | Same methodology, trailing 52-week window |
 | All-in trade rate | 10.8% | Of trailing-52w scan revenue ($32.5M) |
-| All-in trade cost (36mo) | $10.26M | 2024-01-01 to 2027-01-02 |
+| All-in trade cost (36mo) | $10.26M | 2023-01-01 to 2026-01-02 |
 | Structural trade (36mo) | $8.8M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
 | Operational waste (36mo) | $1.44M | Trailing-365 deductions excl promo_billback |
 | Operational waste (annual) | ~$480K/yr | Recoverable via disputes |
@@ -133,7 +133,7 @@ See each repo for derivation details.
 | Structural trade rate | 9.2% | Of trailing-52w scan revenue ($32.5M) |
 | Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.5M) |
 | Chargebacks | 864 | 690 retailer + 174 distributor; gross = net, no reversals |
-| Data window | 2024-01-01 to 2027-01-02 | 36 months |
+| Data window | 2023-01-01 to 2026-01-02 | 36 months |
 | Scan revenue (trailing-52w) | $32.5M | |
 | EBITDA check | 13.7% trade + 11% EBITDA = 24.7% | Leaves 75.3% for COGS+SGA (plausible) |
 
@@ -166,7 +166,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | $5.4M | Pre-May-2026 all-in (old seed_config trade rates) | Superseded by intentional Postgres regen |
 | $7.2M / $7,174,939 / 26.1% | May 2026 SQLite export figures | Postgres was regenerated after this export |
 | 464 chargebacks | DPI Northwest deduction count from deduction-recovery `summary.json` | Misquoted as total chargebacks; actual total is 864 |
-| "18 months" | Misstatement of data window length | Always was 36 months (2024-01-01 to 2027-01-02) |
+| "18 months" | Misstatement of data window length | Always was 36 months (2023-01-01 to 2026-01-02) |
 | 3,441 chargebacks | May 2026 SQLite chargeback count | Superseded by regen |
 | 21.5% Walmart trade_spend_pct | Old seed_config value | Now 12.0% in current seed_config |
 | $430K product data cost | Pre-fresh-pull PDHA figure (stale cache) | Fresh Postgres export (2026-06-06) produces $461K |

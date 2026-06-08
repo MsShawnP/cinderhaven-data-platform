@@ -15,8 +15,8 @@ from datetime import date
 # Additive regens MUST NOT touch this block.
 # Verified against Postgres SSOT 2026-06-04. See CINDERHAVEN_CANONICAL.md.
 SEED = 42
-WINDOW_START = date(2024, 1, 1)
-WINDOW_END = date(2027, 1, 2)
+WINDOW_START = date(2023, 1, 1)
+WINDOW_END = date(2026, 1, 2)
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",

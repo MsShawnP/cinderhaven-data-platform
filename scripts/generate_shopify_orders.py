@@ -1,6 +1,6 @@
 """Generate synthetic Shopify DTC orders for the Cinderhaven platform.
 
-Produces ~79,000 orders over the full data window (Jan 2024 - Dec 2026)
+Produces ~79,000 orders over the full data window (Jan 2023 - Dec 2025)
 with realistic e-commerce patterns: repeat customers, seasonal demand,
 discount codes, and Shopify-style export fields. Calibrated so annual
 DTC revenue lands in the $1.0-1.8M range with AOV of $48-58, matching
@@ -28,8 +28,8 @@ from pathlib import Path
 DB_PATH = Path(r"C:\Users\mssha\projects\active\cinderhaven-data\data\cinderhaven_product_master.db")
 SEED = 42
 
-WINDOW_START = date(2024, 1, 1)
-WINDOW_END = date(2026, 12, 31)
+WINDOW_START = date(2023, 1, 1)
+WINDOW_END = date(2025, 12, 31)
 TARGET_ORDERS = 79_000
 
 # Seasonal multipliers by month (1.0 = baseline).

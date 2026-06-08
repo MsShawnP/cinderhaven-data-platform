@@ -41,12 +41,12 @@ def _sub_months(d: date, months: int) -> date:
 
 def _build_time_windows() -> dict[str, tuple[date, date]]:
     return {
-        "full":   (date(2024, 1, 1),  TODAY),
+        "full":   (date(2023, 1, 1),  TODAY),
         "t3m":    (_sub_months(TODAY, 3), TODAY),
         "t6m":    (_sub_months(TODAY, 6), TODAY),
         "t12m":   (_sub_months(TODAY, 12), TODAY),
-        "cy2025": (date(2025, 1, 1),  date(2025, 12, 31)),
-        "fy2026": (date(2025, 4, 1),  date(2026, 3, 31)),
+        "cy2024": (date(2024, 1, 1),  date(2024, 12, 31)),
+        "fy2025": (date(2024, 4, 1),  date(2025, 3, 31)),
     }
 
 
