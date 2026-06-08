@@ -108,6 +108,18 @@ def parse_canonical():
     if m:
         expected["trade_rate"] = float(m.group(1)) / 100
 
+    m = re.search(r'\| Structural trade \(annual\)\s*\|\s*~?\$([0-9.]+)M/yr\s*\|', text)
+    if m:
+        expected["structural_annual"] = float(m.group(1)) * 1_000_000
+
+    m = re.search(r'\| Structural trade rate\s*\|\s*([0-9.]+)%\s*\|', text)
+    if m:
+        expected["structural_rate"] = float(m.group(1)) / 100
+
+    m = re.search(r'\| Operational waste rate\s*\|\s*([0-9.]+)%\s*\|', text)
+    if m:
+        expected["op_waste_rate"] = float(m.group(1)) / 100
+
     return expected
 
 
@@ -219,6 +231,28 @@ def run_checks():
     results.append(("PASS" if ok else "FAIL", "trade_rate",
                     f"{exp_rate*100:.1f}%", f"{trade_rate*100:.1f}%"))
 
+    # Derived figures for downstream copy
+    structural_rate = structural_annual / revenue if revenue else 0
+    op_waste_rate = op_waste_annual / revenue if revenue else 0
+
+    exp_struct_annual = expected.get("structural_annual")
+    if exp_struct_annual is not None:
+        ok = approx(structural_annual, exp_struct_annual, TOLERANCE_PCT)
+        results.append(("PASS" if ok else "FAIL", "structural_annual",
+                        f"${exp_struct_annual/1e6:.2f}M", f"${structural_annual/1e6:.2f}M"))
+
+    exp_struct_rate = expected.get("structural_rate")
+    if exp_struct_rate is not None:
+        ok = abs(structural_rate - exp_struct_rate) <= TOLERANCE_RATE_PP
+        results.append(("PASS" if ok else "FAIL", "structural_rate",
+                        f"{exp_struct_rate*100:.1f}%", f"{structural_rate*100:.1f}%"))
+
+    exp_op_rate = expected.get("op_waste_rate")
+    if exp_op_rate is not None:
+        ok = abs(op_waste_rate - exp_op_rate) <= TOLERANCE_RATE_PP
+        results.append(("PASS" if ok else "FAIL", "op_waste_rate",
+                        f"{exp_op_rate*100:.1f}%", f"{op_waste_rate*100:.1f}%"))
+
     conn.close()
 
     # Report
@@ -237,7 +271,17 @@ def run_checks():
         return 1
     else:
         print("\nPASS: All canonical figures match Postgres SSOT.")
-        return 0
+
+    if "--emit" in sys.argv:
+        print("\n=== Derived figures (for CINDERHAVEN_CANONICAL.md) ===\n")
+        print(f"| Structural trade (annual) | ~${structural_annual/1e6:.1f}M/yr "
+              f"| Rate × trailing-52w channel revenue |")
+        print(f"| Structural trade rate | {structural_rate*100:.1f}% "
+              f"| Of trailing-52w scan revenue (${revenue/1e6:.1f}M) |")
+        print(f"| Operational waste rate | {op_waste_rate*100:.1f}% "
+              f"| Of trailing-52w scan revenue (${revenue/1e6:.1f}M) |")
+
+    return 1 if any_fail else 0
 
 
 if __name__ == "__main__":
