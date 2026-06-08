@@ -281,31 +281,78 @@ def generate_chargebacks(rng):
     """Legacy chargeback records by month/retailer/reason/sku.
 
     SKU distribution is quality-weighted (lower score → more chargebacks)
-    using an isolated defect_rng stream. Main rng consumption is preserved
-    exactly so the total count stays at 690.
+    using an isolated defect_rng stream. Reason assignment is conditional:
+    data-quality reasons (label_fine, damaged, pricing_error) only fire
+    for SKUs with the corresponding defect. Operational reasons (short_ship,
+    late_delivery) are unconditional.
+
+    reason_defect_map mirrors product-data-health-audit/R/02_build_frames.R
+    lines 356-366 (excluding weight_implausible and ows_incomplete which
+    are not generated at seed time).
     """
     defect = compute_defect_profile()
     defect_rng = init_rng(DEFECT_SEED + 1)
 
-    # Quality-weighted SKU selection: weight = (101 - score)^2
+    # Quality-weighted SKU selection: weight = (101 - score)^3.5
     sku_list = [p["sku"] for p in ALL_SKUS]
     weights = [(101 - defect[s]["quality_score"]) ** 3.5 for s in sku_list]
 
+    REASON_DEFECT_CONDITIONS = {
+        "label_fine": lambda d: not d["gtin_valid"],
+        "damaged": lambda d: (
+            d["missing_fields"].get("case_length_in")
+            or d["missing_fields"].get("case_width_in")
+            or d["missing_fields"].get("case_height_in")
+            or d["missing_fields"].get("case_weight_lbs")
+        ),
+        "pricing_error": lambda d: (
+            d["missing_fields"].get("brand_owner")
+            or d["missing_fields"].get("country_of_origin")
+        ),
+    }
+
+    REASON_TRIGGER_FIELDS = {
+        "label_fine": lambda d, r: r.choice(
+            [f for f in ["gtin_valid", "upc_valid"] if not d["gtin_valid"]]
+        ),
+        "damaged": lambda d, r: r.choice(
+            [f for f, k in [
+                ("missing_case_dims", "case_length_in"),
+                ("missing_case_dims", "case_width_in"),
+                ("missing_case_dims", "case_height_in"),
+                ("missing_case_weight", "case_weight_lbs"),
+            ] if d["missing_fields"].get(k)]
+        ),
+        "pricing_error": lambda d, r: r.choice(
+            [f for f, k in [
+                ("missing_brand_owner", "brand_owner"),
+                ("missing_country", "country_of_origin"),
+            ] if d["missing_fields"].get(k)]
+        ),
+    }
+
     rows = []
-    reasons = ["short_ship", "late_delivery", "label_fine", "damaged", "pricing_error"]
+    reasons_all = ["short_ship", "late_delivery", "label_fine", "damaged", "pricing_error"]
     current = WINDOW_START
     while current <= WINDOW_END:
         month_date = date(current.year, current.month, 1)
         for ret in RETAILERS:
             n_cbs = rng.randint(1, 5)
             for _ in range(n_cbs):
-                # Dummy call: preserve main rng stream exactly
                 rng.choice(ALL_SKUS)
-                reason = rng.choice(reasons)
+                rng.choice(reasons_all)
                 amount = round(rng.uniform(50, 2000), 2)
-                # Actual SKU from quality-weighted draw (isolated stream)
                 sku = defect_rng.choices(sku_list, weights=weights)[0]
-                rows.append((str(month_date), ret["retailer_id"], reason, sku, amount))
+                dp = defect[sku]
+                valid_reasons = ["short_ship", "late_delivery"]
+                for r, cond in REASON_DEFECT_CONDITIONS.items():
+                    if cond(dp):
+                        valid_reasons.append(r)
+                reason = defect_rng.choice(valid_reasons)
+                triggered_by = None
+                if reason in REASON_TRIGGER_FIELDS:
+                    triggered_by = REASON_TRIGGER_FIELDS[reason](dp, defect_rng)
+                rows.append((str(month_date), ret["retailer_id"], reason, sku, amount, triggered_by))
         if current.month == 12:
             current = date(current.year + 1, 1, 1)
         else:
@@ -438,7 +485,7 @@ def main():
     print("Generating chargebacks...")
     chargebacks = generate_chargebacks(rng)
     copy_rows(cur, "raw.retailer_chargebacks",
-              ["month", "retailer_id", "reason", "sku", "amount"],
+              ["month", "retailer_id", "reason", "sku", "amount", "triggered_by_field"],
               chargebacks)
     print(f"  retailer_chargebacks: {len(chargebacks)} rows")
 

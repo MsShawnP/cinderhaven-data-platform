@@ -209,7 +209,8 @@ CREATE TABLE raw.retailer_chargebacks (
     retailer_id             TEXT NOT NULL REFERENCES raw.retailers(retailer_id),
     reason                  TEXT NOT NULL,
     sku                     TEXT NOT NULL REFERENCES raw.product_master(sku),
-    amount                  NUMERIC(10,2) NOT NULL
+    amount                  NUMERIC(10,2) NOT NULL,
+    triggered_by_field      TEXT
 );
 CREATE INDEX idx_retailer_chargebacks_retailer ON raw.retailer_chargebacks(retailer_id);
 
