@@ -94,6 +94,9 @@ See each repo for derivation details.
 | Short-ship — shipped revenue | $53M | short-ship-cost | ✅ Confirmed |
 | OTIF — internal fill rate | 95% | otif-blind-spot | ✅ Confirmed |
 | OTIF — retailer-scored | 86% | otif-blind-spot | ✅ Confirmed |
+| OTIF — annual exposure (total) | ~$430K/yr | otif-blind-spot | ✅ Confirmed |
+| OTIF — annual fines | ~$138K/yr | otif-blind-spot | ✅ Confirmed |
+| OTIF — shelf-velocity damage | ~$292K/yr | otif-blind-spot | ✅ Confirmed |
 | Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ✅ Confirmed |
 | Revenue lifecycle — cents per invoiced dollar | 86¢ | contract-to-cash | ✅ Confirmed |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |

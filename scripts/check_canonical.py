@@ -120,6 +120,25 @@ def parse_canonical():
     if m:
         expected["op_waste_rate"] = float(m.group(1)) / 100
 
+    # OTIF exposure (pipeline-derived from otif-blind-spot, not directly in Postgres)
+    m = re.search(
+        r'\| OTIF — annual exposure \(total\)\s*\|\s*~?\$(\d+)K/yr', text
+    )
+    if m:
+        expected["otif_exposure_total"] = float(m.group(1)) * 1_000
+
+    m = re.search(
+        r'\| OTIF — annual fines\s*\|\s*~?\$(\d+)K/yr', text
+    )
+    if m:
+        expected["otif_fines_annual"] = float(m.group(1)) * 1_000
+
+    m = re.search(
+        r'\| OTIF — shelf-velocity damage\s*\|\s*~?\$(\d+)K/yr', text
+    )
+    if m:
+        expected["otif_velocity_annual"] = float(m.group(1)) * 1_000
+
     return expected
 
 
@@ -252,6 +271,19 @@ def run_checks():
         ok = abs(op_waste_rate - exp_op_rate) <= TOLERANCE_RATE_PP
         results.append(("PASS" if ok else "FAIL", "op_waste_rate",
                         f"{exp_op_rate*100:.1f}%", f"{op_waste_rate*100:.1f}%"))
+
+    # OTIF exposure self-consistency (pipeline-derived; no direct SQL validation)
+    otif_total = expected.get("otif_exposure_total")
+    otif_fines = expected.get("otif_fines_annual")
+    otif_velocity = expected.get("otif_velocity_annual")
+    if otif_total and otif_fines and otif_velocity:
+        computed_total = otif_fines + otif_velocity
+        ok = approx(computed_total, otif_total, TOLERANCE_PCT)
+        results.append(("PASS" if ok else "FAIL", "otif_exposure_consistency",
+                        f"${otif_total/1e3:.0f}K", f"${computed_total/1e3:.0f}K"))
+    else:
+        results.append(("FAIL", "otif_exposure_parse",
+                        "3 OTIF rows", "could not parse all rows"))
 
     conn.close()
 
