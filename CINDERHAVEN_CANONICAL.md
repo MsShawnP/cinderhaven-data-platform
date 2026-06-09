@@ -9,7 +9,7 @@ metadata:
 
 **Source of truth:** `scripts/seed_config.py` in this repo.
 **Rule:** Reconcile DOWN to this file. Never change this file to match a drifted repo.
-**Last verified:** 2026-06-04
+**Last verified:** 2026-06-08
 
 ---
 
@@ -85,34 +85,34 @@ See each repo for derivation details.
 |--------|-------|------------|--------|
 | SKU rationalization — kill candidates | 19 of 50 | sku-rationalization-framework | ✅ Confirmed |
 | SKU rationalization — fix-or-kill | 22 of 50 | sku-rationalization-framework | ✅ Confirmed |
-| Product data — annualized cost | **$461K** | product-data-health-audit | ✅ Confirmed |
-| Deductions — total backlog | $1.65M | retailer-deduction-recovery | ✅ Confirmed |
+| Product data — annualized cost | **$458K** | product-data-health-audit | ✅ Confirmed |
+| Deductions — total backlog | $1.66M | retailer-deduction-recovery | ✅ Confirmed |
 | Deductions — baseline recovery rate | ~16% | retailer-deduction-recovery | ✅ Confirmed |
 | Deductions — max recovery rate | 65% | retailer-deduction-recovery | ✅ Confirmed |
 | Deductions — forward exposure | $861K | retailer-deduction-recovery | ✅ Confirmed |
-| Short-ship — total cost (3 yr, 8 dimensions) | $33.1M | short-ship-cost | ✅ Confirmed |
-| Short-ship — shipped revenue | $53M | short-ship-cost | ✅ Confirmed |
+| Short-ship — total cost (3 yr, 8 dimensions) | $32.8M | short-ship-cost | ✅ Confirmed |
+| Short-ship — shipped revenue | $53.0M | short-ship-cost | ✅ Confirmed |
 | OTIF — internal fill rate | 95% | otif-blind-spot | ✅ Confirmed |
 | OTIF — retailer-scored | 86% | otif-blind-spot | ✅ Confirmed |
-| OTIF — annual exposure (total) | ~$430K/yr | otif-blind-spot | ✅ Confirmed |
-| OTIF — annual fines | ~$138K/yr | otif-blind-spot | ✅ Confirmed |
-| OTIF — shelf-velocity damage | ~$292K/yr | otif-blind-spot | ✅ Confirmed |
+| OTIF — annual exposure (total) | ~$433K/yr | otif-blind-spot | ✅ Confirmed |
+| OTIF — annual fines | ~$136K/yr | otif-blind-spot | ✅ Confirmed |
+| OTIF — shelf-velocity damage | ~$297K/yr | otif-blind-spot | ✅ Confirmed |
 | Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ✅ Confirmed |
-| Revenue lifecycle — cents per invoiced dollar | 86¢ | contract-to-cash | ✅ Confirmed |
+| Revenue lifecycle — cents per invoiced dollar | 83¢ | contract-to-cash | ✅ Confirmed |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
 | Thesis range | $1.4M–$3.1M/yr | the-ten-decisions | ✅ Confirmed |
-| Trade — all-in (trailing-52w) | ~$3.5M/yr, 10.8% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed |
+| Trade — all-in (trailing-52w) | ~$3.4M/yr, 10.5% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed |
 | Trade — operational waste | ~$480K/yr | trade-spend-data-diagnostic | ✅ Confirmed |
-| Trade — chargebacks | 864 (690 ret + 174 dist) | cinderhaven-data-platform | ✅ Confirmed |
+| Trade — chargebacks | 837 (677 ret + 160 dist) | cinderhaven-data-platform | ✅ Confirmed |
 
-**Product data $461K note:** Fresh Postgres→SQLite export (2026-06-06) and full R pipeline run confirmed: 690 retailer chargebacks totaling $691,338 over 18 months, annualized to $460,892. Rounded to $461K for all downstream copy. Previous $430K was from a stale cache; $296K was from a pre-reseed calibration. Both superseded.
+**Product data $458K note:** Post-date-shift regen (2026-06-08) and full R pipeline run confirmed: 677 retailer chargebacks totaling $686,534 over 18 months, annualized to $457,689. Rounded to $458K for all downstream copy. Previous $461K was from the pre-date-shift window; $430K was from a stale cache; $296K was from a pre-reseed calibration. All superseded.
 
 ---
 
 ## Trade Economics — CANONICAL FIGURES (option a, locked 2026-06-04)
 
-**Source:** Current Postgres SSOT, queried 2026-06-04 via `flyctl proxy`.
+**Source:** Current Postgres SSOT, queried 2026-06-08 via `flyctl proxy`.
 **Regen commit:** `afbb7c5` (feat: expand seed config to 50 SKUs / 3yr window and scale order generation)
 **Data version:** cinderhaven-data-v2
 **Seed config:** `scripts/seed_config.py`, `SEED=42`, economic constants frozen.
@@ -124,17 +124,17 @@ See each repo for derivation details.
 |---------|-------|------------|
 | All-in trade cost (annualized) | $3.4M/yr | Structural trade + operational waste excl promo_billback |
 | All-in trade cost (trailing-52w) | $3.5M/yr | Same methodology, trailing 52-week window |
-| All-in trade rate | 10.8% | Of trailing-52w scan revenue ($32.5M) |
+| All-in trade rate | 10.5% | Of trailing-52w scan revenue ($32.8M) |
 | All-in trade cost (36mo) | $10.26M | 2023-01-01 to 2026-01-02 |
 | Structural trade (36mo) | $8.8M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
 | Operational waste (36mo) | $1.44M | Trailing-365 deductions excl promo_billback |
 | Operational waste (annual) | ~$480K/yr | Recoverable via disputes |
 | Structural trade (annual) | ~$3.0M/yr | Rate × trailing-52w channel revenue |
-| Structural trade rate | 9.2% | Of trailing-52w scan revenue ($32.5M) |
-| Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.5M) |
+| Structural trade rate | 9.0% | Of trailing-52w scan revenue ($32.8M) |
+| Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.8M) |
 | Chargebacks | 837 | 677 retailer + 160 distributor; gross = net, no reversals |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
-| Scan revenue (trailing-52w) | $32.5M | |
+| Scan revenue (trailing-52w) | $32.8M | |
 | EBITDA check | 13.7% trade + 11% EBITDA = 24.7% | Leaves 75.3% for COGS+SGA (plausible) |
 
 ### Methodology
@@ -152,9 +152,9 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 
 | Context | Exact phrasing |
 |---------|----------------|
-| Product data cost (annual) | "~$461K/yr in chargeback cost attributable to data-quality defects" |
-| Trade context (annual) | "~$3.5M/yr all-in trade spend, 10.8% of scan revenue (trailing 52 weeks)" |
-| Recoverable layer | "~$480K/yr operational deduction waste; 864 chargebacks over 36 months" |
+| Product data cost (annual) | "~$458K/yr in chargeback cost attributable to data-quality defects" |
+| Trade context (annual) | "~$3.4M/yr all-in trade spend, 10.5% of scan revenue (trailing 52 weeks)" |
+| Recoverable layer | "~$480K/yr operational deduction waste; 837 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$10.26M all-in trade over 36 months" |
 
 **Rule:** Pieces copy these phrasings. They never re-derive figures from raw data.
@@ -165,13 +165,19 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 |------------|-------------|----------------|
 | $5.4M | Pre-May-2026 all-in (old seed_config trade rates) | Superseded by intentional Postgres regen |
 | $7.2M / $7,174,939 / 26.1% | May 2026 SQLite export figures | Postgres was regenerated after this export |
-| 464 chargebacks | DPI Northwest deduction count from deduction-recovery `summary.json` | Misquoted as total chargebacks; actual total is 864 |
+| 464 chargebacks | DPI Northwest deduction count from deduction-recovery `summary.json` | Misquoted as total chargebacks; actual total is 837 |
 | "18 months" | Misstatement of data window length | Always was 36 months (2023-01-01 to 2026-01-02) |
 | 3,441 chargebacks | May 2026 SQLite chargeback count | Superseded by regen |
 | 21.5% Walmart trade_spend_pct | Old seed_config value | Now 12.0% in current seed_config |
-| $430K product data cost | Pre-fresh-pull PDHA figure (stale cache) | Fresh Postgres export (2026-06-06) produces $461K |
-| $296K product data cost | Website recalibration (2026-06-02) against pre-reseed data | SSOT reseeded; current pipeline produces $461K |
-| $60K chargebacks | the-ten-decisions early draft figure | Never matched any pipeline output; superseded by $461K |
+| $461K product data cost | Pre-date-shift PDHA figure (2026-06-06) | Date-window shift (2024-2026 → 2023-2025) produces $458K |
+| $430K product data cost | Pre-fresh-pull PDHA figure (stale cache) | Fresh Postgres export (2026-06-06) produced $461K; date shift produces $458K |
+| $296K product data cost | Website recalibration (2026-06-02) against pre-reseed data | SSOT reseeded; current pipeline produces $458K |
+| $60K chargebacks | the-ten-decisions early draft figure | Never matched any pipeline output; superseded by $458K |
+| 864 chargebacks | Pre-date-shift total (690 ret + 174 dist) | Date-window shift produces 837 (677 ret + 160 dist) |
+| 86¢ per dollar | Pre-date-shift contract-to-cash (CY2025) | CY2024 data produces 83¢ |
+| $33.1M short-ship | Pre-date-shift short-ship total cost | Date-window shift produces $32.8M |
+| 10.8% all-in trade rate | Pre-date-shift trade rate | Date-window shift produces 10.5% |
+| 9.2% structural trade rate | Pre-date-shift structural rate | Date-window shift produces 9.0% |
 
 ---
 
@@ -184,9 +190,9 @@ tables are byte-identical to baseline.
 **Consumer:** trade-spend-diagnostic ONLY. No other piece reads this dataset.
 
 **Baseline integrity (provably unchanged):**
-- Chargebacks: 690 retailer (unchanged; 864 total with distributor in Postgres)
+- Chargebacks: 677 retailer (unchanged; 837 total with distributor in Postgres)
 - Orders: 46,414 (unchanged)
-- Scan revenue: $32.54M trailing-52w (unchanged)
+- Scan revenue: $32.8M trailing-52w (unchanged)
 - Structural trade: unchanged (scan_data + sku_costs untouched)
 
 ### Headline figures
@@ -197,7 +203,7 @@ tables are byte-identical to baseline.
 | Total deduction value (36mo) | $3.41M | |
 | Operational waste (36mo) | $2.89M | Excl promo_billback |
 | Operational waste (annual) | ~$965K/yr | Recoverable via disputes |
-| All-in waste rate | 3.0% | Of trailing-52w scan revenue ($32.5M) |
+| All-in waste rate | 3.0% | Of trailing-52w scan revenue ($32.8M) |
 | Vague deductions | 967 | Real vague type with VAGUE_TEMPLATES |
 | Vague value (annual) | ~$419K/yr | Bimodal: 60% $50-600, 40% $800-4500 |
 | Vague with no PO link | 295 | 30.5% of vague (no order_id) |
@@ -277,8 +283,8 @@ freeze guard (`check_canonical.py`) is the gate.
 | Field missingness | 0% (all fields always populated) | 5–18% per field (see table above) |
 | Quality score | Not computed | Mean ~70, range 40–95 |
 | Chargeback SKU distribution | Uniform random | Quality-weighted Pareto |
-| Chargeback total count | 864 (690 ret + 174 dist) | **Unchanged** — RNG isolation preserves counts |
-| Trade economics | $3.4M/yr, 10.8% | **Unchanged** — separate generation path |
+| Chargeback total count | 837 (677 ret + 160 dist) | **Unchanged** — RNG isolation preserves counts |
+| Trade economics | $3.4M/yr, 10.5% | **Unchanged** — separate generation path |
 
 ---
 
@@ -290,14 +296,14 @@ freeze guard (`check_canonical.py`) is the gate.
 | 3 product lines | **5 product lines** | product-data-health-audit old copy |
 | 4 contracted retailers | **6 contracted retailers** | product-data-health-audit old copy |
 | 45 SKUs | **50 SKUs** | the-ten-decisions exec-summary.qmd:33 |
-| ~$361K product data cost | **~$461K** | about/page.tsx (site), old process docs |
+| ~$361K product data cost | **~$458K** | about/page.tsx (site), old process docs |
 | 96% internal OTIF | **95%** | the-ten-decisions copy, old blog |
 | $74.2M shipped (short-ship) | **$53M** | old copy |
 | 44.7% cost-of-shipped | **drop the percentage** (single dimension misapplied) | old copy |
 | $10.8M deduction backlog | **$1.65M** | old copy |
 | 7% baseline recovery | **~16%** | old copy |
 | $714K exposure | **$861K** | old copy |
-| $5.4M all-in trade | **~$3.5M/yr trailing-52w** | trade-spend-data-diagnostic, remittance brief |
-| $7.2M / 26.1% all-in | **~$3.5M/yr / 10.8%** | trade-spend-data-diagnostic |
-| 464 chargebacks | **864** | remittance brief, dimension-weight-integrity |
+| $5.4M all-in trade | **~$3.4M/yr trailing-52w** | trade-spend-data-diagnostic, remittance brief |
+| $7.2M / 26.1% all-in | **~$3.4M/yr / 10.5%** | trade-spend-data-diagnostic |
+| 464 chargebacks | **837** | remittance brief, dimension-weight-integrity |
 | "18 months" window | **36 months** | remittance brief |
