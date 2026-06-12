@@ -2,9 +2,10 @@ with retailer as (
     select
         'Retailer' as channel,
         (select sum(total_value) from {{ ref('stg_retailer_orders') }}) as gross_revenue,
-        (select sum(ol.units_ordered * pm.case_pack_qty * c.cogs_per_unit)
+        -- units_ordered is already in units (priced per unit at order-line
+        -- generation); multiplying by case_pack_qty inflated COGS ~13x
+        (select sum(ol.units_ordered * c.cogs_per_unit)
          from {{ ref('stg_retailer_order_lines') }} ol
-         inner join {{ ref('stg_product_master') }} pm on ol.sku = pm.sku
          inner join {{ ref('stg_sku_costs') }} c on ol.sku = c.sku
         ) as total_cogs,
         (select sum(deduction_amount) from {{ ref('int_retailer_payments') }}) as total_deductions,
@@ -17,9 +18,9 @@ distributor as (
     select
         'Distributor' as channel,
         (select sum(total_value) from {{ ref('stg_distributor_orders') }}) as gross_revenue,
-        (select sum(ol.units_ordered * pm.case_pack_qty * c.cogs_per_unit)
+        -- units_ordered is already in units; see retailer CTE note
+        (select sum(ol.units_ordered * c.cogs_per_unit)
          from {{ ref('stg_distributor_order_lines') }} ol
-         inner join {{ ref('stg_product_master') }} pm on ol.sku = pm.sku
          inner join {{ ref('stg_sku_costs') }} c on ol.sku = c.sku
         ) as total_cogs,
         (select sum(deduction_amount) from {{ ref('stg_distributor_deductions') }}) as total_deductions,
