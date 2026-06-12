@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 15:48
+
+**What changed:** Phase 2 bugfixes complete — mart case-pack COGS fix, check_canonical rate_map fix with interim trade relock, and 4 dbt plausibility assertions here; PDHA annualization and COGS-ratio fixes landed in three sibling repos.
+
+**Why:** Phase 2 of the causal-fulfillment arc (design approved by Shawn this morning). Small SQL/Python fixes with large credibility exposure, fixed before any new generation.
+
+**State:** Guard 10/10 PASS, dbt build 396/396, all repos pushed. Trade canon relocked $3.4M/10.5% → $3.7M/11.3% (old values in SUPERSEDES) — pending Shawn's review. Docker replica running. Seeders untouched.
+
+**Next:** Shawn reviews Phase 2 (especially the trade relock). Then Phase 3: causal fulfillment model in the seeders per CAUSAL_FULFILLMENT_DESIGN.md.
+
+---
+
 ## 2026-06-12 12:28
 
 **What changed:** Wrote cinderhaven-plausibility-audit.md — read-only plausibility audit of every canonical figure, recomputed on a freeze-guard-certified local replica.
