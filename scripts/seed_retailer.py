@@ -40,6 +40,10 @@ from seed_config import (
     RECEIVING_CB_FEE_MULT, CHARGEBACK_CLAMP,
     SHORT_SHIP_DED_ASSESS, SHORT_SHIP_DED_RATE, SHORT_SHIP_DED_CLAMP,
     LATE_DED_ASSESS, LATE_DED_RATE, LATE_DED_CLAMP,
+    EVIDENCE_SEED, EVIDENCE_DQ_WEAK_MAX, EVIDENCE_OUTCOME_WEIGHTS,
+    PARTIAL_RECOVERY_RANGE, RET_POD_STATE_P, RET_FILING_DELAY_P,
+    PACK_VERIFICATION_TIER, RET_DISPUTE_PROPENSITY, LABOR_HOURS_BY_TIER,
+    DISPUTE_METHOD_PHONE_P, DISPUTE_CLOSE_DAYS,
 )
 
 
@@ -440,6 +444,183 @@ def generate_dispute_evidence(rng, disputes):
                 dispute_id, etype, submitted, required, fmt, None,
             ))
     return evidence
+
+
+# ── Group D: §2.5 evidence tiers + §2.4 tier-conditioned outcomes ──
+
+TIER_BY_RANK = ("strong", "moderate", "weak")
+TIER_RANK = {t: i for i, t in enumerate(TIER_BY_RANK)}
+
+
+def _weakest(*tiers: str) -> str:
+    """§2.5 composite rule: the tier is the minimum across all factors."""
+    return TIER_BY_RANK[max(TIER_RANK[t] for t in tiers)]
+
+
+def _dq_tier(score: int) -> str:
+    """§2.5 data-quality factor on the 40-95 defect-profile score."""
+    if score >= EVIDENCE_DQ_STRONG_MIN:
+        return "strong"
+    if score < EVIDENCE_DQ_WEAK_MAX:
+        return "weak"
+    return "moderate"
+
+
+def _filing_delay(u: float, p: tuple) -> int:
+    """Map one uniform draw to a filing delay in days: piecewise across
+    the (≤30, 31-60, 61-90) buckets with the given probabilities, then
+    uniform within the bucket. Single draw keeps the assembly stream at
+    a fixed two draws per deduction."""
+    a, b, c = p
+    if u < a:
+        return 1 + int(u / a * 30)
+    if u < a + b:
+        return 31 + int((u - a) / b * 30)
+    return 61 + int((u - a - b) / c * 30)
+
+
+def assemble_evidence(asm_rng, deductions, ship_by_order, pack_ver_by_order,
+                      ev_sku_by_order, defect):
+    """§2.5 factor states + weakest-link tier per written deduction.
+
+    Deterministic factors come from the fulfillment data: ASN from the
+    order's shipment, pack verification from its pack record, data
+    quality from the defect-profile score of the order's largest-
+    line_total SKU (ties sku-ascending — the dossier centers on the
+    highest-dollar product on the PO). Two factors ride asm_rng =
+    Random(EVIDENCE_SEED), exactly two draws per deduction in write
+    order: the POD retrieval state (carrier-class probabilities; a
+    shipment with no in-window delivery confirmation forces missing)
+    and the filing delay (clipped to the deduction's dispute_deadline —
+    the team files inside the window when one is stated, so >60-day
+    filings only occur against 90-day or open deadlines).
+    """
+    states = []
+    for d in deductions:
+        order_id = d[2]
+        s = ship_by_order[order_id]
+        carrier, asn_sent, asn_late = s[4], s[8], s[9]
+        u_pod = asm_rng.random()
+        u_fil = asm_rng.random()
+
+        if s[3] is None:
+            pod = "weak"  # no delivery confirmation inside the window
+        else:
+            pc, pp, _ = RET_POD_STATE_P[
+                "ltl" if carrier in LTL_CARRIERS else "parcel"]
+            pod = ("strong" if u_pod < pc
+                   else "moderate" if u_pod < pc + pp else "weak")
+
+        asn = ("strong" if asn_sent and not asn_late
+               else "moderate" if asn_sent else "weak")
+        pack_ver = pack_ver_by_order.get(order_id)
+        pack = PACK_VERIFICATION_TIER.get(pack_ver, "weak")
+        dq = _dq_tier(defect[ev_sku_by_order[order_id]]["quality_score"])
+
+        delay = _filing_delay(u_fil, RET_FILING_DELAY_P)
+        if d[8] is not None:
+            deadline_days = (date.fromisoformat(d[8])
+                             - date.fromisoformat(d[7])).days
+            delay = min(delay, deadline_days)
+        fil = ("strong" if delay <= 30
+               else "moderate" if delay <= 60 else "weak")
+
+        states.append({
+            "tier": _weakest(pod, asn, pack, dq, fil),
+            "pod": pod, "asn": asn, "pack": pack, "dq": dq, "fil": fil,
+            "delay": delay, "asn_sent": asn_sent, "pack_ver": pack_ver,
+        })
+    return states
+
+
+def _evidence_rows(out_rng, dispute_id, ded_type, ev):
+    """Evidence items mirroring the assembled §2.5 factor states. The
+    POD row persists the drawn POD state in the data (submitted unless
+    missing; notes='partial' when partial) so the dbt assessment can
+    recompute the POD factor from the warehouse. The ASN row exists
+    only when an ASN was actually sent — you cannot submit a document
+    that was never produced."""
+    rows = [(dispute_id, "invoice", True, True,
+             out_rng.choice(["PDF", "EDI"]), None)]
+    pod_required = ded_type in ("short_ship", "late_delivery",
+                                "damaged", "spoilage")
+    rows.append((dispute_id, "POD", ev["pod"] != "weak", pod_required,
+                 "PDF", "partial" if ev["pod"] == "moderate" else None))
+    if ev["asn_sent"]:
+        rows.append((dispute_id, "ASN", True, False, "EDI", None))
+    pack_type = ("label_scan" if ev["pack_ver"] == "scan_verified"
+                 else "pack_photo")
+    rows.append((dispute_id, pack_type, True, False,
+                 out_rng.choice(["PNG", "PDF"]), None))
+    if ded_type in ("short_ship", "late_delivery"):
+        rows.append((dispute_id, "BOL", True, True, "PDF", None))
+    if ded_type == "pricing_error":
+        rows.append((dispute_id, "price_confirmation", True, True,
+                     out_rng.choice(["PDF", "CSV"]), None))
+    return rows
+
+
+def generate_causal_disputes(sel_rng, out_rng, deductions, evidence_states,
+                             method_by_retailer):
+    """Disputes with §2.5-derived evidence tiers and §2.4 tier-
+    conditioned outcomes (Group D). Replaces the legacy flat draw
+    entirely — every written deduction, legacy-stream and event-driven,
+    is a dispute candidate.
+
+    Selection: the brand triages by winnability — each deduction is
+    disputed at its tier's RET_DISPUTE_PROPENSITY. Selection rides
+    sel_rng = Random(EVIDENCE_SEED+2) at exactly one draw per
+    deduction, so outcome recalibration can never change who gets
+    disputed. Outcomes, partial-recovery fractions, closure timing,
+    tier-conditioned labor hours, filing method, and evidence-row
+    formats ride out_rng = Random(EVIDENCE_SEED+1) and draw only for
+    written disputes. Filing dates come from the assembly delay;
+    disputes filed past the data window are skipped (legacy rule).
+    """
+    disputes, ev_rows = [], []
+    disp_num = 0
+    for d, ev in zip(deductions, evidence_states):
+        if sel_rng.random() >= RET_DISPUTE_PROPENSITY[ev["tier"]]:
+            continue
+        ded_date = date.fromisoformat(d[7])
+        filed = ded_date + timedelta(days=ev["delay"])
+        if filed > WINDOW_END:
+            continue
+        disp_num += 1
+        dispute_id = f"RDISP-{disp_num:05d}"
+        tier = ev["tier"]
+
+        w = EVIDENCE_OUTCOME_WEIGHTS[tier]
+        outcome = out_rng.choices(list(w.keys()), weights=list(w.values()))[0]
+        amount = float(d[6])
+        if outcome == "won":
+            recovered = amount
+        elif outcome == "partial":
+            lo, hi = PARTIAL_RECOVERY_RANGE[tier]
+            recovered = round(amount * out_rng.uniform(lo, hi), 2)
+        elif outcome == "pending":
+            recovered = None
+        else:
+            recovered = 0.0
+
+        closed = None
+        if outcome != "pending":
+            lo_c, hi_c = DISPUTE_CLOSE_DAYS["retailer"]
+            closed = filed + timedelta(days=out_rng.randint(lo_c, hi_c))
+            if closed > WINDOW_END:
+                closed = None
+
+        lo_l, hi_l = LABOR_HOURS_BY_TIER[tier]
+        labor = round(out_rng.uniform(lo_l, hi_l), 2)
+        method = ("phone" if out_rng.random() < DISPUTE_METHOD_PHONE_P
+                  else method_by_retailer.get(d[1]) or "email")
+
+        disputes.append((
+            dispute_id, d[0], str(filed), method, tier, outcome,
+            recovered, str(closed) if closed else None, labor,
+        ))
+        ev_rows.extend(_evidence_rows(out_rng, dispute_id, d[4], ev))
+    return disputes, ev_rows
 
 
 def _month_floor(d: date) -> str:
@@ -923,28 +1104,23 @@ def main():
           f"{len(removed_ded_ids)} legacy short_ship/late_delivery replaced)")
 
     print("Generating disputes...")
-    # Full legacy candidate list in, stream preserved; disputes on the
-    # replaced deductions are dropped (their event-driven successors stay
-    # undisputed until Group D makes disputes causal).
+    # ── Group D: the legacy dispute and evidence generators still run
+    # verbatim on the main rng (the chargeback, post-audit-claim, and
+    # pack-record draws that follow depend on their stream position),
+    # but their output is fully replaced: every written deduction —
+    # legacy-stream and event-driven, both populations — gets §2.5
+    # weakest-link evidence assembly and §2.4 tier-conditioned outcomes
+    # on isolated EVIDENCE_SEED streams. The causal sets are written
+    # after pack records exist (evidence assembly reads pack
+    # verification states).
     legacy_disputes = generate_disputes(rng, legacy_deductions)
-    disputes = [d for d in legacy_disputes if d[1] not in removed_ded_ids]
-    dropped_dispute_ids = {d[0] for d in legacy_disputes} - {d[0] for d in disputes}
-    copy_rows(cur, "raw.retailer_disputes",
-              ["dispute_id", "deduction_id", "filed_date", "filing_method",
-               "evidence_quality", "outcome", "recovered_amount",
-               "closed_date", "labor_hours"],
-              disputes)
-    print(f"  retailer_disputes: {len(disputes)} rows "
-          f"({len(dropped_dispute_ids)} dropped with replaced deductions)")
+    print(f"  legacy dispute stream preserved "
+          f"({len(legacy_disputes)} candidate rows, replaced by Group D)")
 
     print("Generating dispute evidence...")
     legacy_evidence = generate_dispute_evidence(rng, legacy_disputes)
-    evidence = [e for e in legacy_evidence if e[0] not in dropped_dispute_ids]
-    copy_rows(cur, "raw.retailer_dispute_evidence",
-              ["dispute_id", "evidence_type", "was_submitted",
-               "was_required", "format", "notes"],
-              evidence)
-    print(f"  retailer_dispute_evidence: {len(evidence)} rows")
+    print(f"  legacy evidence stream preserved "
+          f"({len(legacy_evidence)} candidate rows, replaced by Group D)")
 
     print("Generating chargebacks...")
     legacy_cb = generate_chargebacks(rng)
@@ -978,6 +1154,50 @@ def main():
                "label_scannable", "evidence_format"],
               pack)
     print(f"  retailer_pack_records: {len(pack)} rows")
+
+    # ── Group D: causal evidence + disputes ──────────────────────────
+    # Isolated streams (design §6.2): assembly, outcomes, and selection
+    # each ride their own sequence so recalibrating one concern cannot
+    # shift the others.
+    asm_rng = init_rng(EVIDENCE_SEED)       # POD state + filing delay
+    out_rng = init_rng(EVIDENCE_SEED + 1)   # outcomes/closure/labor/formats
+    sel_rng = init_rng(EVIDENCE_SEED + 2)   # tier-conditioned selection
+
+    ship_by_order = {s[1]: s for s in shipments}
+    pack_ver_by_order = {p[0]: p[5] for p in pack}
+    lines_by_order_full = defaultdict(list)
+    for line in lines:
+        lines_by_order_full[line[0]].append(line)
+    ev_sku_by_order = {
+        oid: sorted(ls, key=lambda l: (-l[4], l[1]))[0][1]
+        for oid, ls in lines_by_order_full.items()
+    }
+    method_by_retailer = {r["retailer_id"]: r["dispute_method"]
+                          for r in RETAILERS}
+
+    print("Generating causal evidence + disputes (Group D)...")
+    evidence_states = assemble_evidence(
+        asm_rng, deductions, ship_by_order, pack_ver_by_order,
+        ev_sku_by_order, defect)
+    disputes, evidence = generate_causal_disputes(
+        sel_rng, out_rng, deductions, evidence_states, method_by_retailer)
+    copy_rows(cur, "raw.retailer_disputes",
+              ["dispute_id", "deduction_id", "filed_date", "filing_method",
+               "evidence_quality", "outcome", "recovered_amount",
+               "closed_date", "labor_hours"],
+              disputes)
+    tier_counts = {t: 0 for t in TIER_BY_RANK}
+    for disp in disputes:
+        tier_counts[disp[4]] += 1
+    print(f"  retailer_disputes: {len(disputes)} rows "
+          f"({len(deductions)} deduction candidates; tiers "
+          f"{tier_counts['strong']}/{tier_counts['moderate']}/"
+          f"{tier_counts['weak']} S/M/W)")
+    copy_rows(cur, "raw.retailer_dispute_evidence",
+              ["dispute_id", "evidence_type", "was_submitted",
+               "was_required", "format", "notes"],
+              evidence)
+    print(f"  retailer_dispute_evidence: {len(evidence)} rows")
 
     conn.commit()
     print("\nRetailer pipeline committed.")

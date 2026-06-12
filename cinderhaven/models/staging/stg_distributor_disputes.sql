@@ -6,6 +6,7 @@ select
     dispute_id,
     deduction_id,
     filed_date,
+    evidence_quality,
     outcome,
     recovered_amount,
     closed_date,

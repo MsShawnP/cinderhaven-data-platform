@@ -25,7 +25,7 @@ select
     deduction_id,
     filed_date,
     null as filing_method,
-    null as evidence_quality,
+    evidence_quality,
     outcome,
     recovered_amount,
     closed_date,

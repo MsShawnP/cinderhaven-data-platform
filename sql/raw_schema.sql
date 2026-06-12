@@ -323,6 +323,11 @@ CREATE TABLE raw.distributor_disputes (
     dispute_id              TEXT PRIMARY KEY,
     deduction_id            TEXT NOT NULL REFERENCES raw.distributor_deductions(deduction_id),
     filed_date              DATE,
+    -- Group D: §2.5 weakest-link tier (POD / data quality / filing
+    -- timeliness — the §1.6 reduced factor set; no ASN or pack records
+    -- on this channel). Persisted so tier-conditioned outcomes are
+    -- queryable in the warehouse, matching the retailer table.
+    evidence_quality        TEXT NOT NULL,
     outcome                 TEXT NOT NULL,
     recovered_amount        NUMERIC(10,2),
     closed_date             DATE,

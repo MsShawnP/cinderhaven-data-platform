@@ -9,6 +9,49 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 (wrap) — Group D implementation committed, verification pending
+
+**Started from:** C2 accepted; GO on Group D (evidence quality + dispute
+outcomes, both channels in one treatment).
+
+**Did:** Group D implementation complete and committed locally (WIP —
+unverified, mid-group). §2.5 weakest-link evidence tiers from real
+fulfillment factors; §2.4 tier-conditioned outcomes; tier-conditioned
+dispute selection (the brand triages by winnability) across ALL written
+deductions both channels; evidence rows mirror factor states (POD state
+persisted via was_submitted/notes); distributor_disputes gains an
+evidence_quality column (DDL); constants frozen after an analytic
+calibration dry-run against the certified C2 state
+(cinderhaven-causal-fulfillment/verification/calibrate_groupD.py):
+expected combined scenario (a) 16.49% of deduction dollars, retailer
+dispute rate 40.0% (legacy 40%), distributor 37.2%. Two permanent dbt
+tests written (outcome→evidence-assessment linkage with weakest-link
+bounds; per-tier recovery ±2pts of curve). Key data findings: flat-rate
+disputing cannot reach the 16.5% endpoint (caps ~15.0% even at a 50%
+rate) — evidence-correlated selection is structurally required;
+product_master_history is EMPTY in the certified state and its 0–4
+score scale doesn't match the §2.5 thresholds, so the DQ factor uses
+the 40–95 defect-profile score of the order's largest-line_total SKU.
+
+**State:** NOT verified — run1 reseed was in flight when the session
+wrapped; the replica is in an indeterminate state. Nothing pushed
+(mid-group rule). dbt will fail against a pre-Group-D replica (the
+distributor_disputes source now expects evidence_quality) — reseed
+first. Guard expectation unchanged: 7/10 with the same 3 count REDs
+(no dispute checks in the guard).
+
+**Next:** Fresh session: (1) re-run `scripts\seed_all.py` from scratch
+(POSTGRES_PASSWORD=postgres, local Docker replica), (2) write
+verify_groupD.py + run all gates, (3) reseed ×2 determinism +
+checksums vs groupC2-run1 (expect exactly 3 changed tables:
+retailer_disputes, retailer_dispute_evidence, distributor_disputes),
+(4) dbt build, guard, (5) GROUP-D-VERIFICATION.md (§1 judgment calls
+listed in the causal repo's HANDOFF.md; post-fix mix derivation must
+be explicit) + DRIFT-LEDGER.md Group D section, (6) stop at gate.
+Full cold-start detail in the causal repo's HANDOFF.md.
+
+---
+
 ## 2026-06-12 19:00 (wrap)
 
 **Started from:** Group C accepted; C2 (distributor parallel) queued

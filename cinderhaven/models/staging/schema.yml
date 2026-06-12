@@ -187,12 +187,23 @@ models:
         tests: [not_null]
 
   - name: stg_retailer_disputes
-    description: ~800 retailer dispute filings.
+    description: >
+      ~8,000 retailer dispute filings. Since Phase 3 Group D every
+      written deduction is a dispute candidate: evidence_quality is the
+      §2.5 weakest-link tier assembled from real fulfillment factors
+      (POD, ASN timing, pack verification, product data quality, filing
+      timeliness), selection is tier-conditioned (the brand triages by
+      winnability), and outcomes ride the §2.4 tier-conditioned curve.
     columns:
       - name: dispute_id
         tests: [unique, not_null]
       - name: deduction_id
         tests: [not_null]
+      - name: evidence_quality
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['strong', 'moderate', 'weak']
       - name: outcome
         tests:
           - not_null
@@ -200,7 +211,13 @@ models:
               values: ['won', 'lost', 'partial', 'pending']
 
   - name: stg_retailer_dispute_evidence
-    description: ~2,400 evidence items linked to disputes.
+    description: >
+      ~30,000 evidence items linked to disputes. Since Phase 3 Group D
+      the items mirror the assembled §2.5 factor states: the POD row
+      persists the retrieval state (was_submitted false = missing,
+      notes 'partial' = partial), an ASN row exists only when the
+      shipment actually sent one, and the pack row's type follows the
+      pack-record verification method.
     columns:
       - name: evidence_id
         tests: [unique, not_null]
@@ -350,14 +367,23 @@ models:
 
   - name: stg_distributor_disputes
     description: >
-      Distributor dispute filings on legacy-stream deductions.
-      Event-driven deductions stay undisputed until Group D makes
-      dispute outcomes causal.
+      ~900 distributor dispute filings. Since Phase 3 Group D every
+      written deduction — kept legacy types and event-driven rows —
+      is a dispute candidate. evidence_quality is the §2.5 weakest-link
+      tier over the §1.6 reduced factor set (POD, product data quality,
+      filing timeliness; the channel has no ASN fields or pack
+      records), selection is tier-conditioned, and outcomes ride the
+      §2.4 curve — one consistent treatment with the retailer channel.
     columns:
       - name: dispute_id
         tests: [unique, not_null]
       - name: deduction_id
         tests: [not_null]
+      - name: evidence_quality
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['strong', 'moderate', 'weak']
       - name: outcome
         tests:
           - not_null

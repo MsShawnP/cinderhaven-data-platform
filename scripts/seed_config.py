@@ -380,6 +380,52 @@ DIST_SHORT_SHIP_DED_CLAMP = (20.0, 1200.0)
 DIST_LATE_DED_ASSESS = 0.45
 DIST_LATE_DED_RATE = 0.025
 DIST_LATE_DED_CLAMP = (20.0, 400.0)
+
+# Design §2.5 / §3.2 (Group D) — causal evidence assembly, dispute
+# selection, and tier-conditioned outcomes, both wholesale channels.
+# Evidence tier = weakest link across the §2.5 factors. Retailer
+# factors: POD (drawn below, persisted in the dispute-evidence rows),
+# ASN (shipments.asn_sent/asn_sent_late), pack verification
+# (pack_records.pack_verification per PACK_VERIFICATION_TIER), product
+# data quality (defect-profile score of the order's largest-line_total
+# SKU, ties broken sku-ascending, vs EVIDENCE_DQ_* above), and filing
+# timeliness (drawn delay, clipped to the deduction's dispute_deadline
+# when one exists). Distributor factors per §1.6's simpler channel:
+# POD (delivery_date present), data quality, filing (no deadline
+# column, uncapped) — no ASN fields or pack records exist there.
+# Streams: EVIDENCE_SEED+0 retailer assembly (2 draws/deduction:
+# POD state, filing delay), +1 retailer outcomes, +2 retailer dispute
+# selection (1 draw/deduction); +10/+11/+12 the distributor parallels
+# (assembly = 1 filing draw/deduction). Selection rides its own stream
+# so outcome recalibration can never move who gets disputed.
+# Calibrated 2026-06-12 with an analytic dry-run against the frozen
+# Group C2 deduction state (cinderhaven-causal-fulfillment/
+# verification/calibrate_groupD.py): expected blended recovery 16.49%
+# of combined wholesale deduction dollars (canonical endpoint 16.5%),
+# retailer dispute rate 40.0% (legacy 40%), distributor 37.2%
+# (legacy 35%).
+RET_POD_STATE_P = {            # (clean, partial, missing) by carrier class
+    "parcel": (0.92, 0.05, 0.03),
+    "ltl": (0.80, 0.12, 0.08),  # LTL paperwork is messier
+}
+RET_FILING_DELAY_P = (0.78, 0.16, 0.06)   # P(file ≤30d, 31-60d, 61-90d)
+DIST_FILING_DELAY_P = (0.78, 0.16, 0.06)
+PACK_VERIFICATION_TIER = {     # §2.5 row 3; weight_check reads as
+    "scan_verified": "strong",  # instrument-verified (flagged in the
+    "weight_check": "strong",   # Group D verification doc §1)
+    "manual_count": "moderate",
+}
+# Tier-conditioned dispute propensity — the brand triages by
+# winnability (share of deductions disputed, by evidence tier).
+RET_DISPUTE_PROPENSITY = {"strong": 0.88, "moderate": 0.36, "weak": 0.16}
+DIST_DISPUTE_PROPENSITY = {"strong": 0.45, "moderate": 0.35, "weak": 0.25}
+LABOR_HOURS_BY_TIER = {        # weak evidence costs more hours to work
+    "strong": (0.25, 2.5),
+    "moderate": (0.5, 3.5),
+    "weak": (1.0, 5.0),
+}
+DISPUTE_METHOD_PHONE_P = 0.08  # else the retailer's dispute_method
+DISPUTE_CLOSE_DAYS = {"retailer": (14, 90), "distributor": (14, 75)}
 # ── END FROZEN BLOCK ───────────────────────────────────────────────
 
 # ── SCENARIO SUPPORT ──────────────────────────────────────────────
