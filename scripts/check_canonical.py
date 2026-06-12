@@ -16,6 +16,8 @@ from pathlib import Path
 
 import psycopg2
 
+from seed_config import TRADE_SPEND_PCT
+
 CANONICAL_PATH = Path(__file__).resolve().parent.parent / "CINDERHAVEN_CANONICAL.md"
 
 TOLERANCE_PCT = 0.02  # 2% tolerance on dollar figures
@@ -51,12 +53,10 @@ QUERIES = {
     """,
     "channel_rates": """
         SELECT
-            AVG(trade_spend_pct_walmart)     AS rate_walmart,
-            AVG(trade_spend_pct_costco)      AS rate_costco,
+            AVG(trade_spend_pct_walmart)      AS rate_walmart,
+            AVG(trade_spend_pct_costco)       AS rate_costco,
             AVG(trade_spend_pct_whole_foods)  AS rate_whole_foods,
-            AVG(trade_spend_pct_unfi)         AS rate_unfi,
-            AVG(trade_spend_pct_kehe)         AS rate_kehe,
-            AVG(trade_spend_pct_dtc)          AS rate_dtc,
+            AVG(trade_spend_pct_sprouts)      AS rate_sprouts,
             AVG(trade_spend_pct_regional)     AS rate_regional
         FROM raw.sku_costs
     """,
@@ -211,22 +211,37 @@ def run_checks():
     cur.execute(QUERIES["channel_rates"])
     rates_row = cur.fetchone()
     rate_keys = ["rate_walmart", "rate_costco", "rate_whole_foods",
-                 "rate_unfi", "rate_kehe", "rate_dtc", "rate_regional"]
+                 "rate_sprouts", "rate_regional"]
     rates = {k: to_float(v) for k, v in zip(rate_keys, rates_row)}
 
+    # Scan revenue only exists for the six contracted retailers, so the map
+    # carries exactly those six names. An unmapped channel is a guard FAIL,
+    # not a silent fall-through: the old regional fallback priced Kroger and
+    # Sprouts at 7% when their seeded rates are 10% and 9%.
     rate_map = {
         "Walmart": rates["rate_walmart"],
         "Costco": rates["rate_costco"],
         "Whole Foods": rates["rate_whole_foods"],
-        "UNFI": rates["rate_unfi"],
-        "KeHE": rates["rate_kehe"],
-        "DTC": rates["rate_dtc"],
+        "Sprouts": rates["rate_sprouts"],
+        # raw.sku_costs has no trade_spend_pct_kroger column; until the schema
+        # carries one, the rate comes from seed_config (the declared source of
+        # truth for this file).
+        "Kroger": float(TRADE_SPEND_PCT["kroger"]),
+        "Regional Group": rates["rate_regional"],
     }
 
     structural_annual = 0.0
+    unmapped = []
     for channel, rev in channel_rev.items():
-        rate = rate_map.get(channel, rates["rate_regional"])
+        rate = rate_map.get(channel)
+        if rate is None:
+            unmapped.append(channel)
+            continue
         structural_annual += rev * rate
+    if unmapped:
+        results.append(("FAIL", "rate_map_unmapped_channels",
+                        "every scan channel has an explicit rate",
+                        ", ".join(sorted(unmapped))))
 
     # 4. Operational waste (36mo total → annualized)
     cur.execute(QUERIES["operational_waste_retailer"])

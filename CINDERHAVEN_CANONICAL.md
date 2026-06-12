@@ -9,7 +9,7 @@ metadata:
 
 **Source of truth:** `scripts/seed_config.py` in this repo.
 **Rule:** Reconcile DOWN to this file. Never change this file to match a drifted repo.
-**Last verified:** 2026-06-08
+**Last verified:** 2026-06-12 (local certified replica; trade rows relocked after rate_map fix)
 
 ---
 
@@ -102,7 +102,7 @@ See each repo for derivation details.
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
 | Thesis range | $1.4M–$3.1M/yr | the-ten-decisions | ✅ Confirmed |
-| Trade — all-in (trailing-52w) | ~$3.4M/yr, 10.5% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed |
+| Trade — all-in (trailing-52w) | ~$3.7M/yr, 11.3% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-12) |
 | Trade — operational waste | ~$480K/yr | trade-spend-data-diagnostic | ✅ Confirmed |
 | Trade — chargebacks | 837 (677 ret + 160 dist) | cinderhaven-data-platform | ✅ Confirmed |
 
@@ -112,9 +112,17 @@ See each repo for derivation details.
 
 ---
 
-## Trade Economics — CANONICAL FIGURES (option a, locked 2026-06-04)
+## Trade Economics — CANONICAL FIGURES (option a, locked 2026-06-04; trade rows relocked 2026-06-12)
 
-**Source:** Current Postgres SSOT, queried 2026-06-08 via `flyctl proxy`.
+**Relock note (2026-06-12):** `check_canonical.py`'s rate_map silently priced
+Kroger and Sprouts at the 7% regional fallback; their seeded rates are 10%
+and 9% (`seed_config.py` TRADE_SPEND_PCT). The fallback is removed and the
+trade rows below now carry the rates the data actually encodes. Old values
+moved to SUPERSEDES. Interim relock — the full canonical set re-derives in
+Phase 4 of the causal-fulfillment arc.
+
+**Source:** Current Postgres SSOT, queried 2026-06-08 via `flyctl proxy`;
+trade rows reverified 2026-06-12 on the certified local replica.
 **Regen commit:** `afbb7c5` (feat: expand seed config to 50 SKUs / 3yr window and scale order generation)
 **Data version:** cinderhaven-data-v2
 **Seed config:** `scripts/seed_config.py`, `SEED=42`, economic constants frozen.
@@ -124,20 +132,20 @@ See each repo for derivation details.
 
 | Measure | Value | Definition |
 |---------|-------|------------|
-| All-in trade cost (annualized) | $3.4M/yr | Structural trade + operational waste excl promo_billback |
-| All-in trade cost (trailing-52w) | $3.5M/yr | Same methodology, trailing 52-week window |
-| All-in trade rate | 10.5% | Of trailing-52w scan revenue ($32.8M) |
-| All-in trade cost (36mo) | $10.26M | 2023-01-01 to 2026-01-02 |
-| Structural trade (36mo) | $8.8M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
+| All-in trade cost (annualized) | $3.7M/yr | Structural trade + operational waste excl promo_billback |
+| All-in trade cost (trailing-52w) | $3.7M/yr | Same methodology, trailing 52-week window |
+| All-in trade rate | 11.3% | Of trailing-52w scan revenue ($32.8M) |
+| All-in trade cost (36mo) | $11.16M | 2023-01-01 to 2026-01-02 |
+| Structural trade (36mo) | $9.7M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
 | Operational waste (36mo) | $1.44M | Trailing-365 deductions excl promo_billback |
 | Operational waste (annual) | ~$480K/yr | Recoverable via disputes |
-| Structural trade (annual) | ~$3.0M/yr | Rate × trailing-52w channel revenue |
-| Structural trade rate | 9.0% | Of trailing-52w scan revenue ($32.8M) |
+| Structural trade (annual) | ~$3.2M/yr | Rate × trailing-52w channel revenue |
+| Structural trade rate | 9.9% | Of trailing-52w scan revenue ($32.8M) |
 | Operational waste rate | 1.5% | Of trailing-52w scan revenue ($32.8M) |
 | Chargebacks | 837 | 677 retailer + 160 distributor; gross = net, no reversals |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
 | Scan revenue (trailing-52w) | $32.8M | |
-| EBITDA check | 13.7% trade + 11% EBITDA = 24.7% | Leaves 75.3% for COGS+SGA (plausible) |
+| EBITDA check | 14.9% trade + 11% EBITDA = 25.9% | Leaves 74.1% for COGS+SGA (plausible) |
 
 ### Methodology
 
@@ -155,7 +163,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | Context | Exact phrasing |
 |---------|----------------|
 | Product data cost (annual) | "~$458K/yr in chargeback cost attributable to data-quality defects" |
-| Trade context (annual) | "~$3.4M/yr all-in trade spend, 10.5% of scan revenue (trailing 52 weeks)" |
+| Trade context (annual) | "~$3.7M/yr all-in trade spend, 11.3% of scan revenue (trailing 52 weeks)" |
 | Recoverable layer | "~$480K/yr operational deduction waste; 837 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$10.26M all-in trade over 36 months" |
 
@@ -178,8 +186,11 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | 864 chargebacks | Pre-date-shift total (690 ret + 174 dist) | Date-window shift produces 837 (677 ret + 160 dist) |
 | 86¢ per dollar | Pre-date-shift contract-to-cash (CY2025) | CY2024 data produces 83¢ |
 | $33.1M short-ship | Pre-date-shift short-ship total cost | Date-window shift produces $32.8M |
-| 10.8% all-in trade rate | Pre-date-shift trade rate | Date-window shift produces 10.5% |
-| 9.2% structural trade rate | Pre-date-shift structural rate | Date-window shift produces 9.0% |
+| 10.8% all-in trade rate | Pre-date-shift trade rate | Date-window shift produces 10.5%; itself superseded 2026-06-12 (rate_map fix) |
+| 9.2% structural trade rate | Pre-date-shift structural rate | Date-window shift produces 9.0%; itself superseded 2026-06-12 (rate_map fix) |
+| $3.4M/yr / 10.5% all-in trade | Locked 2026-06-04 figure | Superseded 2026-06-12 — check_canonical.py rate_map silently priced Kroger and Sprouts at the 7% regional fallback; seeded rates are 10%/9%. True all-in $3.7M/yr / 11.3% |
+| ~$3.0M/yr / 9.0% structural trade | Locked 2026-06-04 figure | Superseded 2026-06-12 — same rate_map bug. True structural $3.2M/yr / 9.9% |
+| $3.5M/yr (t-52w) / $10.26M (36mo) / $8.8M structural (36mo) | Locked 2026-06-04 derived variants | Superseded 2026-06-12 — same rate_map bug. True $3.7M / $11.16M / $9.7M |
 
 ---
 
