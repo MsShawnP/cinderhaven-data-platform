@@ -30,6 +30,32 @@ failed and may have its own entry below]
 
 ## Entries
 
+### 2026-06-12 — pgrep-based process monitor false-fired under MSYS on Windows
+
+**Attempted:** Watch the long-running seed_all.py reseed with a
+pgrep-based monitor loop (`until ! kill -0 $(pgrep -f "seed_all.py")`)
+as a completion signal, alongside the harness's own background-task
+notification.
+
+**Why it didn't work:** Under MSYS bash on Windows, `pgrep -f` does not
+reliably see the Windows-native python3.13 process command line, so the
+check matched nothing and the monitor reported "process exited"
+immediately while the seed was still running. The real process was
+visible via PowerShell `Get-Process python*`.
+
+**What we tried instead:** Trusted the background-task completion
+notification alone (it fired correctly when the seed finished), with a
+scheduled wakeup as the only fallback. Verified liveness once via
+PowerShell when the false signal arrived.
+
+**Status:** Resolved (workflow lesson: on this machine, don't build
+process watchers on pgrep; use the harness notification or PowerShell
+process queries)
+
+**Tags:** msys, pgrep, windows, background-tasks, monitoring, seed_all
+
+---
+
 ### 2026-06-12 — Theoretical fill calibration undershot targets by ~1pt annually
 
 **Attempted:** Back the constrained-order probability out of the §2.1 fill

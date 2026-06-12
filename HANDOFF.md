@@ -9,6 +9,35 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 19:00 (wrap)
+
+**Started from:** Group C accepted; C2 (distributor parallel) queued
+with cold-start notes in the causal repo.
+
+**Did:** Group C2 shipped (1bb5d0a) and verified — every gate on the
+first calibration: short+late 0.318% of distributor shipped $ (band
+0.2–0.45), total 0.975% (0.7–1.1), linkage 100% (permanent dbt test),
+kept rows identical to the cent, 38/41 tables byte-identical to the
+Group C state, determinism 41/41, dbt 431/431, guard 7/10 with exactly
+the 3 expected count REDs (distributor 160→678 new). The open
+late-trigger question resolved as the 12-day order-to-door window —
+Shawn ACCEPTED C2 and APPROVED the window rule as implemented.
+Decisions recorded in the causal repo (acceptance/window rule;
+standing push-at-every-acceptance rule). Both repos pushed.
+
+**State:** Replica certified on Group C2
+(cinderhaven-causal-fulfillment/verification/groupC2-run1-checksums.txt).
+Both wholesale channels causal on operational money. Prod untouched,
+guard-vs-prod green. Both repos synced with origin.
+
+**Next:** Group D in a fresh session — GO is given. Evidence quality +
+dispute outcomes, both channels in one treatment; verification per the
+approved decomposition plus the scenario amendment (per-tier ±2pts;
+both endpoints as scenarios: current mix ≈16.5%, post-fix mix ≈65%,
+each ±2pts). Cold-start notes in the causal repo's HANDOFF.md.
+
+---
+
 ## 2026-06-12 — Phase 3 Group C2 complete (causal distributor chargebacks + deductions)
 
 **What changed:** Distributor parallel of Group C. Distributor
