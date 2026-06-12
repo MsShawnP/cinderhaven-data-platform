@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 17:27
+
+**What changed:** Phase 3 Groups A and B complete — fulfillment schema + frozen causal-model constants (fe62b4d), then causal shipment events: per-line shortfalls on §2.1 fill targets, per-retailer timing, receipt lines, distributor parallel (0eb21ad). Stopped at the Group C gate.
+
+**Why:** Causal-fulfillment arc Phase 3: orders ≠ shipments must originate in the platform data itself, with money tables untouched until Group C makes them causal.
+
+**State:** Replica certified on Group B state — guard 10/10, dbt 427/427, determinism 41/41, portfolio fill 91.98% with every retailer within ±0.64pt of target. 35/41 tables byte-identical to pre-causal state including every money table (chargebacks exactly 677+160). Rollback point: cinderhaven-causal-fulfillment/verification/groupB-certified-state-checksums.txt. Seeders for remittances/deductions/disputes/chargebacks still legacy — Group C territory.
+
+**Next:** Shawn's go on Group C — causal operational chargebacks + deductions. First canon-divergence commit; drift ledger starts there.
+
+---
+
 ## 2026-06-12 15:48
 
 **What changed:** Phase 2 bugfixes complete — mart case-pack COGS fix, check_canonical rate_map fix with interim trade relock, and 4 dbt plausibility assertions here; PDHA annualization and COGS-ratio fixes landed in three sibling repos.
