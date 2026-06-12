@@ -108,6 +108,8 @@ See each repo for derivation details.
 
 **Product data $458K note:** Post-date-shift regen (2026-06-08) and full R pipeline run confirmed: 677 retailer chargebacks totaling $686,534 over 18 months, annualized to $457,689. Rounded to $458K for all downstream copy. Previous $461K was from the pre-date-shift window; $430K was from a stale cache; $296K was from a pre-reseed calibration. All superseded.
 
+**Deductions $1.66M scope note (verified 2026-06-10):** $1,663,294 is a cross-channel total across all 9 trading partners: retailer $1,332,704 / 13,960 rows (Walmart, Kroger, Whole Foods, Sprouts, Costco, Regional Group) + distributor $330,590 / 2,063 rows (UNFI, KeHE, DPI Northwest). `fct_retailer_deductions` in Postgres covers the retailer portion only; queries against that table return $1.33M by design — that is a scope difference, not drift or a data error. The published case-study copy of ~15,900 deductions is a rounded approximation of the exact 16,023 cross-channel total; it is not a third figure requiring reconciliation. Retailer-only tools (e.g. the Question Engine's Q10) should cite $1.33M and note that distributor deductions are excluded.
+
 ---
 
 ## Trade Economics — CANONICAL FIGURES (option a, locked 2026-06-04)

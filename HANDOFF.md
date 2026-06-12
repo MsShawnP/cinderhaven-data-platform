@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 12:28
+
+**What changed:** Wrote cinderhaven-plausibility-audit.md — read-only plausibility audit of every canonical figure, recomputed on a freeze-guard-certified local replica.
+
+**Why:** check_canonical.py proves figures haven't drifted; this audit asked whether they describe a coherent company. Five REGENERATE-grade findings needed recording before any fix work.
+
+**State:** Audit complete: 6 PLAUSIBLE / 7 RELABEL / 5 REGENERATE. Headliners: $458K/yr product-data cost is a 2× window error (36-mo total annualized as 18; true attributable ~$51–93K/yr); three irreconcilable fill-rate universes (platform 100% / OTIF 95–86% / short-ship 69%); mart_channel_contribution case-pack COGS bug (−522% margins); check_canonical rate_map prices Kroger+Sprouts at the 7% fallback (~$285K/yr understated); $91K channel delta rests on inverted COGS assumptions. Fly.io SSOT untouched; local Docker replica stopped but volume kept. Replica certification: seed 1,940,140 rows → dbt 392/392 PASS → guard 10/10 PASS.
+
+**Next:** Pick fix order from the report's priority list — recommended start: PDHA $458K recomputation (arithmetic error in the most-cited figure), then the two platform bugs (mart COGS, guard rate_map).
+
+---
+
 ## 2026-06-03 18:25
 
 **Started from:** No active arc. Mart layer existed but consumers read raw.* instead.
