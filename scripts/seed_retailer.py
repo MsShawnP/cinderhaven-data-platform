@@ -1,16 +1,17 @@
 """Seed generator for the retailer pipeline.
 
 Tables generated (50 SKUs, 3-year window):
-  - retailer_orders (~45,000 orders)
-  - retailer_order_lines (~110,000 lines)
-  - retailer_shipments (~45,000)
-  - retailer_remittances (~1,500)
-  - retailer_deductions (~11,000)
-  - retailer_disputes (~4,500)
-  - retailer_dispute_evidence (~10,000)
-  - retailer_chargebacks (~1,500)
-  - retailer_post_audit_claims (~220)
-  - retailer_pack_records (~45,000)
+  - retailer_orders (~46,000 orders)
+  - retailer_order_lines (~185,000 lines)
+  - retailer_shipments (~46,000) + retailer_shipment_lines (~189,000)
+  - retailer_receipt_lines (~189,000)
+  - retailer_remittances (~220)
+  - retailer_deductions (~20,000 — legacy stream + event-driven short/late)
+  - retailer_disputes (~4,200)
+  - retailer_dispute_evidence (~12,600)
+  - retailer_chargebacks (~5,500 — Path A data-defect + event-driven)
+  - retailer_post_audit_claims (~230)
+  - retailer_pack_records (~46,000)
 
 Requires seed_shared.py to have been run first (retailers, products, stores exist).
 
@@ -32,7 +33,13 @@ from seed_config import (
     FULFILLMENT_SEED, RETAILER_FILL_TARGET, Q4_FILL_DIP,
     SHORTFALL_REASON_MIX, RECEIVING_DISCREPANCY_RATE,
     RECEIVING_DISCREPANCY_MIX, RETAILER_TRANSIT_DAYS,
+    RETAILER_OTIF_WINDOW_DAYS,
     INTERNAL_ONTIME_TARGET, EVIDENCE_DQ_STRONG_MIN,
+    SHORT_SHIP_CB_ASSESS_BASE, CB_AUTO_DEDUCT_LIFT, SHORT_SHIP_CB_RATE,
+    LATE_CB_ASSESS, LATE_CB_RATE, RECEIVING_CB_ASSESS,
+    RECEIVING_CB_FEE_MULT, CHARGEBACK_CLAMP,
+    SHORT_SHIP_DED_ASSESS, SHORT_SHIP_DED_RATE, SHORT_SHIP_DED_CLAMP,
+    LATE_DED_ASSESS, LATE_DED_RATE, LATE_DED_CLAMP,
 )
 
 
@@ -327,7 +334,14 @@ def generate_remittances(rng, orders):
 
 
 def generate_deductions(rng, orders, remittance_map, deduction_codes_by_retailer):
-    """Generate deductions from remittances. ~25% of orders get a deduction."""
+    """Legacy deduction stream — kept verbatim for stream preservation.
+
+    ~25% of orders draw 1-3 deductions of random type. Since Group C the
+    caller discards the short_ship/late_delivery rows from this output
+    (the draws still happen, so the main rng stays byte-stable) and
+    replaces them with generate_event_deductions; the other seven types
+    ship exactly as drawn here.
+    """
     deductions = []
     ded_num = 0
 
@@ -428,14 +442,238 @@ def generate_dispute_evidence(rng, disputes):
     return evidence
 
 
+def _month_floor(d: date) -> str:
+    """First-of-month string, the chargeback table's month grain."""
+    return str(date(d.year, d.month, 1))
+
+
+def _is_late(key: str, requested_ship: date, delivery: date) -> bool:
+    """Delivery beyond the retailer's MABD window (Group C trigger rule).
+
+    MABD = requested ship date + the retailer's maximum normal transit
+    (RETAILER_TRANSIT_DAYS upper bound) + its OTIF window. A shipment
+    that left on the requested date can never trip this; only the
+    timing_rng late-ship tail (~4%) can, which is what makes the
+    chargeback causal rather than statistical.
+    """
+    t_hi = RETAILER_TRANSIT_DAYS[key][1]
+    window = RETAILER_OTIF_WINDOW_DAYS[key]
+    return delivery > requested_ship + timedelta(days=t_hi + window)
+
+
+def generate_operational_chargebacks(cb_rng, orders, shipments,
+                                     lines_by_shipment, receipt_lines,
+                                     key_by_shipment, price_by_order_sku,
+                                     auto_deduct):
+    """Operational chargebacks triggered by real fulfillment events (Group C).
+
+    Replaces the legacy unconditional short_ship/late_delivery draws.
+    Three causal categories, all riding cb_rng = Random(FULFILLMENT_SEED+3):
+
+      short_ship — a shipment with shorted lines draws one assessment at
+        the retailer's p(assess), lifted where raw.retailer_rules has
+        auto_deduct for short_ship (Walmart, Kroger). Fine = rate ×
+        shorted value, clamped. SKU = largest-shortfall line; month =
+        ship month.
+      late_delivery — delivery beyond the MABD window (_is_late). Fine =
+        rate × shipped value. SKU = largest shipped-value line; month =
+        delivery month.
+      receiving_discrepancy — NEW category (decision #2: separate, never
+        folded into shortage chargebacks). Per receipt line with
+        carrier_damage / quality_rejection; fine = discrepant value ×
+        handling multiplier. SKU = the line's SKU; month = delivery
+        month. receiving_miscount does not charge back — it short-pays
+        as a deduction (design §3.1).
+
+    Draw discipline: cb_rng draws happen only for triggering events, in
+    shipment then receipt-line order, so the stream is a pure function
+    of the frozen Group B fulfillment state. Shipments delivered after
+    the data window (delivery_date NULL) cannot trigger delivery-side
+    assessments.
+    """
+    order_by_id = {o[0]: o for o in orders}
+    shipment_by_id = {s[0]: s for s in shipments}
+    rows_short, rows_late, rows_recv = [], [], []
+
+    for s in shipments:
+        shipment_id, order_id = s[0], s[1]
+        key = key_by_shipment[shipment_id]
+        order = order_by_id[order_id]
+        retailer_id = order[1]
+        slines = lines_by_shipment[shipment_id]
+
+        shorted = [(sku, uo, us) for sku, uo, us, reason in slines
+                   if reason is not None]
+        if shorted:
+            p = SHORT_SHIP_CB_ASSESS_BASE[key]
+            if auto_deduct.get((retailer_id, "short_ship")):
+                p *= CB_AUTO_DEDUCT_LIFT
+            if cb_rng.random() < p:
+                shorted_value = sum(
+                    (uo - us) * price_by_order_sku[(order_id, sku)]
+                    for sku, uo, us in shorted)
+                cb_sku = max(
+                    shorted,
+                    key=lambda l: (l[1] - l[2]) * price_by_order_sku[(order_id, l[0])],
+                )[0]
+                lo, hi = CHARGEBACK_CLAMP["short_ship"]
+                amount = round(min(hi, max(lo, SHORT_SHIP_CB_RATE[key] * shorted_value)), 2)
+                ship_date = date.fromisoformat(s[2])
+                rows_short.append((_month_floor(ship_date), retailer_id,
+                                   "short_ship", cb_sku, amount, None))
+
+        if s[3] is not None:
+            delivery = date.fromisoformat(s[3])
+            requested = date.fromisoformat(order[4])
+            if _is_late(key, requested, delivery):
+                if cb_rng.random() < LATE_CB_ASSESS[key]:
+                    shipped_value = sum(
+                        us * price_by_order_sku[(order_id, sku)]
+                        for sku, _uo, us, _r in slines)
+                    shipped_lines = [(sku, us) for sku, _uo, us, _r in slines
+                                     if us > 0]
+                    cb_sku = max(
+                        shipped_lines,
+                        key=lambda l: l[1] * price_by_order_sku[(order_id, l[0])],
+                    )[0]
+                    lo, hi = CHARGEBACK_CLAMP["late_delivery"]
+                    amount = round(min(hi, max(lo, LATE_CB_RATE[key] * shipped_value)), 2)
+                    rows_late.append((_month_floor(delivery), retailer_id,
+                                      "late_delivery", cb_sku, amount, None))
+
+    for shipment_id, sku, units_received, reason in receipt_lines:
+        if reason not in ("carrier_damage", "quality_rejection"):
+            continue
+        s = shipment_by_id[shipment_id]
+        if s[3] is None:
+            continue
+        key = key_by_shipment[shipment_id]
+        if cb_rng.random() < RECEIVING_CB_ASSESS[key]:
+            order_id = s[1]
+            retailer_id = order_by_id[order_id][1]
+            units_shipped = next(
+                us for l_sku, _uo, us, _r in lines_by_shipment[shipment_id]
+                if l_sku == sku)
+            value = (units_shipped - units_received) * price_by_order_sku[(order_id, sku)]
+            lo, hi = CHARGEBACK_CLAMP["receiving_discrepancy"]
+            amount = round(min(hi, max(lo, RECEIVING_CB_FEE_MULT * value)), 2)
+            delivery = date.fromisoformat(s[3])
+            rows_recv.append((_month_floor(delivery), retailer_id,
+                              "receiving_discrepancy", sku, amount, None))
+
+    return rows_short + rows_late + rows_recv
+
+
+def generate_event_deductions(ded_rng, orders, shipments, lines_by_shipment,
+                              receipt_lines, key_by_shipment,
+                              price_by_order_sku, remittance_map,
+                              deduction_codes_by_retailer, start_num):
+    """Short-ship and late-delivery deductions driven by fulfillment
+    events (Group C). The caller discards the legacy random draws for
+    these two types; every other deduction type still comes off the
+    untouched legacy stream. Amounts are proportional to the event's
+    dollar value (design §3.1):
+
+      short_ship — rate × shorted value per shorted shipment (p=0.90:
+        retailers nearly always short-pay an incomplete PO), plus the
+        EXACT discrepant value for every receiving miscount (AP
+        short-pays the invoice/receipt mismatch at face value — no rate,
+        no clamp, no assessment gate).
+      late_delivery — small admin fee proportional to order value for
+        deliveries beyond the MABD window (same _is_late rule as the
+        chargebacks, drawn independently on this stream).
+
+    Rides ded_rng = Random(FULFILLMENT_SEED+4). IDs continue the legacy
+    RD-______ sequence from start_num so the two populations stay
+    distinguishable by position but uniform in format.
+    """
+    order_by_id = {o[0]: o for o in orders}
+    shipment_by_id = {s[0]: s for s in shipments}
+    rows = []
+    ded_num = start_num
+
+    def _append(retailer_id, order_id, ded_type, amount, ded_date):
+        nonlocal ded_num
+        if ded_date > WINDOW_END:
+            return
+        ded_num += 1
+        deadline = ded_date + timedelta(days=ded_rng.choice([30, 45, 60, 90]))
+        codes = deduction_codes_by_retailer.get(retailer_id, [])
+        matching = [c for c in codes if c[4] == ded_type]
+        code_id = matching[0][0] if matching else None
+        rem_info = remittance_map.get(order_id)
+        rem_id = rem_info[0] if rem_info else None
+        rows.append((
+            f"RD-{ded_num:06d}", retailer_id, order_id, rem_id,
+            ded_type, code_id, round(amount, 2), str(ded_date),
+            str(deadline) if deadline <= WINDOW_END + timedelta(days=90) else None,
+            ded_rng.random() < 0.03,
+        ))
+
+    for s in shipments:
+        shipment_id, order_id = s[0], s[1]
+        key = key_by_shipment[shipment_id]
+        order = order_by_id[order_id]
+        retailer_id = order[1]
+        slines = lines_by_shipment[shipment_id]
+        ship_date = date.fromisoformat(s[2])
+        delivery = date.fromisoformat(s[3]) if s[3] else None
+
+        shorted = [(sku, uo, us) for sku, uo, us, reason in slines
+                   if reason is not None]
+        if shorted and ded_rng.random() < SHORT_SHIP_DED_ASSESS:
+            shorted_value = sum(
+                (uo - us) * price_by_order_sku[(order_id, sku)]
+                for sku, uo, us in shorted)
+            lo, hi = SHORT_SHIP_DED_CLAMP
+            amount = min(hi, max(lo, SHORT_SHIP_DED_RATE * shorted_value))
+            anchor = delivery if delivery else ship_date
+            _append(retailer_id, order_id, "short_ship", amount,
+                    anchor + timedelta(days=ded_rng.randint(15, 45)))
+
+        if delivery is not None:
+            requested = date.fromisoformat(order[4])
+            if _is_late(key, requested, delivery):
+                if ded_rng.random() < LATE_DED_ASSESS:
+                    lo, hi = LATE_DED_CLAMP
+                    amount = min(hi, max(lo, LATE_DED_RATE * float(order[6])))
+                    _append(retailer_id, order_id, "late_delivery", amount,
+                            delivery + timedelta(days=ded_rng.randint(15, 40)))
+
+    for shipment_id, sku, units_received, reason in receipt_lines:
+        if reason != "receiving_miscount":
+            continue
+        s = shipment_by_id[shipment_id]
+        if s[3] is None:
+            continue
+        order_id = s[1]
+        retailer_id = order_by_id[order_id][1]
+        units_shipped = next(
+            us for l_sku, _uo, us, _r in lines_by_shipment[shipment_id]
+            if l_sku == sku)
+        value = (units_shipped - units_received) * price_by_order_sku[(order_id, sku)]
+        if value <= 0:
+            continue
+        delivery = date.fromisoformat(s[3])
+        _append(retailer_id, order_id, "short_ship", value,
+                delivery + timedelta(days=ded_rng.randint(10, 30)))
+
+    return rows
+
+
 def generate_chargebacks(rng):
-    """Legacy chargeback records by month/retailer/reason/sku.
+    """Legacy chargeback loop — kept verbatim for stream preservation;
+    the caller keeps only its Path A output (Group C).
 
     SKU distribution is quality-weighted (lower score → more chargebacks)
     using an isolated defect_rng stream. Reason assignment is conditional:
     data-quality reasons (label_fine, damaged, pricing_error) only fire
-    for SKUs with the corresponding defect. Operational reasons (short_ship,
-    late_delivery) are unconditional.
+    for SKUs with the corresponding defect — those rows carry
+    triggered_by_field and ARE the Path A pattern, unchanged. Rows whose
+    defect_rng reason lands on short_ship/late_delivery are discarded by
+    the caller and replaced by generate_operational_chargebacks (the
+    draws still happen, so both the main rng and defect_rng streams stay
+    byte-stable for everything downstream).
 
     reason_defect_map mirrors product-data-health-audit/R/02_build_frames.R
     lines 356-366 (excluding weight_implausible and ows_incomplete which
@@ -577,6 +815,12 @@ def main():
     for row in all_codes:
         codes_by_retailer[row[1]].append(row)
 
+    # Compliance enforcement flags (Group C): retailers whose rules
+    # auto-deduct a violation type assess short-ship chargebacks at a
+    # lifted rate.
+    cur.execute("SELECT retailer_id, deduction_type, auto_deduct FROM raw.retailer_rules")
+    auto_deduct = {(r[0], r[1]): r[2] for r in cur.fetchall()}
+
     print("\nGenerating retailer orders and lines...")
     orders, lines = generate_orders_and_lines(rng)
     copy_rows(cur, "raw.retailer_orders",
@@ -642,26 +886,60 @@ def main():
               remittances)
     print(f"  retailer_remittances: {len(remittances)} rows")
 
+    # ── Group C: causal money tables ─────────────────────────────────
+    # Every legacy generator below still runs on the main rng with its
+    # ORIGINAL input list, so the seed=100 stream stays byte-stable all
+    # the way through pack records. The causal replacement happens in
+    # what gets WRITTEN: legacy short_ship/late_delivery rows (and their
+    # dependent disputes/evidence/claims) are filtered out and the
+    # event-driven rows ride isolated streams (FULFILLMENT_SEED+3/+4).
+    cb_rng = init_rng(FULFILLMENT_SEED + 3)   # operational chargeback assessment
+    ded_rng = init_rng(FULFILLMENT_SEED + 4)  # event-driven deductions
+
+    lines_by_shipment = defaultdict(list)
+    for sid, sku, units_ordered, units_shipped, reason in shipment_lines:
+        lines_by_shipment[sid].append((sku, units_ordered, units_shipped, reason))
+    price_by_order_sku = {(order_id, sku): price
+                          for order_id, sku, _units, price, _total in lines}
+
     print("Generating deductions...")
-    deductions = generate_deductions(rng, orders, rem_map, codes_by_retailer)
+    legacy_deductions = generate_deductions(rng, orders, rem_map, codes_by_retailer)
+    removed_ded_ids = {d[0] for d in legacy_deductions
+                       if d[4] in ("short_ship", "late_delivery")}
+    kept_deductions = [d for d in legacy_deductions if d[0] not in removed_ded_ids]
+    max_legacy_num = max(int(d[0].split("-")[1]) for d in legacy_deductions)
+    event_deductions = generate_event_deductions(
+        ded_rng, orders, shipments, lines_by_shipment, receipt_lines,
+        key_by_shipment, price_by_order_sku, rem_map, codes_by_retailer,
+        max_legacy_num)
+    deductions = kept_deductions + event_deductions
     copy_rows(cur, "raw.retailer_deductions",
               ["deduction_id", "retailer_id", "order_id", "remittance_id",
                "deduction_type", "code_id", "amount", "deduction_date",
                "dispute_deadline", "is_post_audit"],
               deductions)
-    print(f"  retailer_deductions: {len(deductions)} rows")
+    print(f"  retailer_deductions: {len(deductions)} rows "
+          f"({len(kept_deductions)} legacy + {len(event_deductions)} event-driven; "
+          f"{len(removed_ded_ids)} legacy short_ship/late_delivery replaced)")
 
     print("Generating disputes...")
-    disputes = generate_disputes(rng, deductions)
+    # Full legacy candidate list in, stream preserved; disputes on the
+    # replaced deductions are dropped (their event-driven successors stay
+    # undisputed until Group D makes disputes causal).
+    legacy_disputes = generate_disputes(rng, legacy_deductions)
+    disputes = [d for d in legacy_disputes if d[1] not in removed_ded_ids]
+    dropped_dispute_ids = {d[0] for d in legacy_disputes} - {d[0] for d in disputes}
     copy_rows(cur, "raw.retailer_disputes",
               ["dispute_id", "deduction_id", "filed_date", "filing_method",
                "evidence_quality", "outcome", "recovered_amount",
                "closed_date", "labor_hours"],
               disputes)
-    print(f"  retailer_disputes: {len(disputes)} rows")
+    print(f"  retailer_disputes: {len(disputes)} rows "
+          f"({len(dropped_dispute_ids)} dropped with replaced deductions)")
 
     print("Generating dispute evidence...")
-    evidence = generate_dispute_evidence(rng, disputes)
+    legacy_evidence = generate_dispute_evidence(rng, legacy_disputes)
+    evidence = [e for e in legacy_evidence if e[0] not in dropped_dispute_ids]
     copy_rows(cur, "raw.retailer_dispute_evidence",
               ["dispute_id", "evidence_type", "was_submitted",
                "was_required", "format", "notes"],
@@ -669,14 +947,22 @@ def main():
     print(f"  retailer_dispute_evidence: {len(evidence)} rows")
 
     print("Generating chargebacks...")
-    chargebacks = generate_chargebacks(rng)
+    legacy_cb = generate_chargebacks(rng)
+    path_a_cb = [r for r in legacy_cb if r[5] is not None]
+    event_cb = generate_operational_chargebacks(
+        cb_rng, orders, shipments, lines_by_shipment, receipt_lines,
+        key_by_shipment, price_by_order_sku, auto_deduct)
+    chargebacks = path_a_cb + event_cb
     copy_rows(cur, "raw.retailer_chargebacks",
               ["month", "retailer_id", "reason", "sku", "amount", "triggered_by_field"],
               chargebacks)
-    print(f"  retailer_chargebacks: {len(chargebacks)} rows")
+    print(f"  retailer_chargebacks: {len(chargebacks)} rows "
+          f"({len(path_a_cb)} Path A data-defect + {len(event_cb)} event-driven; "
+          f"{len(legacy_cb) - len(path_a_cb)} legacy operational replaced)")
 
     print("Generating post-audit claims...")
-    pac = generate_post_audit_claims(rng, deductions)
+    legacy_pac = generate_post_audit_claims(rng, legacy_deductions)
+    pac = [c for c in legacy_pac if c[1] not in removed_ded_ids]
     copy_rows(cur, "raw.retailer_post_audit_claims",
               ["claim_id", "deduction_id", "auditor_name",
                "audit_period_start", "audit_period_end",

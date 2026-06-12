@@ -296,6 +296,62 @@ EVIDENCE_FILING_MODERATE_DAYS = 60
 # Design §3.3 + decision #3 — intentional unclassified remittance residual.
 # The canonical figure states the ACHIEVED classification rate, not this target.
 REMITTANCE_RESIDUAL_TARGET = 0.02
+
+# Design §2.3 (Group C) — operational chargeback enforcement.
+# Triggering events: per-line shipment shortfalls, deliveries beyond the
+# retailer MABD window (requested ship + max transit + OTIF window,
+# reusing RETAILER_TRANSIT_DAYS / RETAILER_OTIF_WINDOW_DAYS above), and
+# receiving discrepancies (carrier_damage / quality_rejection only —
+# decision #2 keeps receiving_discrepancy a separate category, never
+# folded into shortage chargebacks; receiving_miscount feeds short_ship
+# deductions instead, per design §3.1).
+# p(assess) = share of triggering events the retailer's compliance
+# program converts to a chargeback. Short-ship assessment lifts where
+# raw.retailer_rules.auto_deduct is true (Walmart, Kroger in seeded
+# rules). Fine = rate × event dollar value, clamped. Calibrated to §2.3:
+# short-ship + late 0.5–0.8% of shipped $; total compliance 1.0–1.5%
+# with the Path A data-defect chargebacks ($279,330/36mo) unchanged.
+SHORT_SHIP_CB_ASSESS_BASE = {
+    "walmart": 0.52, "kroger": 0.48, "costco": 0.35,
+    "whole_foods": 0.45, "sprouts": 0.40, "regional": 0.25,
+}
+CB_AUTO_DEDUCT_LIFT = 1.25
+SHORT_SHIP_CB_RATE = {
+    "walmart": 0.14, "kroger": 0.13, "costco": 0.10,
+    "whole_foods": 0.12, "sprouts": 0.10, "regional": 0.08,
+}
+LATE_CB_ASSESS = {
+    "walmart": 0.85, "kroger": 0.70, "costco": 0.50,
+    "whole_foods": 0.60, "sprouts": 0.55, "regional": 0.30,
+}
+LATE_CB_RATE = {
+    "walmart": 0.15, "kroger": 0.12, "costco": 0.08,
+    "whole_foods": 0.12, "sprouts": 0.11, "regional": 0.06,
+}
+RECEIVING_CB_ASSESS = {
+    "walmart": 0.26, "kroger": 0.22, "costco": 0.16,
+    "whole_foods": 0.28, "sprouts": 0.20, "regional": 0.12,
+}
+RECEIVING_CB_FEE_MULT = 1.2  # discrepant value + 20% dock-handling fee
+CHARGEBACK_CLAMP = {
+    "short_ship": (50.0, 2500.0),
+    "late_delivery": (75.0, 1500.0),
+    "receiving_discrepancy": (25.0, 2000.0),
+}
+
+# Group C — event-driven short-ship / late deductions (design §3.1:
+# amounts proportional to the shorted / shipped value). Receiving
+# miscounts deduct the exact discrepant value (AP short-pays the
+# invoice/receipt mismatch at face value, no rate or clamp). Rates are
+# calibrated so total deduction dollars stay in the §4.2 operational-
+# waste neighborhood (~$480K/yr) — the event-driven rows replace the
+# legacy random short_ship/late_delivery draws at similar dollar scale.
+SHORT_SHIP_DED_ASSESS = 0.90
+SHORT_SHIP_DED_RATE = 0.062
+SHORT_SHIP_DED_CLAMP = (20.0, 1500.0)
+LATE_DED_ASSESS = 0.70
+LATE_DED_RATE = 0.03
+LATE_DED_CLAMP = (25.0, 500.0)
 # ── END FROZEN BLOCK ───────────────────────────────────────────────
 
 # ── SCENARIO SUPPORT ──────────────────────────────────────────────

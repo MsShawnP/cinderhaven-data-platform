@@ -9,6 +9,40 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 — Phase 3 Group C complete (causal chargebacks + deductions)
+
+**What changed:** First canon-divergence commit. Retailer
+short_ship/late_delivery chargebacks and deductions are now triggered
+by real Group B fulfillment events; NEW receiving_discrepancy
+chargeback category from damage/quality receipt lines (decision #2 —
+separate, never folded); Path A data-defect chargebacks unchanged to
+the cent (281/$279,330). Legacy generators still run verbatim for
+stream preservation; replaced rows are filtered at write time and the
+event-driven rows ride FULFILLMENT_SEED+3/+4. Permanent dbt linkage
+test added.
+
+**Verification:** compliance 1.444% of shipped $ (band 1.0–1.5),
+short+late 0.701% (band 0.5–0.8), all-reason $231K/yr (~$230K design
+target) — in band on the first calibration; linkage 100% (5,604/5,604
+operational chargebacks join to triggering events); kept deduction
+types byte-identical (10,809/$1,032,702), deduction $ −2.2%; 36/41
+tables byte-identical to the Group B rollback state (5 intended
+changes); determinism 41/41; dbt 430/430; guard-vs-replica 8/10 with
+exactly the 2 expected count REDs (677→5,885; 837→6,045), all dollar
+checks green; prod untouched.
+
+**State:** Replica on Group C state, fully verified. Drift ledger open
+at cinderhaven-causal-fulfillment/verification/DRIFT-LEDGER.md (resolves
+at the Phase 4 relock). Event-driven deductions undisputed until Group
+D (declared intermediate state). Disputes/evidence/claims drift is
+subtractive-only.
+
+**Next:** Shawn's go on Group D — causal evidence quality + dispute
+outcomes (§2.5 weakest-link tiers on EVIDENCE_SEED, §2.4 outcome curve,
+endpoints as scenarios per decision #4).
+
+---
+
 ## 2026-06-12 17:30 (wrap)
 
 **Started from:** Phase 1 design doc at the hard gate awaiting Shawn's review.

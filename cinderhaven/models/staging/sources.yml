@@ -61,7 +61,10 @@ sources:
         description: ~144 monthly remittance payment bundles from retailers.
 
       - name: retailer_deductions
-        description: ~2,000 deduction records from retailer remittances.
+        description: >
+          ~20,000 deduction records from retailer remittances. short_ship
+          and late_delivery rows are event-driven from fulfillment events
+          (Phase 3 Group C); other types ride the legacy stream.
 
       - name: retailer_disputes
         description: ~800 dispute filings against retailer deductions.
@@ -85,7 +88,11 @@ sources:
           the causal fulfillment model (Phase 3 Group B); empty until then.
 
       - name: retailer_chargebacks
-        description: ~450 legacy chargeback events by month/retailer/reason/SKU.
+        description: >
+          Compliance chargebacks by month/retailer/reason/SKU. Operational
+          reasons (short_ship, late_delivery, receiving_discrepancy) are
+          triggered by actual shipment/receipt events (Phase 3 Group C);
+          data-defect reasons keep the Path A triggered_by_field pattern.
 
       - name: retailer_post_audit_claims
         description: ~42 retroactive post-audit claims from third-party auditors.

@@ -168,7 +168,12 @@ models:
         tests: [not_null]
 
   - name: stg_retailer_deductions
-    description: ~2,000 retailer deduction records.
+    description: >
+      Retailer deduction records (~20,000). short_ship and late_delivery
+      rows are event-driven from shipment shortfalls, receiving
+      miscounts, and MABD violations (Phase 3 Group C), amounts
+      proportional to the event's dollar value; the other seven types
+      come off the legacy generation stream unchanged.
     columns:
       - name: deduction_id
         tests: [unique, not_null]
@@ -239,12 +244,25 @@ models:
         tests: [not_null]
 
   - name: stg_retailer_chargebacks
-    description: ~450 legacy chargeback events.
+    description: >
+      Compliance chargebacks. Operational reasons (short_ship,
+      late_delivery, receiving_discrepancy) are triggered by actual
+      shipment/receipt events (Phase 3 Group C); data-defect reasons
+      (label_fine, damaged, pricing_error) carry triggered_by_field and
+      follow the Path A product-data pattern unchanged.
+      receiving_discrepancy is its own category by decision — never
+      folded into shortage chargebacks.
     columns:
       - name: chargeback_id
         tests: [unique, not_null]
       - name: retailer_id
         tests: [not_null]
+      - name: reason
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['short_ship', 'late_delivery', 'receiving_discrepancy',
+                       'label_fine', 'damaged', 'pricing_error']
       - name: chargeback_amount
         tests: [not_null]
 
