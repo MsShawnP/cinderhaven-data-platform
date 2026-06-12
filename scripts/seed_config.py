@@ -250,6 +250,18 @@ RECEIVING_DISCREPANCY_MIX = {
     "whole_foods": {"carrier_damage": 0.40, "receiving_miscount": 0.25, "quality_rejection": 0.35},
 }
 
+# Design §2.2 — per-retailer transit-day ranges (delivery = ship + transit).
+# Replaces the uniform 1-7 day draw that produced identical 71% lateness
+# across all six retailers (plausibility audit §2.6 realism finding).
+RETAILER_TRANSIT_DAYS = {
+    "walmart": (1, 3),
+    "kroger": (1, 3),
+    "costco": (2, 4),
+    "whole_foods": (2, 5),
+    "sprouts": (2, 4),
+    "regional": (3, 6),
+}
+
 # Design §2.2 — OTIF timing: retailer on-time window (days); internal ±1
 RETAILER_OTIF_WINDOW_DAYS = {
     "walmart": 0,

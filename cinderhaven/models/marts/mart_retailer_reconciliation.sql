@@ -11,7 +11,9 @@ shipment_totals as (
     select
         o.retailer_id,
         count(distinct s.shipment_id) as shipment_count,
-        count(distinct case when s.shipment_id is null then o.order_id end) as unshipped_orders
+        count(distinct case when s.shipment_id is null then o.order_id end) as unshipped_orders,
+        sum(o.total_units) as total_units_ordered,
+        sum(s.units_shipped) as total_units_shipped
     from {{ ref('stg_retailer_orders') }} o
     left join {{ ref('stg_retailer_shipments') }} s on o.order_id = s.order_id
     group by o.retailer_id
@@ -59,6 +61,12 @@ select
 
     st.shipment_count,
     st.unshipped_orders,
+    st.total_units_ordered,
+    st.total_units_shipped,
+    case
+        when st.total_units_ordered > 0
+        then round(st.total_units_shipped::numeric / st.total_units_ordered, 4)
+    end as unit_fill_rate,
 
     rt.remittance_count,
     rt.total_remittance_gross,

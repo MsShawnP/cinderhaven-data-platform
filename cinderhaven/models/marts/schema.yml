@@ -45,6 +45,38 @@ models:
       - name: ship_date
         tests: [not_null]
 
+  - name: fct_retailer_shipment_lines
+    description: >
+      Per-SKU shipment lines — units ordered vs. shipped with
+      shortfall_reason, joined to retailer. The causal source for fill
+      rates and short-ship events. Empty until Phase 3 Group B data lands.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: units_ordered
+        tests: [not_null]
+      - name: units_shipped
+        tests: [not_null]
+
+  - name: fct_retailer_receipt_lines
+    description: >
+      Per-SKU receiving lines — what the retailer reports receiving vs.
+      what shipped, with discrepancy_reason. Feeds receiving-discrepancy
+      chargebacks and the retailer-scored OTIF gap.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: retailer_id
+        tests: [not_null]
+      - name: units_received
+        tests: [not_null]
+
   - name: fct_retailer_payments
     description: Retailer remittance-level payments with deduction summary.
     columns:
@@ -94,6 +126,23 @@ models:
           - not_null
           - accepted_values:
               values: ['disputed', 'open']
+
+  - name: fct_distributor_shipment_lines
+    description: >
+      Per-SKU distributor shipment lines — units ordered vs. shipped with
+      shortfall_reason. No receipt lines for distributors (discrepancies
+      arrive via deductions).
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: distributor_id
+        tests: [not_null]
+      - name: units_ordered
+        tests: [not_null]
+      - name: units_shipped
+        tests: [not_null]
 
   - name: fct_distributor_shipments
     description: Distributor shipment records.

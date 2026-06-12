@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import io
+import math
 import psycopg2
 from datetime import date, timedelta
 
@@ -28,6 +29,10 @@ from seed_config import (
     DISPUTE_OUTCOMES, EVIDENCE_TYPES, SEASONALITY,
     WINDOW_START, WINDOW_END, init_rng, compute_defect_profile,
     DEFECT_SEED,
+    FULFILLMENT_SEED, RETAILER_FILL_TARGET, Q4_FILL_DIP,
+    SHORTFALL_REASON_MIX, RECEIVING_DISCREPANCY_RATE,
+    RECEIVING_DISCREPANCY_MIX, RETAILER_TRANSIT_DAYS,
+    INTERNAL_ONTIME_TARGET, EVIDENCE_DQ_STRONG_MIN,
 )
 
 
@@ -53,6 +58,16 @@ RETAILER_VOLUME_WEIGHT = {
     "RET-KROGER": 1.2,
     "RET-SPROUTS": 0.9,
     "RET-REGIONAL": 0.7,
+}
+
+# retailer_id -> seed_config key (fill targets, mixes, transit profiles)
+RETAILER_KEY = {
+    "RET-WALMART": "walmart",
+    "RET-COSTCO": "costco",
+    "RET-WHOLEFOODS": "whole_foods",
+    "RET-SPROUTS": "sprouts",
+    "RET-KROGER": "kroger",
+    "RET-REGIONAL": "regional",
 }
 
 def generate_orders_and_lines(rng):
@@ -115,27 +130,163 @@ def generate_orders_and_lines(rng):
     return orders, lines
 
 
-def generate_shipments(rng, orders):
-    """One shipment per order."""
+# Unit loss on a capacity-constrained order under the line mechanics in
+# generate_shipments — measured from generated data (Group B calibration
+# run: 0.4667 across 9,074 shorted orders). Used to back out the
+# constrained-order probability from the §2.1 fill targets.
+EXPECTED_CONSTRAINED_LOSS = 0.467
+
+# §2.1 targets are annual figures. Q4 months dip Q4_FILL_DIP below the
+# base rate and carry ~23% of annual units (SEASONALITY-weighted,
+# measured), so the base rate sits 0.23 x dip above target for the
+# annual blend to land on target.
+Q4_ANNUAL_COMP = 0.23 * Q4_FILL_DIP
+
+# LTL carriers see more pickup-delay and pre-load damage shortfalls (§1.4)
+LTL_CARRIERS = ("LTL Freight", "R+L Carriers")
+
+
+def _shortfall_reason(fill_rng, mix, sku, carrier, defect, eligible_share):
+    """Weighted §1.4 reason draw with two causal couplings: LTL carriers
+    skew toward carrier shortfalls, and data_defect can only fire for SKUs
+    whose data quality score is below the strong threshold (a SKU with
+    clean data cannot be rejected for bad data).
+
+    Because only `eligible_share` of SKUs can carry a data_defect short,
+    eligible SKUs get the data weight scaled by (1-w)/(e-w) so the
+    realized portfolio share still lands on the §1.4 mix; ineligible SKUs
+    redistribute the data weight proportionally across the other reasons.
+    Exactly one fill_rng draw either way — fill outcomes are unaffected.
+    """
+    w = dict(mix)
+    if carrier in LTL_CARRIERS:
+        w["carrier"] = w["carrier"] * 1.5
+    w_d = mix["data_defect"]
+    if defect[sku]["quality_score"] < EVIDENCE_DQ_STRONG_MIN:
+        w["data_defect"] = w_d * (1.0 - w_d) / (eligible_share - w_d)
+    else:
+        w["data_defect"] = 0.0
+    reasons = list(w.keys())
+    return fill_rng.choices(reasons, weights=[w[r] for r in reasons])[0]
+
+
+def generate_shipments(rng, orders, lines_by_order, fill_rng, timing_rng,
+                       defect, eligible_share):
+    """One shipment per order, shorted per-line by the causal model.
+
+    Main-rng draw count and order are preserved EXACTLY — the legacy
+    delivery offset is still drawn (then discarded) — so every generator
+    after this one (remittances, deductions, disputes, evidence,
+    chargebacks, post-audit claims, pack records) sees an unchanged
+    stream and reproduces byte-identically. All fulfillment randomness
+    rides isolated streams: fill_rng = Random(FULFILLMENT_SEED) for
+    shortfall allocation, timing_rng = Random(FULFILLMENT_SEED+2) for
+    ship/delivery timing.
+    """
     shipments = []
+    shipment_lines = []
+    key_by_shipment = {}
+
     for i, order in enumerate(orders):
         order_id = order[0]
-        po_date = date.fromisoformat(order[3])
-        ship_date = date.fromisoformat(order[4])
-        delivery_date = ship_date + timedelta(days=rng.randint(1, 7))
+        retailer_key = RETAILER_KEY[order[1]]
+        requested_ship = date.fromisoformat(order[4])
+
+        # -- main-stream draws: identical count and order to the legacy
+        # generator. The delivery offset is a dummy draw: delivery now
+        # comes from timing_rng (same pattern as generate_chargebacks'
+        # dummy draws).
+        rng.randint(1, 7)
         carrier = rng.choice(CARRIERS)
-        units_shipped = order[5]
-        pallets = max(1, units_shipped // 48)
         asn_sent = rng.random() < 0.85
         asn_late = asn_sent and rng.random() < 0.10
 
+        # -- fulfillment: §2.1 fill targets with Q4 dip, applied through
+        # a constrained-order model — shorts concentrate in a minority of
+        # orders (allocation cuts hit whole POs) rather than dusting
+        # every order with small shorts.
+        fill_target = RETAILER_FILL_TARGET[retailer_key] + Q4_ANNUAL_COMP
+        if requested_ship.month in (11, 12):
+            fill_target -= Q4_FILL_DIP
+        p_constrained = min(0.95, (1.0 - fill_target) / EXPECTED_CONSTRAINED_LOSS)
+        constrained = fill_rng.random() < p_constrained
+
+        mix = SHORTFALL_REASON_MIX[retailer_key]
+        order_line_rows = []
+        for sku, units in lines_by_order[order_id]:
+            shipped = units
+            reason = None
+            if constrained and fill_rng.random() < 0.75:
+                if fill_rng.random() < 0.30:
+                    shipped = 0
+                else:
+                    shipped = units - math.ceil(units * fill_rng.uniform(0.20, 0.70))
+                reason = _shortfall_reason(fill_rng, mix, sku, carrier,
+                                           defect, eligible_share)
+            order_line_rows.append([sku, units, shipped, reason])
+
+        # A constrained order never vanishes entirely: full-order
+        # cancellation is not part of the §1.4 model, so if every line
+        # was cut to zero, partially restore the largest one.
+        if order_line_rows and all(l[2] == 0 for l in order_line_rows):
+            biggest = max(order_line_rows, key=lambda l: l[1])
+            biggest[2] = max(1, math.ceil(biggest[1] * 0.4))
+
+        units_shipped = sum(l[2] for l in order_line_rows)
+
+        # -- timing: ~96% ship on the requested date (internal on-time),
+        # delivery rides per-retailer transit instead of a uniform 1-7.
+        if timing_rng.random() < INTERNAL_ONTIME_TARGET:
+            ship_date = requested_ship
+        else:
+            ship_date = requested_ship + timedelta(days=timing_rng.randint(1, 2))
+        t_lo, t_hi = RETAILER_TRANSIT_DAYS[retailer_key]
+        delivery_date = ship_date + timedelta(days=timing_rng.randint(t_lo, t_hi))
+
+        shipment_id = f"RS-{i+1:06d}"
+        key_by_shipment[shipment_id] = retailer_key
+        pallets = max(1, units_shipped // 48)
+
         shipments.append((
-            f"RS-{i+1:06d}", order_id, str(ship_date),
+            shipment_id, order_id, str(ship_date),
             str(delivery_date) if delivery_date <= WINDOW_END else None,
             carrier, f"BOL-{i+1:06d}",
             units_shipped, pallets, asn_sent, asn_late,
         ))
-    return shipments
+        for sku, units, shipped, reason in order_line_rows:
+            shipment_lines.append((shipment_id, sku, units, shipped, reason))
+
+    return shipments, shipment_lines, key_by_shipment
+
+
+def generate_receipt_lines(receipt_rng, shipment_lines, key_by_shipment):
+    """What the retailer reports receiving, per shipment line (§1.5).
+
+    Rides its own stream (Random(FULFILLMENT_SEED+1)) so later changes to
+    shipment generation cannot shift receiving outcomes. Zero-shipped
+    lines receive zero with no discrepancy draw — nothing arrived at the
+    dock to miscount.
+    """
+    rows = []
+    for shipment_id, sku, _units_ordered, units_shipped, _reason in shipment_lines:
+        if units_shipped == 0:
+            rows.append((shipment_id, sku, 0, None))
+            continue
+        key = key_by_shipment[shipment_id]
+        if receipt_rng.random() >= RECEIVING_DISCREPANCY_RATE[key]:
+            rows.append((shipment_id, sku, units_shipped, None))
+            continue
+        mix = RECEIVING_DISCREPANCY_MIX.get(key, RECEIVING_DISCREPANCY_MIX["default"])
+        reasons = list(mix.keys())
+        reason = receipt_rng.choices(reasons, weights=[mix[r] for r in reasons])[0]
+        if reason == "carrier_damage":
+            missing = max(1, math.ceil(units_shipped * receipt_rng.uniform(0.05, 0.25)))
+        elif reason == "receiving_miscount":
+            missing = receipt_rng.randint(1, max(1, units_shipped // 10))
+        else:  # quality_rejection
+            missing = max(1, math.ceil(units_shipped * receipt_rng.uniform(0.10, 0.40)))
+        rows.append((shipment_id, sku, max(0, units_shipped - missing), reason))
+    return rows
 
 
 def generate_remittances(rng, orders):
@@ -440,13 +591,48 @@ def main():
     print(f"  retailer_order_lines: {len(lines)} rows")
 
     print("Generating shipments...")
-    shipments = generate_shipments(rng, orders)
+    # Isolated fulfillment streams (design §6.2): they cannot disturb the
+    # main seed=100 stream, and each concern gets its own sub-stream so
+    # later groups cannot shift earlier outputs.
+    fill_rng = init_rng(FULFILLMENT_SEED)         # shortfall allocation
+    receipt_rng = init_rng(FULFILLMENT_SEED + 1)  # receiving discrepancies
+    timing_rng = init_rng(FULFILLMENT_SEED + 2)   # ship/delivery timing
+    defect = compute_defect_profile()
+    # Share of SKUs that can carry a data_defect short (DQ below strong);
+    # orders sample SKUs uniformly, so the SKU-count share is the
+    # unit-weighted eligibility.
+    eligible_share = sum(
+        1 for p in ALL_SKUS
+        if defect[p["sku"]]["quality_score"] < EVIDENCE_DQ_STRONG_MIN
+    ) / len(ALL_SKUS)
+
+    lines_by_order = defaultdict(list)
+    for order_id, sku, units, _price, _total in lines:
+        lines_by_order[order_id].append((sku, units))
+
+    shipments, shipment_lines, key_by_shipment = generate_shipments(
+        rng, orders, lines_by_order, fill_rng, timing_rng, defect,
+        eligible_share)
     copy_rows(cur, "raw.retailer_shipments",
               ["shipment_id", "order_id", "ship_date", "delivery_date",
                "carrier", "bol_number", "units_shipped", "pallets_shipped",
                "asn_sent", "asn_sent_late"],
               shipments)
     print(f"  retailer_shipments: {len(shipments)} rows")
+
+    copy_rows(cur, "raw.retailer_shipment_lines",
+              ["shipment_id", "sku", "units_ordered", "units_shipped",
+               "shortfall_reason"],
+              shipment_lines)
+    print(f"  retailer_shipment_lines: {len(shipment_lines)} rows")
+
+    print("Generating receipt lines...")
+    receipt_lines = generate_receipt_lines(receipt_rng, shipment_lines,
+                                           key_by_shipment)
+    copy_rows(cur, "raw.retailer_receipt_lines",
+              ["shipment_id", "sku", "units_received", "discrepancy_reason"],
+              receipt_lines)
+    print(f"  retailer_receipt_lines: {len(receipt_lines)} rows")
 
     print("Generating remittances...")
     remittances, rem_map = generate_remittances(rng, orders)

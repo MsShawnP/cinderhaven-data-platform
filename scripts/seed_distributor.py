@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import io
+import math
 import psycopg2
 from collections import defaultdict
 from datetime import date, timedelta
@@ -26,6 +27,8 @@ from seed_config import (
     DISPUTE_OUTCOMES, SEASONALITY,
     WINDOW_START, WINDOW_END, init_rng, WHOLESALE_MULT,
     compute_defect_profile, DEFECT_SEED,
+    FULFILLMENT_SEED, DISTRIBUTOR_FILL_TARGET, Q4_FILL_DIP,
+    DISTRIBUTOR_SHORTFALL_MIX, EVIDENCE_DQ_STRONG_MIN,
 )
 
 
@@ -48,6 +51,13 @@ DISTRIBUTOR_VOLUME_WEIGHT = {
     "DIST-UNFI": 1.2,
     "DIST-KEHE": 1.0,
     "DIST-DPI": 0.7,
+}
+
+# distributor_id -> seed_config key (fill targets)
+DISTRIBUTOR_KEY = {
+    "DIST-UNFI": "unfi",
+    "DIST-KEHE": "kehe",
+    "DIST-DPI": "dpi",
 }
 
 def generate_orders_and_lines(rng):
@@ -108,22 +118,92 @@ def generate_orders_and_lines(rng):
     return orders, lines
 
 
-def generate_shipments(rng, orders):
+# Unit loss on a constrained order — same line mechanics as the retailer
+# pipeline, measured from generated data (Group B calibration run: 0.4739
+# across 1,303 shorted orders; distributor lines run larger and cut a
+# little deeper than retailer lines).
+EXPECTED_CONSTRAINED_LOSS = 0.474
+
+# §1.6 targets are annual; same Q4 compensation as the retailer pipeline
+# (Q4 carries ~23% of annual units).
+Q4_ANNUAL_COMP = 0.23 * Q4_FILL_DIP
+
+LTL_CARRIERS = ("LTL Freight", "R+L Carriers")
+
+
+def _shortfall_reason(fill_rng, sku, carrier, defect, eligible_share):
+    """Weighted §1.6 reason draw (allocation-heavy distributor mix) with
+    the same causal couplings and eligibility compensation as the
+    retailer pipeline — see seed_retailer.py._shortfall_reason."""
+    mix = DISTRIBUTOR_SHORTFALL_MIX
+    w = dict(mix)
+    if carrier in LTL_CARRIERS:
+        w["carrier"] = w["carrier"] * 1.5
+    w_d = mix["data_defect"]
+    if defect[sku]["quality_score"] < EVIDENCE_DQ_STRONG_MIN:
+        w["data_defect"] = w_d * (1.0 - w_d) / (eligible_share - w_d)
+    else:
+        w["data_defect"] = 0.0
+    reasons = list(w.keys())
+    return fill_rng.choices(reasons, weights=[w[r] for r in reasons])[0]
+
+
+def generate_shipments(rng, orders, lines_by_order, fill_rng, defect,
+                       eligible_share):
+    """One shipment per order, shorted per-line by the causal model.
+
+    Main-rng draws keep their original count, order, AND values — the
+    distributor timing model is unchanged by design (§1.6: simpler
+    channel, no receipt documents, flexible windows). Only units_shipped
+    changes, computed from the per-line allocation on the isolated
+    fill_rng = Random(FULFILLMENT_SEED + 10) stream.
+    """
     shipments = []
+    shipment_lines = []
+
     for i, order in enumerate(orders):
         order_id = order[0]
+        dist_key = DISTRIBUTOR_KEY[order[1]]
         po_date = date.fromisoformat(order[3])
         ship_date = po_date + timedelta(days=rng.randint(1, 4))
         delivery_date = ship_date + timedelta(days=rng.randint(2, 10))
         carrier = rng.choice(CARRIERS)
-        units_shipped = order[4]
+
+        fill_target = DISTRIBUTOR_FILL_TARGET[dist_key] + Q4_ANNUAL_COMP
+        if po_date.month in (11, 12):
+            fill_target -= Q4_FILL_DIP
+        p_constrained = min(0.95, (1.0 - fill_target) / EXPECTED_CONSTRAINED_LOSS)
+        constrained = fill_rng.random() < p_constrained
+
+        order_line_rows = []
+        for sku, units in lines_by_order[order_id]:
+            shipped = units
+            reason = None
+            if constrained and fill_rng.random() < 0.75:
+                if fill_rng.random() < 0.30:
+                    shipped = 0
+                else:
+                    shipped = units - math.ceil(units * fill_rng.uniform(0.20, 0.70))
+                reason = _shortfall_reason(fill_rng, sku, carrier, defect,
+                                           eligible_share)
+            order_line_rows.append([sku, units, shipped, reason])
+
+        if order_line_rows and all(l[2] == 0 for l in order_line_rows):
+            biggest = max(order_line_rows, key=lambda l: l[1])
+            biggest[2] = max(1, math.ceil(biggest[1] * 0.4))
+
+        units_shipped = sum(l[2] for l in order_line_rows)
+        shipment_id = f"DS-{i+1:06d}"
 
         shipments.append((
-            f"DS-{i+1:06d}", order_id, str(ship_date),
+            shipment_id, order_id, str(ship_date),
             str(delivery_date) if delivery_date <= WINDOW_END else None,
             carrier, units_shipped,
         ))
-    return shipments
+        for sku, units, shipped, reason in order_line_rows:
+            shipment_lines.append((shipment_id, sku, units, shipped, reason))
+
+    return shipments, shipment_lines
 
 
 def generate_remittances(rng, orders):
@@ -286,12 +366,32 @@ def main():
     print(f"  distributor_order_lines: {len(lines)} rows")
 
     print("Generating shipments...")
-    shipments = generate_shipments(rng, orders)
+    # Isolated fulfillment stream (design §6.2); offset from the retailer
+    # pipeline's sub-streams so the channels never share a sequence.
+    fill_rng = init_rng(FULFILLMENT_SEED + 10)
+    defect = compute_defect_profile()
+    eligible_share = sum(
+        1 for p in ALL_SKUS
+        if defect[p["sku"]]["quality_score"] < EVIDENCE_DQ_STRONG_MIN
+    ) / len(ALL_SKUS)
+
+    lines_by_order = defaultdict(list)
+    for order_id, sku, units, _price, _total in lines:
+        lines_by_order[order_id].append((sku, units))
+
+    shipments, shipment_lines = generate_shipments(
+        rng, orders, lines_by_order, fill_rng, defect, eligible_share)
     copy_rows(cur, "raw.distributor_shipments",
               ["shipment_id", "order_id", "ship_date", "delivery_date",
                "carrier", "units_shipped"],
               shipments)
     print(f"  distributor_shipments: {len(shipments)} rows")
+
+    copy_rows(cur, "raw.distributor_shipment_lines",
+              ["shipment_id", "sku", "units_ordered", "units_shipped",
+               "shortfall_reason"],
+              shipment_lines)
+    print(f"  distributor_shipment_lines: {len(shipment_lines)} rows")
 
     print("Generating remittances...")
     remittances, rem_map = generate_remittances(rng, orders)
