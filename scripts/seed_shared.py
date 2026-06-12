@@ -91,7 +91,7 @@ def seed_sku_costs(cur, rng):
         "wholesale_unfi", "wholesale_kehe", "wholesale_dtc",
         "trade_spend_pct_walmart", "trade_spend_pct_costco",
         "trade_spend_pct_whole_foods", "trade_spend_pct_sprouts",
-        "trade_spend_pct_regional",
+        "trade_spend_pct_kroger", "trade_spend_pct_regional",
         "trade_spend_pct_unfi", "trade_spend_pct_kehe", "trade_spend_pct_dtc",
     ]
     rows = []
@@ -114,6 +114,7 @@ def seed_sku_costs(cur, rng):
             TRADE_SPEND_PCT["costco"],
             TRADE_SPEND_PCT["whole_foods"],
             TRADE_SPEND_PCT["sprouts"],
+            TRADE_SPEND_PCT["kroger"],
             TRADE_SPEND_PCT["regional"],
             TRADE_SPEND_PCT["unfi"],
             TRADE_SPEND_PCT["kehe"],

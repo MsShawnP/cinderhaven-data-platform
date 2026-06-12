@@ -1,5 +1,5 @@
 -- Cinderhaven Data Platform: Raw Schema DDL (v2 — channel-isolated pipelines)
--- 38 tables across 3 isolated pipelines (retailer, distributor, DTC) + shared.
+-- 41 tables across 3 isolated pipelines (retailer, distributor, DTC) + shared.
 -- Schema: raw (landing zone, source-of-record)
 --
 -- Greenfield rebuild — no migration from v1. DROP CASCADE and recreate.
@@ -62,6 +62,7 @@ CREATE TABLE raw.sku_costs (
     trade_spend_pct_costco      NUMERIC(5,4),
     trade_spend_pct_whole_foods NUMERIC(5,4),
     trade_spend_pct_sprouts     NUMERIC(5,4),
+    trade_spend_pct_kroger      NUMERIC(5,4),
     trade_spend_pct_regional    NUMERIC(5,4),
     trade_spend_pct_unfi        NUMERIC(5,4),
     trade_spend_pct_kehe        NUMERIC(5,4),
@@ -203,6 +204,29 @@ CREATE TABLE raw.retailer_shipments (
 );
 CREATE INDEX idx_retailer_shipments_order ON raw.retailer_shipments(order_id);
 
+-- Per-SKU shipment detail: what was ordered vs. what actually shipped.
+-- shortfall_reason is NULL when the line shipped complete.
+CREATE TABLE raw.retailer_shipment_lines (
+    shipment_id             TEXT NOT NULL REFERENCES raw.retailer_shipments(shipment_id),
+    sku                     TEXT NOT NULL REFERENCES raw.product_master(sku),
+    units_ordered           INTEGER NOT NULL,
+    units_shipped           INTEGER NOT NULL,
+    shortfall_reason        TEXT,
+    PRIMARY KEY (shipment_id, sku)
+);
+
+-- What the retailer says they received (may differ from shipped).
+-- discrepancy_reason is NULL when the receipt matches the shipment.
+CREATE TABLE raw.retailer_receipt_lines (
+    shipment_id             TEXT NOT NULL,
+    sku                     TEXT NOT NULL,
+    units_received          INTEGER NOT NULL,
+    discrepancy_reason      TEXT,
+    PRIMARY KEY (shipment_id, sku),
+    FOREIGN KEY (shipment_id, sku)
+        REFERENCES raw.retailer_shipment_lines(shipment_id, sku)
+);
+
 CREATE TABLE raw.retailer_chargebacks (
     chargeback_id           SERIAL PRIMARY KEY,
     month                   DATE NOT NULL,
@@ -314,6 +338,17 @@ CREATE TABLE raw.distributor_shipments (
     units_shipped           INTEGER NOT NULL
 );
 CREATE INDEX idx_distributor_shipments_order ON raw.distributor_shipments(order_id);
+
+-- Per-SKU shipment detail (distributor channel). No receipt lines:
+-- distributors report discrepancies via deductions, not receiving docs.
+CREATE TABLE raw.distributor_shipment_lines (
+    shipment_id             TEXT NOT NULL REFERENCES raw.distributor_shipments(shipment_id),
+    sku                     TEXT NOT NULL REFERENCES raw.product_master(sku),
+    units_ordered           INTEGER NOT NULL,
+    units_shipped           INTEGER NOT NULL,
+    shortfall_reason        TEXT,
+    PRIMARY KEY (shipment_id, sku)
+);
 
 CREATE TABLE raw.distributor_chargebacks (
     chargeback_id           SERIAL PRIMARY KEY,

@@ -7,7 +7,7 @@ sources:
     description: >
       Landing zone for Cinderhaven data. Channel-isolated pipelines
       (retailer, distributor, DTC) plus shared cross-channel tables.
-      38 tables total. Staging models clean, type, and standardize.
+      41 tables total. Staging models clean, type, and standardize.
 
     tables:
       # ── Shared tables ─────────────────────────────────────
@@ -72,6 +72,18 @@ sources:
       - name: retailer_shipments
         description: ~7,200 retailer shipment records.
 
+      - name: retailer_shipment_lines
+        description: >
+          Per-SKU shipment detail — units ordered vs. units actually shipped,
+          with shortfall_reason on shorted lines. Populated by the causal
+          fulfillment model (Phase 3 Group B); empty until then.
+
+      - name: retailer_receipt_lines
+        description: >
+          Per-SKU receiving detail — what the retailer reports receiving vs.
+          what shipped, with discrepancy_reason on mismatches. Populated by
+          the causal fulfillment model (Phase 3 Group B); empty until then.
+
       - name: retailer_chargebacks
         description: ~450 legacy chargeback events by month/retailer/reason/SKU.
 
@@ -105,6 +117,13 @@ sources:
 
       - name: distributor_shipments
         description: ~1,400 distributor shipment records.
+
+      - name: distributor_shipment_lines
+        description: >
+          Per-SKU distributor shipment detail — units ordered vs. shipped with
+          shortfall_reason. No receipt lines for distributors (they report
+          discrepancies via deductions). Populated by the causal fulfillment
+          model (Phase 3 Group B); empty until then.
 
       - name: distributor_chargebacks
         description: ~93 distributor chargeback events.

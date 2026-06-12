@@ -16,8 +16,6 @@ from pathlib import Path
 
 import psycopg2
 
-from seed_config import TRADE_SPEND_PCT
-
 CANONICAL_PATH = Path(__file__).resolve().parent.parent / "CINDERHAVEN_CANONICAL.md"
 
 TOLERANCE_PCT = 0.02  # 2% tolerance on dollar figures
@@ -57,6 +55,7 @@ QUERIES = {
             AVG(trade_spend_pct_costco)       AS rate_costco,
             AVG(trade_spend_pct_whole_foods)  AS rate_whole_foods,
             AVG(trade_spend_pct_sprouts)      AS rate_sprouts,
+            AVG(trade_spend_pct_kroger)       AS rate_kroger,
             AVG(trade_spend_pct_regional)     AS rate_regional
         FROM raw.sku_costs
     """,
@@ -211,7 +210,7 @@ def run_checks():
     cur.execute(QUERIES["channel_rates"])
     rates_row = cur.fetchone()
     rate_keys = ["rate_walmart", "rate_costco", "rate_whole_foods",
-                 "rate_sprouts", "rate_regional"]
+                 "rate_sprouts", "rate_kroger", "rate_regional"]
     rates = {k: to_float(v) for k, v in zip(rate_keys, rates_row)}
 
     # Scan revenue only exists for the six contracted retailers, so the map
@@ -223,10 +222,7 @@ def run_checks():
         "Costco": rates["rate_costco"],
         "Whole Foods": rates["rate_whole_foods"],
         "Sprouts": rates["rate_sprouts"],
-        # raw.sku_costs has no trade_spend_pct_kroger column; until the schema
-        # carries one, the rate comes from seed_config (the declared source of
-        # truth for this file).
-        "Kroger": float(TRADE_SPEND_PCT["kroger"]),
+        "Kroger": rates["rate_kroger"],
         "Regional Group": rates["rate_regional"],
     }
 

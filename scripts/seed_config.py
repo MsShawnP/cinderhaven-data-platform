@@ -186,7 +186,7 @@ WHOLESALE_MULT = {
     "dtc": 1.00,  # DTC sells at MSRP
 }
 
-TRADE_SPEND_PCT = {  # drives structural trade cost ($8.8M/36mo)
+TRADE_SPEND_PCT = {  # drives structural trade cost ($9.7M/36mo after 2026-06-12 rate_map relock)
     "walmart": 0.12,
     "costco": 0.10,
     "whole_foods": 0.08,
@@ -198,6 +198,92 @@ TRADE_SPEND_PCT = {  # drives structural trade cost ($8.8M/36mo)
     "dpi": 0.05,
     "dtc": 0.03,
 }
+
+# ── Causal fulfillment model (frozen 2026-06-12) ──────────────────
+# Per CAUSAL_FULFILLMENT_DESIGN.md (Shawn-approved). Consumed by the
+# Phase 3 seeder groups B-E; isolated RNG streams so they cannot
+# disturb the SEED=42 / DEFECT_SEED=300 generation paths.
+
+FULFILLMENT_SEED = 400   # shortfall allocation, receiving discrepancies
+EVIDENCE_SEED = 500      # evidence assembly, outcome conditioning
+
+# Design §2.1 — per-retailer unit fill-rate targets ("bad end of normal")
+RETAILER_FILL_TARGET = {
+    "walmart": 0.89,
+    "kroger": 0.90,
+    "costco": 0.92,
+    "whole_foods": 0.94,
+    "sprouts": 0.93,
+    "regional": 0.95,
+}
+# Design §1.6 — distributors fill 2-3 points above the retailer portfolio
+DISTRIBUTOR_FILL_TARGET = {"unfi": 0.94, "kehe": 0.94, "dpi": 0.95}
+# Design §2.1 — fill drops during the Nov-Dec seasonal peak, in points
+Q4_FILL_DIP = 0.04
+
+# Design §1.4 — shortfall-reason mix per retailer (shares of shortage units)
+SHORTFALL_REASON_MIX = {
+    "walmart":     {"allocation": 0.65, "production": 0.18, "carrier": 0.10, "data_defect": 0.07},
+    "kroger":      {"allocation": 0.60, "production": 0.20, "carrier": 0.12, "data_defect": 0.08},
+    "costco":      {"allocation": 0.55, "production": 0.22, "carrier": 0.13, "data_defect": 0.10},
+    "whole_foods": {"allocation": 0.35, "production": 0.20, "carrier": 0.20, "data_defect": 0.25},
+    "sprouts":     {"allocation": 0.35, "production": 0.30, "carrier": 0.20, "data_defect": 0.15},
+    "regional":    {"allocation": 0.35, "production": 0.20, "carrier": 0.25, "data_defect": 0.20},
+}
+# Design §1.6 — distributor shortfalls skew toward allocation
+DISTRIBUTOR_SHORTFALL_MIX = {
+    "allocation": 0.68, "production": 0.17, "carrier": 0.10, "data_defect": 0.05,
+}
+
+# Design §1.5 — receiving-discrepancy rate per retailer (share of shipment lines)
+RECEIVING_DISCREPANCY_RATE = {
+    "walmart": 0.05,
+    "whole_foods": 0.05,
+    "kroger": 0.04,
+    "sprouts": 0.04,
+    "costco": 0.03,
+    "regional": 0.03,
+}
+# Design §1.5 — discrepancy-reason mix; Whole Foods skews to quality rejection
+RECEIVING_DISCREPANCY_MIX = {
+    "default":     {"carrier_damage": 0.50, "receiving_miscount": 0.30, "quality_rejection": 0.20},
+    "whole_foods": {"carrier_damage": 0.40, "receiving_miscount": 0.25, "quality_rejection": 0.35},
+}
+
+# Design §2.2 — OTIF timing: retailer on-time window (days); internal ±1
+RETAILER_OTIF_WINDOW_DAYS = {
+    "walmart": 0,
+    "kroger": 1,
+    "costco": 2,
+    "whole_foods": 1,
+    "sprouts": 1,
+    "regional": 2,
+}
+INTERNAL_OTIF_TOLERANCE_DAYS = 1
+INTERNAL_ONTIME_TARGET = 0.96  # share of shipments departing inside the internal window
+
+# Design §2.4 — evidence tier -> dispute outcome distributions
+EVIDENCE_OUTCOME_WEIGHTS = {
+    "strong":   {"won": 0.45, "partial": 0.35, "lost": 0.10, "pending": 0.10},
+    "moderate": {"won": 0.15, "partial": 0.25, "lost": 0.40, "pending": 0.20},
+    "weak":     {"won": 0.05, "partial": 0.15, "lost": 0.55, "pending": 0.25},
+}
+# Partial outcomes recover a uniform fraction of the deduction
+# (midpoints 0.57 / 0.48 / 0.53 per the design's effective-rate math)
+PARTIAL_RECOVERY_RANGE = {
+    "strong":   (0.40, 0.74),
+    "moderate": (0.28, 0.68),
+    "weak":     (0.33, 0.73),
+}
+# Design §2.5 — evidence factor thresholds (weakest link sets the tier)
+EVIDENCE_DQ_STRONG_MIN = 75       # data quality score at/above -> strong factor
+EVIDENCE_DQ_WEAK_MAX = 50         # below -> weak factor
+EVIDENCE_FILING_STRONG_DAYS = 30  # filed within -> strong factor
+EVIDENCE_FILING_MODERATE_DAYS = 60
+
+# Design §3.3 + decision #3 — intentional unclassified remittance residual.
+# The canonical figure states the ACHIEVED classification rate, not this target.
+REMITTANCE_RESIDUAL_TARGET = 0.02
 # ── END FROZEN BLOCK ───────────────────────────────────────────────
 
 # ── SCENARIO SUPPORT ──────────────────────────────────────────────

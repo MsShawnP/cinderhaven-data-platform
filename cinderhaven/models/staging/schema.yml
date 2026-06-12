@@ -212,6 +212,32 @@ models:
       - name: ship_date
         tests: [not_null]
 
+  - name: stg_retailer_shipment_lines
+    description: >
+      Per-SKU shipment detail (ordered vs. shipped, shortfall_reason).
+      Empty until the causal fulfillment model (Phase 3 Group B) populates it.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: units_ordered
+        tests: [not_null]
+      - name: units_shipped
+        tests: [not_null]
+
+  - name: stg_retailer_receipt_lines
+    description: >
+      Per-SKU receiving detail (received vs. shipped, discrepancy_reason).
+      Empty until the causal fulfillment model (Phase 3 Group B) populates it.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: units_received
+        tests: [not_null]
+
   - name: stg_retailer_chargebacks
     description: ~450 legacy chargeback events.
     columns:
@@ -320,6 +346,21 @@ models:
       - name: order_id
         tests: [not_null]
       - name: ship_date
+        tests: [not_null]
+
+  - name: stg_distributor_shipment_lines
+    description: >
+      Per-SKU distributor shipment detail (ordered vs. shipped,
+      shortfall_reason). Empty until the causal fulfillment model
+      (Phase 3 Group B) populates it.
+    columns:
+      - name: shipment_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: units_ordered
+        tests: [not_null]
+      - name: units_shipped
         tests: [not_null]
 
   - name: stg_distributor_chargebacks
