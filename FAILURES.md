@@ -30,6 +30,69 @@ failed and may have its own entry below]
 
 ## Entries
 
+### 2026-06-12 — Theoretical fill calibration undershot targets by ~1pt annually
+
+**Attempted:** Back the constrained-order probability out of the §2.1 fill
+targets using a theoretical expected-loss constant (0.46) and apply the Q4
+dip as a plain target reduction in Nov/Dec.
+
+**Why it didn't work:** Two compounding effects. Q4 months carry ~23% of
+annual units (SEASONALITY-weighted), so dipping Q4 below an uncompensated
+base drags the annual blend ~0.9pt under target. And the realized per-order
+loss was 0.467 (retailer) / 0.474 (distributor), not 0.46 — distributor
+lines run larger and cut deeper. Combined: annual fills 0.8–1.5pt low.
+
+**What we tried instead:** Measured both quantities from the generated data
+and folded them in: per-channel EXPECTED_CONSTRAINED_LOSS from realized
+shorted-order loss, and base rate = target + 0.23 × Q4_FILL_DIP. Annual
+fills landed within ±0.64pt of every target on the next run.
+
+**Status:** Resolved
+
+**Tags:** fill rate, calibration, Q4, seasonality, constrained order, Group B
+
+---
+
+### 2026-06-12 — data_defect shortfall share landed at half the §1.4 mix
+
+**Attempted:** Draw shortfall reasons from the §1.4 per-retailer mixes,
+then reassign data_defect to allocation when the SKU's data quality score
+was ≥ 75 (clean-data SKUs can't have data-defect shorts).
+
+**Why it didn't work:** Only 23/50 SKUs (46%) are eligible, so the
+reassignment halved the realized data_defect share (Whole Foods .108 vs
+the approved .25) and inflated allocation.
+
+**What we tried instead:** Exact compensation — eligible SKUs carry the
+data weight scaled by (1−w)/(e−w), ineligible SKUs redistribute it
+proportionally across the other reasons. Same single RNG draw either way,
+so fills were untouched. WF data_defect landed at .246 vs .25.
+
+**Status:** Resolved
+
+**Tags:** shortfall reason, mix, data_defect, eligibility, compensation, Group B
+
+---
+
+### 2026-06-12 — .venv pip.exe shim dead; install via python -m pip
+
+**Attempted:** `.venv/Scripts/pip.exe install -r requirements.txt` to
+restore the platform venv (dbt etc.).
+
+**Why it didn't work:** pip.exe produced no output and did nothing — a
+stale shim (venv created from a since-updated base Python). dbt.exe was
+also absent because the venv had no packages at all.
+
+**What we tried instead:** `.venv\Scripts\python.exe -m pip install -r
+requirements.txt` — installed cleanly (dbt-core 1.11.11, dbt-postgres
+1.10.0).
+
+**Status:** Resolved
+
+**Tags:** venv, pip, dbt, windows, environment
+
+---
+
 ### 2026-05-15 — Plan's cascade model assumed UPC/GTIN damage breaks joins
 
 **Attempted:** Design RC1 (Excel/CSV damage) around corrupting UPC and GTIN14

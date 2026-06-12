@@ -46,6 +46,40 @@ Each entry:
 
 ## Data & Schema
 
+### 2026-06-12 — Preserve main-rng draw sequences with dummy draws; new randomness on isolated sub-streams
+- **Why:** The seeders consume one sequential rng per pipeline, so any
+  added/removed draw shifts every downstream table. Group B proved the
+  pattern: keep every legacy draw in place (dummy-draw where the value is
+  superseded — the idiom generate_chargebacks already used) and put all new
+  randomness on dedicated Random(FULFILLMENT_SEED+k) instances (400 fill /
+  401 receipts / 402 timing / 410 distributor fill). Result: 35/41 tables
+  byte-identical through a major shipment rewrite, every money table intact.
+- **Scope:** All seeder changes, Groups C–E especially. Allocate a fresh
+  sub-stream per concern; never let two concerns share one.
+- **Do not:** Remove a "dummy" draw because it looks unused — it is load-
+  bearing for stream position. Do not draw from the main rng in new code.
+
+### 2026-06-12 — Calibrate generation constants from measured generated data, not theory
+- **Why:** The theoretical constrained-order loss (0.46) and an
+  uncompensated Q4 dip undershot every fill target ~1pt annually. Measuring
+  realized loss (0.467/0.474) and Q4 unit share (23%) from an actual run,
+  then folding the measurements in, landed all nine partners within ±0.64pt
+  in one iteration. Same pattern for the data_defect eligibility share (46%).
+- **Scope:** Any seeder constant that backs a target band (Groups C–E:
+  chargeback rates, evidence mixes, residual sizing).
+- **Do not:** Tune by guess-and-rerun. Measure the mechanism, derive the
+  constant, document the measurement in the verification record.
+
+### 2026-06-12 — §2.1 fill targets are annual figures
+- **Why:** Q4 carries ~23% of annual units, so a base rate equal to target
+  with a Q4 dip below it lands the annual blend under target. The base rate
+  carries +0.23 × Q4_FILL_DIP so the annual figure is the target and the
+  Q4 dip stays visible per retailer (the design's seasonal story).
+- **Scope:** Fill verification in Groups B–F and the Phase 4 canonical
+  derivations — "fill rate" with no qualifier means the annual unit rate.
+- **Do not:** Re-baseline targets as non-Q4 steady-state rates without a
+  design-doc amendment and Shawn's approval.
+
 ### 2026-05-12 — Scale Fly.io machine temporarily for bulk ingestion, then scale back
 - **Why:** The shared-cpu-1x (256MB) Fly.io Postgres machine crashes under
   bulk COPY loads — specifically scan_data (1.1M rows). Scaling to 1GB for

@@ -9,6 +9,18 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 17:30 (wrap)
+
+**Started from:** Phase 1 design doc at the hard gate awaiting Shawn's review.
+
+**Did:** Gate cleared (6 decisions). Phase 2 complete: mart COGS fix (a6b4d20), rate_map fix + interim trade relock $3.4M/10.5%→$3.7M/11.3% (6e05e33), 4 dbt plausibility assertions (8c41c84), PDHA 12/18→12/36 (e7ce057), COGS ratios in WTMCF (4428f95) + CPA (81e1c34). Phase 3 decomposed into six gated groups; Group A schema+constants (fe62b4d) and Group B causal fulfillment events (0eb21ad) shipped with byte-identical stream-preservation proofs.
+
+**State:** Replica certified on Group B — guard 10/10, dbt 427/427, determinism 41/41, portfolio fill 91.98%, money tables byte-identical to pre-causal state. Rollback point in cinderhaven-causal-fulfillment/verification/. Money seeders (remittances/deductions/disputes/chargebacks) still legacy.
+
+**Next:** Shawn's go on Group C — causal operational chargebacks + deductions. First canon-divergence commit; drift ledger starts. Arc tracking lives in cinderhaven-causal-fulfillment (PLAN.md + HANDOFF.md there are current).
+
+---
+
 ## 2026-06-12 17:27
 
 **What changed:** Phase 3 Groups A and B complete — fulfillment schema + frozen causal-model constants (fe62b4d), then causal shipment events: per-line shortfalls on §2.1 fill targets, per-retailer timing, receipt lines, distributor parallel (0eb21ad). Stopped at the Group C gate.

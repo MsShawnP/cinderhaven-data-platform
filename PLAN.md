@@ -5,6 +5,19 @@ session. For session-by-session state, see HANDOFF.md.
 
 ---
 
+## ACTIVE ARC (2026-06-12 — causal fulfillment, tracked externally)
+
+The causal-fulfillment arc (single fulfillment reality as the causal
+source for every downstream figure) is planned and tracked in the
+**cinderhaven-causal-fulfillment** repo — PLAN.md, HANDOFF.md,
+CAUSAL_FULFILLMENT_DESIGN.md, and verification/ live there. This repo
+receives the commit-gated implementation groups. Status: Phase 2
+bugfixes complete; Phase 3 Groups A–B complete (schema, constants,
+causal fulfillment events); Group C (causal chargebacks + deductions)
+awaits Shawn's go.
+
+---
+
 ## Goal (2026-05-15 — dirty dataset arc, COMPLETE)
 
 Create a standalone repository containing a realistically degraded
