@@ -33,12 +33,14 @@ product_master_history is EMPTY in the certified state and its 0–4
 score scale doesn't match the §2.5 thresholds, so the DQ factor uses
 the 40–95 defect-profile score of the order's largest-line_total SKU.
 
-**State:** NOT verified — run1 reseed was in flight when the session
-wrapped; the replica is in an indeterminate state. Nothing pushed
-(mid-group rule). dbt will fail against a pre-Group-D replica (the
-distributor_disputes source now expects evidence_quality) — reseed
-first. Guard expectation unchanged: 7/10 with the same 3 count REDs
-(no dispute checks in the guard).
+**State:** NOT verified, but run1 reseed COMPLETED clean just before
+wrap (282.5s; replica is on the unverified run1 state). Realized
+counts landed on calibration: retailer_disputes 7,756 (tiers
+3,316/3,515/925 S/M/W), retailer_dispute_evidence 34,743,
+distributor_disputes 926 (478/343/105); deductions unchanged
+(20,002 / 2,423). Nothing pushed (mid-group rule). Guard expectation
+unchanged: 7/10 with the same 3 count REDs (no dispute checks in the
+guard).
 
 **Next:** Fresh session: (1) re-run `scripts\seed_all.py` from scratch
 (POSTGRES_PASSWORD=postgres, local Docker replica), (2) write
