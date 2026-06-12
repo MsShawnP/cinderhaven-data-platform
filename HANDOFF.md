@@ -9,6 +9,38 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 — Phase 3 Group C2 complete (causal distributor chargebacks + deductions)
+
+**What changed:** Distributor parallel of Group C. Distributor
+short_ship/late_delivery chargebacks and deductions are now triggered
+by real distributor_shipment_lines events (streams
+FULFILLMENT_SEED+11/+12); late = delivery beyond the 12-day
+order-to-door window (distributor orders have no requested_ship_date —
+rule choice flagged in the causal repo's GROUP-C2-VERIFICATION.md). No
+receiving_discrepancy category distributor-side (no receipt lines per
+design §1.6). Quality-linked chargebacks (damaged/pricing_error) and
+the three non-operational deduction types ride the legacy stream
+unchanged; legacy generators still run verbatim for stream
+preservation. Permanent dbt linkage test added; stale distributor
+staging descriptions refreshed.
+
+**Verification:** component 0.318% of distributor shipped $ (proposed
+band 0.2–0.45), total 0.975% (0.7–1.1) — first calibration; linkage
+100% (400+183 cb, 892+290 event deductions); kept rows identical to
+the cent; 38/41 tables byte-identical to the Group C state (exactly
+the 3 intended distributor money tables); determinism 41/41; dbt
+431/431; guard-vs-replica 7/10 with exactly the 3 expected count REDs
+(distributor 160→678 new); all dollar checks green; prod untouched.
+
+**State:** Replica certified on Group C2. Drift ledger updated in the
+causal repo. Both wholesale channels now causal on operational money.
+
+**Next:** Shawn's review of C2 (the 12-day window rule is the
+judgment call), then Group D — causal evidence quality + dispute
+outcomes across both channels.
+
+---
+
 ## 2026-06-12 23:50 (wrap)
 
 **Started from:** Groups A–B accepted; GO on Group C (causal

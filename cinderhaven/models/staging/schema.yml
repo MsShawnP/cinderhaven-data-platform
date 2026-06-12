@@ -332,7 +332,12 @@ models:
         tests: [not_null]
 
   - name: stg_distributor_deductions
-    description: ~300 distributor deduction records.
+    description: >
+      Distributor deduction records. Operational types (short_ship,
+      late_delivery) are triggered by actual shipment events (Phase 3
+      Group C2); the other types (pricing_error, promo_billback,
+      damaged — distributor discrepancies arrive via deductions, not
+      receiving documents) come off the legacy stream unchanged.
     columns:
       - name: deduction_id
         tests: [unique, not_null]
@@ -344,7 +349,10 @@ models:
         tests: [not_null]
 
   - name: stg_distributor_disputes
-    description: ~100 distributor dispute filings.
+    description: >
+      Distributor dispute filings on legacy-stream deductions.
+      Event-driven deductions stay undisputed until Group D makes
+      dispute outcomes causal.
     columns:
       - name: dispute_id
         tests: [unique, not_null]
@@ -369,8 +377,9 @@ models:
   - name: stg_distributor_shipment_lines
     description: >
       Per-SKU distributor shipment detail (ordered vs. shipped,
-      shortfall_reason). Empty until the causal fulfillment model
-      (Phase 3 Group B) populates it.
+      shortfall_reason), populated by the causal fulfillment model
+      (Phase 3 Group B). Shorted lines trigger the Group C2
+      operational chargebacks and deductions.
     columns:
       - name: shipment_id
         tests: [not_null]
@@ -382,7 +391,13 @@ models:
         tests: [not_null]
 
   - name: stg_distributor_chargebacks
-    description: ~93 distributor chargeback events.
+    description: >
+      Distributor chargebacks. Operational reasons (short_ship,
+      late_delivery) are triggered by actual shipment events (Phase 3
+      Group C2; late = delivery beyond the 12-day order-to-door
+      window); quality-linked reasons (damaged, pricing_error) are
+      quality-weighted legacy draws. No receiving_discrepancy category
+      on this channel — distributors have no receipt lines.
     columns:
       - name: chargeback_id
         tests: [unique, not_null]

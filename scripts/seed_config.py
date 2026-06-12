@@ -352,6 +352,34 @@ SHORT_SHIP_DED_CLAMP = (20.0, 1500.0)
 LATE_DED_ASSESS = 0.70
 LATE_DED_RATE = 0.03
 LATE_DED_CLAMP = (25.0, 500.0)
+
+# Design §1.6 (Group C2) — distributor operational enforcement.
+# Triggering events: per-line shipment shortfalls and deliveries beyond
+# the distributor's order-to-door window (po_date + window days; there
+# is no requested_ship_date on distributor orders, so the window is the
+# observable MABD analog — only the slowest ~8% of deliveries qualify).
+# No receipt lines on this channel (§1.6: discrepancies arrive via
+# deductions), so there is NO receiving_discrepancy category here.
+# "Flexible delivery windows" is encoded as a generous window plus low
+# assessment probabilities, not zero enforcement. Calibrated below the
+# retailer §2.3 bands: short-ship + late 0.2–0.45% of distributor
+# shipped $; total compliance 0.7–1.1% with the kept quality-linked
+# chargebacks (damaged / pricing_error) unchanged.
+DIST_DELIVERY_WINDOW_DAYS = 12
+DIST_SHORT_SHIP_CB_ASSESS = {"unfi": 0.40, "kehe": 0.35, "dpi": 0.25}
+DIST_SHORT_SHIP_CB_RATE = {"unfi": 0.10, "kehe": 0.09, "dpi": 0.07}
+DIST_LATE_CB_ASSESS = {"unfi": 0.30, "kehe": 0.25, "dpi": 0.15}
+DIST_LATE_CB_RATE = {"unfi": 0.06, "kehe": 0.05, "dpi": 0.04}
+DIST_CHARGEBACK_CLAMP = {
+    "short_ship": (40.0, 2000.0),
+    "late_delivery": (50.0, 1200.0),
+}
+DIST_SHORT_SHIP_DED_ASSESS = 0.85
+DIST_SHORT_SHIP_DED_RATE = 0.06
+DIST_SHORT_SHIP_DED_CLAMP = (20.0, 1200.0)
+DIST_LATE_DED_ASSESS = 0.45
+DIST_LATE_DED_RATE = 0.025
+DIST_LATE_DED_CLAMP = (20.0, 400.0)
 # ── END FROZEN BLOCK ───────────────────────────────────────────────
 
 # ── SCENARIO SUPPORT ──────────────────────────────────────────────
