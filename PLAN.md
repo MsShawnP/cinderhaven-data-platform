@@ -12,10 +12,11 @@ source for every downstream figure) is planned and tracked in the
 **cinderhaven-causal-fulfillment** repo — PLAN.md, HANDOFF.md,
 CAUSAL_FULFILLMENT_DESIGN.md, and verification/ live there. This repo
 receives the commit-gated implementation groups. Status: Phase 2
-bugfixes complete; Phase 3 Groups A–C complete (schema, constants,
-causal fulfillment events, causal operational chargebacks + deductions
-— first canon-divergence commit, drift ledger open); Group D (causal
-evidence + dispute outcomes) awaits Shawn's go.
+bugfixes complete; Phase 3 Groups A–C complete and accepted (schema,
+constants, causal fulfillment events, causal operational chargebacks +
+deductions — first canon-divergence commit, drift ledger open). Next:
+Group C2 (distributor parallel, added at Group C acceptance — see the
+causal repo's PLAN.md/DECISIONS.md), then Group D.
 
 ---
 

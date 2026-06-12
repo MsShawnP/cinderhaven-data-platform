@@ -9,6 +9,33 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 23:50 (wrap)
+
+**Started from:** Groups A–B accepted; GO on Group C (causal
+chargebacks + deductions, first canon-divergence commit).
+
+**Did:** Group C shipped (fbdaf3b) and verified — every gate on the
+first calibration: compliance 1.444% of shipped $, short+late 0.701%,
+100% linkage (5,604/5,604, permanent dbt test), Path A and kept
+deduction types byte-identical, 36/41 tables identical to the Group B
+rollback state, determinism 41/41, dbt 430/430, guard 8/10 with
+exactly the 2 expected count REDs. Drift ledger opened in the causal
+repo. Shawn accepted Group C and directed **Group C2** — distributor
+operational money tables go causal BEFORE Group D (decision in causal
+repo DECISIONS.md).
+
+**State:** Replica certified on Group C
+(cinderhaven-causal-fulfillment/verification/groupC-run1-checksums.txt
+is the C2 baseline). Prod untouched, guard-vs-prod green. Distributor
+money seeders still legacy — C2 territory.
+
+**Next:** Group C2 in a fresh session — cold-start notes in the causal
+repo's HANDOFF.md (scope, seed streams +11/+12, no requested_ship_date
+on distributor orders so the late-trigger rule needs a decision,
+distributor band proposal from §1.6).
+
+---
+
 ## 2026-06-12 — Phase 3 Group C complete (causal chargebacks + deductions)
 
 **What changed:** First canon-divergence commit. Retailer
