@@ -9,6 +9,67 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-12 (wrap) — Group D verification 6/8 complete, docs remaining
+
+**Started from:** Group D implementation committed (1a9279d), run1
+reseed clean, verification pending (8-step checklist).
+
+**Did:** Steps 1–6 of the verification checklist COMPLETE:
+1. Spot-checked run1 state — counts match calibration expectations
+2. Wrote verify_groupD.py (4 gates + diagnostics, replay from platform
+   generators, SCENARIO_B_REDRAW_SEED = 550)
+3. Ran all gates — results:
+   - dbt: 437/437 PASS
+   - Guard: 7/10 (3 expected count REDs, all dollar checks green)
+   - Determinism: 41/41 byte-identical (run1 vs run2)
+   - Stream preservation: 3/41 changed (exactly retailer_disputes,
+     retailer_dispute_evidence, distributor_disputes)
+   - Replay linkage: 100% both channels
+   - Scenario (a): combined 16.16% of all deduction dollars
+   - Scenario (b): redraw 64.76% per disputed dollar
+   - Per-tier recovery: 9/10 cells green; distributor strong 60.77%
+     RED per-channel (sampling noise on n=478; combined wholesale
+     strong 64.37% passes, dbt test grain is combined)
+4. Checksums: groupD-run1 and groupD-run2 created in causal repo
+5. Determinism: 41/41 identical across independent reseeds
+6. dbt build 437/437, guard 7/10
+
+**Retailer dispute aggregates:** 7,756 disputes (3,316/3,515/925
+S/M/W), $209,342.28 recovered, $505,414.90 disputed, 14,256 labor
+hours, 1,259 pending.
+
+**Distributor dispute aggregates:** 926 disputes (478/343/105),
+$47,257.57 recovered, $108,399.17 disputed, 1,689 labor hours,
+122 pending.
+
+**NOT done (Task 7):** GROUP-D-VERIFICATION.md, DRIFT-LEDGER.md
+Group D section, PLAN.md update. These need C2-state dispute baselines
+for the drift ledger's before/after comparison. Attempted to recover
+C2 baselines (checked out 6fce555, reseeded C2 state) but the disputes
+tables live in Postgres, not the SQLite source file — need to query
+Postgres after a C2 reseed, or compute from the C2 checksum state.
+
+**State:** Replica is on Group D state (main branch, Postgres reseed
+complete, 2,399,045 rows). verify_groupD.py and both checksum files
+exist in the causal repo. Nothing pushed (mid-group rule). Platform
+repo 2 commits ahead of origin.
+
+**Next concrete action:** Fresh session should:
+1. Recover C2-state dispute baselines — either checkout 6fce555 +
+   reseed + query Postgres for retailer_disputes/distributor_disputes
+   aggregates (recovered $, disputed $, per-disputed rates), OR
+   derive from the C2 verification doc if already recorded there
+2. Checkout main, reseed back to Group D, verify 2,399,045 rows
+3. Write GROUP-D-VERIFICATION.md (use GROUP-C2-VERIFICATION.md as
+   template; §1 = 8 judgment calls from causal repo HANDOFF.md;
+   include distributor strong per-channel flag as known observation)
+4. Write DRIFT-LEDGER.md Group D section (disputes before→after,
+   evidence 12,711→34,743, recovered $ old→new, note 44% restatement)
+5. Update causal repo PLAN.md Group D entry
+6. STOP at gate — push only at Shawn's acceptance
+
+---
+
 ## 2026-06-12 (wrap) — Group D implementation committed, verification pending
 
 **Started from:** C2 accepted; GO on Group D (evidence quality + dispute
