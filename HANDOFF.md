@@ -9,6 +9,65 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-13 — Group D ACCEPTED, GO on Group E
+
+**Started from:** Group D docs complete, stopped at acceptance gate.
+
+**Did:** Shawn reviewed and accepted Group D. All 8 judgment calls
+approved as implemented. Denominator mismatch resolved — two separately
+denominated canonical metrics replace the retired "16.5% → 65%" pairing:
+(1) Recovery rate ~16% per all deduction $ (standalone diagnostic),
+(2) Win rate ~42% → ~65% per disputed $ (same denominator, apples to
+apples). Old decision struck through in DECISIONS.md with superseded-by
+note; two new entries added (denominator decision + Group D acceptance).
+Both repos pushed.
+
+**State:** Both repos at origin. Causal repo: 0526d57. Platform repo
+synced. Group D is the current certified replica state.
+
+**Next:** Group E — remittance reconstruction (§3.3). generate_remittances:
+net = gross − itemized deductions − trade allowances − applied chargebacks
+− timing residual (~2% target). Verify: classification rate ≥97% with
+actual rate recorded, residual 1–3%, subset≤superset and net≤gross dbt
+tests, mart_retailer_reconciliation unexplained gap ≈ residual only.
+
+---
+
+## 2026-06-13 — Group D documentation complete, stopped at acceptance gate
+
+**Started from:** Group D verification 6/8 done, docs remaining (steps
+7–8 of the checklist).
+
+**Did:** Recovered C2-state dispute baselines from existing checkpoint
+docs (GROUP-C2-VERIFICATION.md §6 and DRIFT-LEDGER.md Group C section) —
+no reseed needed. Wrote all three documents in the causal repo:
+1. GROUP-D-VERIFICATION.md — 8 judgment calls with alternatives
+   considered (tier-conditioned selection, weight_check mapping, DQ
+   factor source, ≥75 boundary, DDL column, distributor binary POD,
+   filing-delay clip, universal factor application), 4 verification
+   gates documented, aggregate statistics, known simplifications
+2. DRIFT-LEDGER.md Group D section — disputes 4,233+462 → 7,756+926,
+   evidence 12,711 → 34,743, per-disputed ~44% → 41.8% restatement
+3. PLAN.md Group D entry marked verified with full summary
+
+C2-state retailer recovered $ was not captured in any checkpoint (only
+distributor: $29,458.26 from C2 verification §6). The Group D column
+has the complete figures; the restatement from ~44% to ~41% per-disputed
+is the meaningful signal for the drift ledger.
+
+**State:** Replica on Group D state (main branch, 2,399,045 rows).
+All verification steps complete (8/8). Causal repo committed locally
+(bdf9b3c, 4 commits ahead of origin). Platform repo synced with origin.
+Nothing pushed per mid-group rule.
+
+**Next:** Shawn reviews Group D — 8 judgment calls in
+GROUP-D-VERIFICATION.md §1, especially §1.1 (tier-conditioned selection
+is structurally required, not stylistic) and the ~19/51/30 underlying
+tier mix (moderate-centered, not 50/25/25 as PLAN sketched). On
+acceptance: push both repos, then Group E (remittance reconstruction).
+
+---
+
 ## 2026-06-12 (wrap) — Group D verification 6/8 complete, docs remaining
 
 **Started from:** Group D implementation committed (1a9279d), run1

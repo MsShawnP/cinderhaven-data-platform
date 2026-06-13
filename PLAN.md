@@ -16,10 +16,9 @@ bugfixes complete; Phase 3 Groups A–C2 complete and accepted (schema,
 constants, causal fulfillment events, causal operational chargebacks +
 deductions retailer-side then distributor-side — both wholesale
 channels causal on operational money; drift ledger open through C2).
-Next: Group D in progress — implementation + calibration committed
-locally 2026-06-12 (unverified WIP; verification checklist and
-judgment-call register in the causal repo's HANDOFF.md), then
-Groups E–F.
+Group D ACCEPTED (2026-06-13): 8 judgment calls approved, denominator
+mismatch resolved (two separately denominated metrics — see causal repo
+DECISIONS.md). Next: Group E — remittance reconstruction (§3.3).
 
 ---
 
