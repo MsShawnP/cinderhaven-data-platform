@@ -18,7 +18,10 @@ deductions retailer-side then distributor-side — both wholesale
 channels causal on operational money; drift ledger open through C2).
 Group D ACCEPTED (2026-06-13): 8 judgment calls approved, denominator
 mismatch resolved (two separately denominated metrics — see causal repo
-DECISIONS.md). Next: Group E — remittance reconstruction (§3.3).
+DECISIONS.md). Group E ACCEPTED (2026-06-13): causal remittance
+reconstruction both channels, classification rate 98%/98%, residual
+1.9%/2.1%, lifecycle 86¢ (target restated 85–87¢). Next: Group F —
+validation + Phase 4 package (PHASE4_DRIFT_REPORT.md).
 
 ---
 

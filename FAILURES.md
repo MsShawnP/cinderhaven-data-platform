@@ -30,6 +30,50 @@ failed and may have its own entry below]
 
 ## Entries
 
+### 2026-06-13 — Deferred remittance INSERT caused FK violation on deductions
+
+**Attempted:** In Group E, deferred writing remittances to the DB
+until after finalize_remittances() computed causal amounts (which needs
+deduction and chargeback data). Deductions were inserted before
+remittances existed.
+
+**Why it didn't work:** retailer_deductions has a FK constraint on
+remittance_id → retailer_remittances. Inserting deductions before
+remittances violates the constraint. Circular dependency: remittances
+need deduction data for causal amounts, but deductions need remittance
+rows for FK satisfaction.
+
+**What we tried instead:** Insert skeleton remittances with placeholder
+amounts (0 for trade/chargebacks/residual, legacy values for
+net/total_deductions) immediately after generation. After deductions
+and chargebacks exist, finalize_remittances() computes causal amounts
+and UPDATEs each remittance row in place. FK satisfied throughout.
+
+**Status:** Resolved
+
+**Tags:** FK, circular-dependency, remittances, deductions, Group E, seeder
+
+---
+
+### 2026-06-13 — Unicode box-drawing characters fail on Windows cp1252 console
+
+**Attempted:** Used ═══ and ≥ characters in classification rate
+headline print statements in seed_retailer.py and seed_distributor.py.
+
+**Why it didn't work:** Windows console uses cp1252 encoding by
+default. Box-drawing characters (═) and math symbols (≥, –) are not in
+cp1252, causing UnicodeEncodeError on print().
+
+**What we tried instead:** Replaced with ASCII equivalents: === for
+═══, >= for ≥, - for –. Seed output prints cleanly on all Windows
+consoles.
+
+**Status:** Resolved
+
+**Tags:** unicode, cp1252, windows, console, encoding, print
+
+---
+
 ### 2026-06-12 — pgrep-based process monitor false-fired under MSYS on Windows
 
 **Attempted:** Watch the long-running seed_all.py reseed with a

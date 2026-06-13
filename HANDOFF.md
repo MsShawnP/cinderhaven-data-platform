@@ -9,6 +9,30 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-13 16:30 — Group E ACCEPTED
+
+**Started from:** Group E mid-implementation. finalize_remittances()
+existed in both seed files; schema and staging had new columns;
+mart_distributor_reconciliation CTE updated but select/gap formula not.
+No reseed or verification run yet.
+
+**Did:** Completed mart_distributor_reconciliation.sql. Fixed FK
+circular dependency (skeleton INSERT then UPDATE). Fixed cp1252 Unicode
+error. Applied Docker stale-socket workaround. Ran seed ×2
+(determinism verified). dbt build 437/437. Built lifecycle waterfall —
+86¢ confirmed as honest result (trade 9.53%, fulfillment 0.52%).
+Restated lifecycle target 80–85¢ → 85–87¢; canonical relocked to 86¢.
+
+**State:** Groups A–E complete, committed, pushed (ae77cfb). All 437
+dbt tests pass. Both channels deterministic, classification rates
+>97%, residuals 1–3%. Canonical lifecycle 86¢.
+
+**Next:** Group F — validation + Phase 4 package. Build
+PHASE4_DRIFT_REPORT.md with every guard check old-vs-new, headline
+recomputes, and the proposed new canonical set for Shawn's approval.
+
+---
+
 ## 2026-06-13 — Group D ACCEPTED, GO on Group E
 
 **Started from:** Group D docs complete, stopped at acceptance gate.
