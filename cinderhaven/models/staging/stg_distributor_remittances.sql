@@ -8,5 +8,8 @@ select
     received_date,
     gross_amount,
     net_amount,
-    total_deductions
+    total_deductions,
+    trade_allowance,
+    chargebacks_applied,
+    timing_residual
 from source

@@ -10,5 +10,8 @@ select
     gross_amount,
     net_amount,
     total_deductions,
-    clarity
+    clarity,
+    trade_allowance,
+    chargebacks_applied,
+    timing_residual
 from source

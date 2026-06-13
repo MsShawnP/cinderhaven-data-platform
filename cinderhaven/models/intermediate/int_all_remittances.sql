@@ -15,7 +15,10 @@ select
     gross_amount,
     net_amount,
     total_deductions,
-    clarity
+    clarity,
+    trade_allowance,
+    chargebacks_applied,
+    timing_residual
 from retailer_remittances
 
 union all
@@ -29,5 +32,8 @@ select
     gross_amount,
     net_amount,
     total_deductions,
-    null as clarity
+    null as clarity,
+    trade_allowance,
+    chargebacks_applied,
+    timing_residual
 from distributor_remittances

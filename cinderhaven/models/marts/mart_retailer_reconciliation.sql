@@ -25,7 +25,10 @@ remittance_totals as (
         count(*) as remittance_count,
         sum(gross_amount) as total_remittance_gross,
         sum(net_amount) as total_remittance_net,
-        sum(total_deductions) as total_remittance_deductions
+        sum(total_deductions) as total_remittance_deductions,
+        sum(trade_allowance) as total_trade_allowance,
+        sum(chargebacks_applied) as total_chargebacks_applied,
+        sum(timing_residual) as total_timing_residual
     from {{ ref('stg_retailer_remittances') }}
     group by retailer_id
 ),
@@ -72,6 +75,9 @@ select
     rt.total_remittance_gross,
     rt.total_remittance_net,
     rt.total_remittance_deductions,
+    coalesce(rt.total_trade_allowance, 0) as total_trade_allowance,
+    coalesce(rt.total_chargebacks_applied, 0) as total_chargebacks_applied,
+    coalesce(rt.total_timing_residual, 0) as total_timing_residual,
 
     dt.deduction_count,
     dt.total_deduction_amount,
@@ -89,7 +95,8 @@ select
     ot.total_order_value
         - coalesce(rt.total_remittance_net, 0)
         - coalesce(dt.total_deduction_amount, 0)
-        - coalesce(cbt.total_chargeback_amount, 0) as net_reconciliation_gap
+        - coalesce(cbt.total_chargeback_amount, 0)
+        - coalesce(rt.total_trade_allowance, 0) as net_reconciliation_gap
 
 from {{ ref('stg_retailers') }} r
 left join order_totals ot on r.retailer_id = ot.retailer_id

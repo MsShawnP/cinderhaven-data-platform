@@ -236,6 +236,20 @@ Each entry:
 - **Do not:** Apply case_pack_qty uniformly across channels. Any new
   COGS calculation must check channel first.
 
+### 2026-06-13 — Restate lifecycle target from 80–85¢ to 85–87¢; canonical figure 86¢
+- **Why:** The 80–85¢ range was set before trade spend rates locked in
+  seed_config.py (Walmart 12%, Costco 10%, Whole Foods 8%, Sprouts 9%,
+  Kroger 10%, Regional 7%; distributors all 5%). Group E lifecycle
+  waterfall shows trade spend dominates at 9.53% of gross; fulfillment
+  costs (short_ship + late_delivery) flow through correctly at 0.52%.
+  The 86¢ figure is the honest mechanical result. Previous 83¢ was a
+  uniform-draw artifact — no causal decomposition backed it.
+- **Scope:** CINDERHAVEN_CANONICAL.md lifecycle figure, any downstream
+  consumer that references the lifecycle target.
+- **Do not:** Adjust trade spend percentages to force the old target.
+  The rates are calibrated to real CPG benchmarks; the target follows
+  the data, not the other way around.
+
 ---
 
 ## Visualization

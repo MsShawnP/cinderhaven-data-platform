@@ -149,7 +149,10 @@ CREATE TABLE raw.retailer_remittances (
     gross_amount            NUMERIC(12,2) NOT NULL,
     net_amount              NUMERIC(12,2) NOT NULL,
     total_deductions        NUMERIC(12,2) NOT NULL,
-    clarity                 TEXT
+    clarity                 TEXT,
+    trade_allowance         NUMERIC(12,2) NOT NULL,
+    chargebacks_applied     NUMERIC(12,2) NOT NULL,
+    timing_residual         NUMERIC(12,2) NOT NULL
 );
 CREATE INDEX idx_retailer_remittances_retailer ON raw.retailer_remittances(retailer_id);
 
@@ -304,7 +307,10 @@ CREATE TABLE raw.distributor_remittances (
     received_date           DATE NOT NULL,
     gross_amount            NUMERIC(12,2) NOT NULL,
     net_amount              NUMERIC(12,2) NOT NULL,
-    total_deductions        NUMERIC(12,2) NOT NULL
+    total_deductions        NUMERIC(12,2) NOT NULL,
+    trade_allowance         NUMERIC(12,2) NOT NULL,
+    chargebacks_applied     NUMERIC(12,2) NOT NULL,
+    timing_residual         NUMERIC(12,2) NOT NULL
 );
 CREATE INDEX idx_distributor_remittances_distributor ON raw.distributor_remittances(distributor_id);
 

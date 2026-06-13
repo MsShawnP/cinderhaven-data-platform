@@ -296,6 +296,7 @@ EVIDENCE_FILING_MODERATE_DAYS = 60
 # Design §3.3 + decision #3 — intentional unclassified remittance residual.
 # The canonical figure states the ACHIEVED classification rate, not this target.
 REMITTANCE_RESIDUAL_TARGET = 0.02
+REMITTANCE_SEED = 600   # Group E: isolated stream for residual fraction draws
 
 # Design §2.3 (Group C) — operational chargeback enforcement.
 # Triggering events: per-line shipment shortfalls, deliveries beyond the

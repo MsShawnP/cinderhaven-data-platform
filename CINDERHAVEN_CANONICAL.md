@@ -98,7 +98,7 @@ See each repo for derivation details.
 | OTIF — annual fines | ~$136K/yr | otif-blind-spot | ✅ Confirmed |
 | OTIF — shelf-velocity damage | ~$297K/yr | otif-blind-spot | ✅ Confirmed |
 | Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ✅ Confirmed |
-| Revenue lifecycle — cents per invoiced dollar | 83¢ | contract-to-cash | ✅ Confirmed |
+| Revenue lifecycle — cents per invoiced dollar | 86¢ | contract-to-cash | ✅ Confirmed (relocked 2026-06-13, Group E) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
 | Thesis range | $1.4M–$3.1M/yr | the-ten-decisions | ✅ Confirmed |

@@ -44,6 +44,7 @@ from seed_config import (
     PARTIAL_RECOVERY_RANGE, RET_POD_STATE_P, RET_FILING_DELAY_P,
     PACK_VERIFICATION_TIER, RET_DISPUTE_PROPENSITY, LABOR_HOURS_BY_TIER,
     DISPUTE_METHOD_PHONE_P, DISPUTE_CLOSE_DAYS,
+    TRADE_SPEND_PCT, REMITTANCE_RESIDUAL_TARGET, REMITTANCE_SEED,
 )
 
 
@@ -301,7 +302,13 @@ def generate_receipt_lines(receipt_rng, shipment_lines, key_by_shipment):
 
 
 def generate_remittances(rng, orders):
-    """Group orders into monthly remittances per retailer."""
+    """Group orders into monthly remittances per retailer.
+
+    Legacy rng draws preserved verbatim (stream preservation). The
+    deduction_rate draw is a dummy — Group E replaces the amounts with
+    causal reconstruction in finalize_remittances. Returns rem_meta
+    mapping rem_id -> (retailer_id, year, month) for chargeback matching.
+    """
     from collections import defaultdict
     by_retailer_month = defaultdict(list)
     for order in orders:
@@ -313,6 +320,7 @@ def generate_remittances(rng, orders):
     remittances = []
     rem_num = 0
     remittance_order_map = {}
+    rem_meta = {}
 
     for (rid, year, month), month_orders in sorted(by_retailer_month.items()):
         rem_num += 1
@@ -331,10 +339,79 @@ def generate_remittances(rng, orders):
             rem_id, rid, str(received), fmt,
             round(gross, 2), round(net, 2), total_ded, clarity,
         ))
+        rem_meta[rem_id] = (rid, year, month)
         for o in month_orders:
             remittance_order_map[o[0]] = (rem_id, total_ded / len(month_orders))
 
-    return remittances, remittance_order_map
+    return remittances, remittance_order_map, rem_meta
+
+
+def finalize_remittances(rem_rng, legacy_rows, rem_meta, deductions, chargebacks):
+    """Group E: causal remittance reconstruction (§3.3).
+
+    Replaces legacy random haircuts with:
+      net = gross − itemized − trade − chargebacks_applied − residual
+
+    Constraint #1 — residual is the balancing term, not an independent draw.
+    Constraint #2 — option (b): residual fraction drawn from gauss(2%, 0.5%)
+      then clamped to [1%, 3%]. total_deductions is computed after the clamp,
+      so the identity net = gross − total_deductions holds by construction
+      (no component needs to absorb a difference).
+    Constraint #3 — each component ≥ 0 per row, enforced explicitly.
+    """
+    from collections import defaultdict
+
+    ded_by_rem = defaultdict(float)
+    for d in deductions:
+        if d[3]:
+            ded_by_rem[d[3]] += float(d[6])
+
+    cb_by_pm = defaultdict(float)
+    for cb in chargebacks:
+        cb_by_pm[(cb[1], cb[0])] += float(cb[4])
+
+    final = []
+    agg_known = 0.0
+    agg_shortfall = 0.0
+
+    for row in legacy_rows:
+        rem_id, retailer_id = row[0], row[1]
+        received_date, fmt = row[2], row[3]
+        gross = float(row[4])
+        clarity = row[7]
+
+        rid, year, month = rem_meta[rem_id]
+        key = RETAILER_KEY[retailer_id]
+
+        itemized = round(max(0.0, ded_by_rem.get(rem_id, 0.0)), 2)
+        trade = round(max(0.0, TRADE_SPEND_PCT[key] * gross), 2)
+        month_str = str(date(year, month, 1))
+        cb = round(max(0.0, cb_by_pm.get((retailer_id, month_str), 0.0)), 2)
+        known = itemized + trade + cb
+
+        r_raw = rem_rng.gauss(REMITTANCE_RESIDUAL_TARGET, 0.005)
+        r = max(0.01, min(0.03, r_raw))
+        timing_residual = round(known * r / (1.0 - r), 2) if known > 0 else 0.0
+        timing_residual = max(0.0, timing_residual)
+
+        total_deductions = round(itemized + trade + cb + timing_residual, 2)
+        net = round(gross - total_deductions, 2)
+
+        if net < 0:
+            trade = round(max(0.0, trade + net), 2)
+            total_deductions = round(itemized + trade + cb + timing_residual, 2)
+            net = round(gross - total_deductions, 2)
+
+        agg_known += (itemized + trade + cb)
+        agg_shortfall += total_deductions
+
+        final.append((
+            rem_id, retailer_id, received_date, fmt,
+            round(gross, 2), net, total_deductions, clarity,
+            trade, cb, timing_residual,
+        ))
+
+    return final, agg_known, agg_shortfall
 
 
 def generate_deductions(rng, orders, remittance_map, deduction_codes_by_retailer):
@@ -1059,13 +1136,18 @@ def main():
               receipt_lines)
     print(f"  retailer_receipt_lines: {len(receipt_lines)} rows")
 
-    print("Generating remittances...")
-    remittances, rem_map = generate_remittances(rng, orders)
+    print("Generating remittance skeletons...")
+    legacy_remittances, rem_map, rem_meta = generate_remittances(rng, orders)
+    skeleton_rows = [
+        (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], 0, 0, 0)
+        for r in legacy_remittances
+    ]
     copy_rows(cur, "raw.retailer_remittances",
               ["remittance_id", "retailer_id", "received_date", "format",
-               "gross_amount", "net_amount", "total_deductions", "clarity"],
-              remittances)
-    print(f"  retailer_remittances: {len(remittances)} rows")
+               "gross_amount", "net_amount", "total_deductions", "clarity",
+               "trade_allowance", "chargebacks_applied", "timing_residual"],
+              skeleton_rows)
+    print(f"  remittance skeletons: {len(legacy_remittances)} (placeholder amounts; finalized in Group E)")
 
     # ── Group C: causal money tables ─────────────────────────────────
     # Every legacy generator below still runs on the main rng with its
@@ -1135,6 +1217,26 @@ def main():
     print(f"  retailer_chargebacks: {len(chargebacks)} rows "
           f"({len(path_a_cb)} Path A data-defect + {len(event_cb)} event-driven; "
           f"{len(legacy_cb) - len(path_a_cb)} legacy operational replaced)")
+
+    # ── Group E: causal remittance reconstruction (§3.3) ────────────
+    rem_rng = init_rng(REMITTANCE_SEED)
+    print("Finalizing remittances (Group E)...")
+    final_remittances, ret_known, ret_shortfall = finalize_remittances(
+        rem_rng, legacy_remittances, rem_meta, deductions, chargebacks)
+    for row in final_remittances:
+        cur.execute(
+            """UPDATE raw.retailer_remittances
+               SET net_amount = %s, total_deductions = %s,
+                   trade_allowance = %s, chargebacks_applied = %s,
+                   timing_residual = %s
+               WHERE remittance_id = %s""",
+            (row[5], row[6], row[8], row[9], row[10], row[0]))
+
+    ret_classif = ret_known / ret_shortfall * 100 if ret_shortfall > 0 else 100
+    ret_residual_pct = (ret_shortfall - ret_known) / ret_shortfall * 100 if ret_shortfall > 0 else 0
+    print(f"  retailer_remittances: {len(final_remittances)} rows")
+    print(f"\n  === Classification rate: {ret_classif:.2f}% (target >=97%) ===")
+    print(f"  === Residual: {ret_residual_pct:.2f}% of shortfall (target 1-3%) ===\n")
 
     print("Generating post-audit claims...")
     legacy_pac = generate_post_audit_claims(rng, legacy_deductions)
