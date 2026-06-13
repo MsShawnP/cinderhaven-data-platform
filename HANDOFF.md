@@ -9,6 +9,46 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-13 — Group F complete, at approval gate
+
+**Started from:** Groups A–E accepted and pushed. Group F GO —
+validation + Phase 4 package.
+
+**Did:** Full Group F verification:
+- Determinism: seed_all.py ×3 (pre + 2 fresh), 41/41 byte-identical
+- dbt build: 437/437 PASS, 0 errors
+- Plausibility: classification 98.1%/97.9%, residual 1.9%/2.1% (all 4 GREEN)
+- Freeze guard: 7/10 GREEN, 3 RED (chargeback counts — expected)
+- Queried every canonical figure from Postgres replica
+- Wrote PHASE4_DRIFT_REPORT.md (causal repo) with all 5 sections:
+  §1 drift ledger resolved, §2 pipeline verification, §3 headline
+  recompute, §4 proposed new canonical set, §5 cascade inventory
+
+**State:** PHASE4_DRIFT_REPORT.md written to causal repo (uncommitted).
+Platform repo at ed40c08. Causal repo at 0526d57. Report is AT THE
+GATE — Shawn reviews before CINDERHAVEN_CANONICAL.md or
+check_canonical.py change. Verification artifacts in causal repo
+verification/ (groupF-{pre,run1,run2}-checksums.txt). query_canonical.py
+in platform repo scripts/.
+
+**Key proposed changes (pending approval):**
+- Chargebacks: 837 → 6,563
+- Deductions: $1.66M/16,023 → $1.59M/22,425
+- Op waste: $480K → $460K
+- Recovery: Option C two-metric restatement (16% per all ded $, 42% per disputed $)
+- Short-ship $32.8M/$53M retired, replaced by fill rates 92%/94%
+- Lifecycle confirmed 86¢ (85–87¢ band)
+- 10 new SUPERSEDED entries
+- check_canonical.py: 4 values change (3 chargeback counts + op_waste_rate)
+
+**Next:** Shawn reviews PHASE4_DRIFT_REPORT.md Section 4. On approval:
+apply changes to CINDERHAVEN_CANONICAL.md and check_canonical.py, run
+guard to confirm 10/10 GREEN, commit, push both repos. Then update
+causal repo state files (HANDOFF.md stale since Group D, PLAN.md
+needs Group E+F checked off).
+
+---
+
 ## 2026-06-13 16:30 — Group E ACCEPTED
 
 **Started from:** Group E mid-implementation. finalize_remittances()

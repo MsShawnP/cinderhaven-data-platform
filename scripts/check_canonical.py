@@ -85,13 +85,13 @@ def parse_canonical():
     expected = {}
 
     m = re.search(
-        r'\| Chargebacks\s*\|\s*(\d+)\s*\|\s*(\d+) retailer \+ (\d+) distributor',
+        r'\| Chargebacks\s*\|\s*([\d,]+)\s*\|\s*([\d,]+) retailer \+ ([\d,]+) distributor',
         text,
     )
     if m:
-        expected["chargeback_count_total"] = int(m.group(1))
-        expected["chargeback_count_retailer"] = int(m.group(2))
-        expected["chargeback_count_distributor"] = int(m.group(3))
+        expected["chargeback_count_total"] = int(m.group(1).replace(',', ''))
+        expected["chargeback_count_retailer"] = int(m.group(2).replace(',', ''))
+        expected["chargeback_count_distributor"] = int(m.group(3).replace(',', ''))
 
     m = re.search(r'\| Scan revenue \(trailing-52w\)\s*\|\s*\$([0-9.]+)M\s*\|', text)
     if m:
