@@ -236,6 +236,19 @@ Each entry:
 - **Do not:** Apply case_pack_qty uniformly across channels. Any new
   COGS calculation must check channel first.
 
+### 2026-06-13 — Recovery metrics use two denominators; never pair 16% with 65%
+- **Why:** 16% is recovery per all deduction dollars (exposure diagnostic).
+  42% and 65% are both per disputed dollars (fix story — baseline vs strong-
+  evidence ceiling). The old "16% → 65%" narrative paired figures with
+  different denominators, implying a single rate moving from bad to good.
+  Option C restatement (DECISIONS.md in causal repo) replaces the narrative
+  with two separately denominated metrics and an explicit usage rule in
+  CINDERHAVEN_CANONICAL.md §4.5 approved phrasings.
+- **Scope:** Every downstream piece that cites deduction recovery — approved
+  phrasings, case studies, website copy.
+- **Do not:** Cite 65% without 42% as baseline. Never pair 16% with 65%
+  (different denominators). The 16% stands alone as the exposure diagnostic.
+
 ### 2026-06-13 — Restate lifecycle target from 80–85¢ to 85–87¢; canonical figure 86¢
 - **Why:** The 80–85¢ range was set before trade spend rates locked in
   seed_config.py (Walmart 12%, Costco 10%, Whole Foods 8%, Sprouts 9%,

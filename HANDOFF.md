@@ -9,6 +9,29 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-13 — Phase 4 canonical relock complete
+
+**Started from:** Phase 4 drift report at the approval gate. Shawn
+reviewing proposed canonical set before relock.
+
+**Did:** Received approval with one addition (usage rule for
+16%/42%/65% denominator boundary). Applied §4.1–4.9 to
+CINDERHAVEN_CANONICAL.md: chargebacks 6,563, deductions $1.59M/22,425,
+op waste $460K/1.4%, Option C recovery restatement with usage rule,
+lifecycle waterfall section, 10 SUPERSEDES entries. Updated
+check_canonical.py regex for comma-formatted counts. Guard 10/10
+GREEN. Committed and pushed both repos.
+
+**State:** Both repos synced with origin. Platform ea8fd7d, causal
+91be603. Canonical set relocked. Causal-fulfillment arc (Groups A–F)
+fully accepted and documented. No broken code.
+
+**Next:** Arc is done. Options: (1) cascade regen — 8 high-impact
+downstream projects per drift report §5, (2) update causal repo state
+files (PLAN.md needs Groups E+F checked off), (3) different project.
+
+---
+
 ## 2026-06-13 — Group F complete, at approval gate
 
 **Started from:** Groups A–E accepted and pushed. Group F GO —
