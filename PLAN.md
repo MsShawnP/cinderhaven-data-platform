@@ -11,19 +11,12 @@ The causal-fulfillment arc (single fulfillment reality as the causal
 source for every downstream figure) is planned and tracked in the
 **cinderhaven-causal-fulfillment** repo — PLAN.md, HANDOFF.md,
 CAUSAL_FULFILLMENT_DESIGN.md, and verification/ live there. This repo
-receives the commit-gated implementation groups. Status: Phase 2
-bugfixes complete; Phase 3 Groups A–C2 complete and accepted (schema,
-constants, causal fulfillment events, causal operational chargebacks +
-deductions retailer-side then distributor-side — both wholesale
-channels causal on operational money; drift ledger open through C2).
-Group D ACCEPTED (2026-06-13): 8 judgment calls approved, denominator
-mismatch resolved (two separately denominated metrics — see causal repo
-DECISIONS.md). Group E ACCEPTED (2026-06-13): causal remittance
-reconstruction both channels, classification rate 98%/98%, residual
-1.9%/2.1%, lifecycle 86¢ (target restated 85–87¢). Group F COMPLETE (2026-06-13): PHASE4_DRIFT_REPORT.md
-written with all 5 sections (drift ledger resolved, pipeline verified,
-headlines recomputed, proposed canonical set, cascade inventory). AT
-APPROVAL GATE — Shawn reviews proposed canonical set before relock.
+receives the commit-gated implementation groups. Status: **ARC COMPLETE
+through production deployment (2026-06-14).** All 6 groups (A–F)
+accepted, Phase 4 canonical relock applied, Fly.io Postgres reseeded
+with causal model data (2,399,045 rows), dbt build 437/437 PASS,
+canonical freeze guard 12/12 GREEN. Volume extended 1GB→3GB (permanent).
+Backup of pre-causal state preserved at project root.
 
 ---
 

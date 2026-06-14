@@ -9,6 +9,51 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-14 — Production deployment: causal fulfillment model to Fly.io
+
+**Started from:** Groups A–F accepted and verified on local Docker
+replica. Prod Fly.io Postgres still on pre-causal data. First prod
+data change since the causal arc began.
+
+**Did:**
+- Backed up pre-causal prod state (backup-prod-2026-06-14.sql, 611 MB)
+- Ran full seeder suite against prod via flyctl proxy — 41 tables,
+  2,399,045 rows, completed in 1289s
+- dbt build failed twice: first run hit "read-only transaction" (WAL
+  pressure from scan_data COPY), second run hit OOM crash (4 threads
+  materializing large tables concurrently on a 99%-full 1GB disk)
+- Root cause: 1GB Fly.io volume too small for 2.4M-row dataset + mart
+  materializations. Extended volume 1GB→3GB, restarted machine.
+- dbt retry with --threads 1 succeeded: 437/437 PASS (85 models,
+  352 tests, 0 errors)
+- Checksum verification: row counts exact (41/41), MD5 comparison N/A
+  (cross-installation CAST(t.* AS TEXT) differs between Docker Postgres
+  17-alpine and Fly.io postgres-flex:17.2)
+- Canonical freeze guard: 12/12 PASS — all business metrics match
+  CINDERHAVEN_CANONICAL.md (chargebacks 6,563 exact, revenue $32.80M,
+  trade rate 11.3%, OTIF $423K, short-ship $6.58M)
+
+**Infrastructure changes (permanent):**
+- Fly.io volume: 1GB → 3GB (was at 99% utilization)
+- .gitignore: added `backup-*.sql` pattern
+
+**Cleanup done:**
+- ~/.dbt/profiles.yml: reverted DBT_PORT env_var override to hardcoded 5432
+- flyctl proxy: stopped
+- Temp scripts deleted: _check_write.py, _check_active.py
+
+**State:** Prod Fly.io Postgres is fully current with the causal
+fulfillment model. All downstream consumers can query against prod.
+Backup at project root. No broken code.
+
+**Next:** Causal fulfillment arc is COMPLETE through production
+deployment. Remaining work is downstream: recovery denominator
+restatement (9 surfaces in lailara-website — user handling separately),
+$458K PDHA item (8 surfaces), 33 CODE_FIX entries across downstream
+projects.
+
+---
+
 ## 2026-06-13 — Channel inversion + lifecycle fix (10+4 surfaces)
 
 **Started from:** Phase 5 Tier 4 gate pending. Channel-profitability

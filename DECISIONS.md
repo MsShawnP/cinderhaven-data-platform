@@ -80,14 +80,25 @@ Each entry:
 - **Do not:** Re-baseline targets as non-Q4 steady-state rates without a
   design-doc amendment and Shawn's approval.
 
-### 2026-05-12 — Scale Fly.io machine temporarily for bulk ingestion, then scale back
-- **Why:** The shared-cpu-1x (256MB) Fly.io Postgres machine crashes under
+### ~~2026-05-12 — Scale Fly.io machine temporarily for bulk ingestion, then scale back~~
+- ~~**Why:** The shared-cpu-1x (256MB) Fly.io Postgres machine crashes under
   bulk COPY loads — specifically scan_data (1.1M rows). Scaling to 1GB for
   the load and back to 256MB after is cheaper and faster than engineering
-  around the memory limit with micro-batches or alternative upload paths.
-- **Scope:** Ingestion — applies any time a full reload is needed.
-- **Do not:** Leave the machine at 1GB permanently. Scale up, load, scale
-  down. The steady-state workload (dbt transforms, queries) fits in 256MB.
+  around the memory limit with micro-batches or alternative upload paths.~~
+- ~~**Scope:** Ingestion — applies any time a full reload is needed.~~
+- ~~**Do not:** Leave the machine at 1GB permanently. Scale up, load, scale
+  down. The steady-state workload (dbt transforms, queries) fits in 256MB.~~
+- **Superseded by:** 2026-06-14 volume extension (below).
+
+### 2026-06-14 — Fly.io volume permanently extended to 3GB
+- **Why:** The causal fulfillment model (2.4M rows, 41 tables) plus dbt
+  mart materializations requires ~1GB of Postgres storage. The original 1GB
+  volume hit 99% utilization after seeding, leaving no room for WAL files or
+  CREATE TABLE AS operations — Postgres crashed and couldn't restart. 3GB
+  gives comfortable headroom (currently 33% utilized).
+- **Scope:** Fly.io cinderhaven-db app, vol_vjyeldw37mqxegpv.
+- **Do not:** Shrink back to 1GB. The dataset is permanently larger now.
+  Machine memory (2GB) is adequate — the bottleneck was disk, not RAM.
 
 ### 2026-05-12 — Use Postgres COPY with chunked reconnection for ingestion
 - **Why:** Row-by-row INSERT (via execute_batch) was too slow and connection-

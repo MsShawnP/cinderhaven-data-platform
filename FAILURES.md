@@ -287,3 +287,17 @@ cents per dollar — internally consistent. Headline changed from
 **Status:** Resolved
 
 **Tags:** temporal-mismatch, cohort, contract-to-cash, date-filter, payments
+
+---
+
+### 2026-06-14 — Fly.io 1GB volume exhausted during dbt build (Postgres crash loop)
+
+**Attempted:** `dbt build` against Fly.io Postgres after seeding 2.4M rows (41 tables). First with --threads 4 (OOM crash), then --threads 1 (disk exhaustion). The serialized build filled the 1GB volume to 99% (13MB free) during fct_scan_data materialization (CREATE TABLE AS on 1.4M rows). Postgres crashed and couldn't restart — WAL recovery requires free disk space.
+
+**Why it didn't work:** The causal fulfillment model nearly doubled the dataset (1.1M → 2.4M rows). After seeding, the volume was already at ~850MB. dbt's TABLE materialization creates a full copy of the data (CREATE TABLE AS), which temporarily doubles table storage before dropping the old version. 1GB was never viable for a 2.4M-row dataset with dbt materializations.
+
+**What we tried instead:** Extended volume from 1GB to 3GB via `flyctl volumes extend vol_vjyeldw37mqxegpv --size 3`. Postgres recovered on restart (WAL replay succeeded with free disk). dbt build completed cleanly with --threads 1 (437/437 tests pass). Volume now at 33% utilization — comfortable headroom.
+
+**Status:** Resolved
+
+**Tags:** fly.io, postgres, disk, volume, dbt, materialization, crash-loop, WAL
