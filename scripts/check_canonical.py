@@ -119,24 +119,47 @@ def parse_canonical():
     if m:
         expected["op_waste_rate"] = float(m.group(1)) / 100
 
-    # OTIF exposure (pipeline-derived from otif-blind-spot, not directly in Postgres)
+    # OTIF exposure (pipeline-derived, not directly in Postgres)
     m = re.search(
-        r'\| OTIF — annual exposure \(total\)\s*\|\s*~?\$(\d+)K/yr', text
+        r'\| OTIF — total annual exposure\s*\|\s*\$?([\d,]+)', text
     )
     if m:
-        expected["otif_exposure_total"] = float(m.group(1)) * 1_000
+        expected["otif_exposure_total"] = float(m.group(1).replace(',', ''))
 
     m = re.search(
-        r'\| OTIF — annual fines\s*\|\s*~?\$(\d+)K/yr', text
+        r'\| OTIF — annual fines \(measured\)\s*\|\s*\$?([\d,]+)', text
     )
     if m:
-        expected["otif_fines_annual"] = float(m.group(1)) * 1_000
+        expected["otif_fines_annual"] = float(m.group(1).replace(',', ''))
 
     m = re.search(
-        r'\| OTIF — shelf-velocity damage\s*\|\s*~?\$(\d+)K/yr', text
+        r'\| OTIF — annual velocity damage \(modeled\)\s*\|\s*\$?([\d,]+)', text
     )
     if m:
-        expected["otif_velocity_annual"] = float(m.group(1)) * 1_000
+        expected["otif_velocity_annual"] = float(m.group(1).replace(',', ''))
+
+    # Short-ship self-consistency (engagement-level, not in Postgres)
+    m = re.search(
+        r'\| Short-ship — total cost \(3yr\)\s*\|\s*\$?([\d,]+)', text
+    )
+    if m:
+        expected["shortship_total_3yr"] = float(m.group(1).replace(',', ''))
+
+    m = re.search(
+        r'\| Short-ship — total cost \(annual\)\s*\|\s*\$?([\d,]+)', text
+    )
+    if m:
+        expected["shortship_annual"] = float(m.group(1).replace(',', ''))
+
+    shortship_dims = {}
+    for dim in ("forgone revenue", "compliance fines", "chargebacks", "deductions"):
+        m = re.search(
+            rf'\| Short-ship — {dim} \(3yr\)\s*\|\s*\$?([\d,]+)', text
+        )
+        if m:
+            shortship_dims[dim] = float(m.group(1).replace(',', ''))
+    if shortship_dims:
+        expected["shortship_dims_sum"] = sum(shortship_dims.values())
 
     return expected
 
@@ -295,6 +318,20 @@ def run_checks():
     else:
         results.append(("FAIL", "otif_exposure_parse",
                         "3 OTIF rows", "could not parse all rows"))
+
+    # Short-ship self-consistency (engagement-level; no direct SQL validation)
+    ss_total = expected.get("shortship_total_3yr")
+    ss_annual = expected.get("shortship_annual")
+    ss_dims_sum = expected.get("shortship_dims_sum")
+    if ss_total and ss_dims_sum:
+        ok = approx(ss_dims_sum, ss_total, TOLERANCE_PCT)
+        results.append(("PASS" if ok else "FAIL", "shortship_dims_sum_consistency",
+                        f"${ss_total/1e6:.2f}M", f"${ss_dims_sum/1e6:.2f}M"))
+    if ss_total and ss_annual:
+        computed_annual = ss_total / 3
+        ok = approx(computed_annual, ss_annual, TOLERANCE_PCT)
+        results.append(("PASS" if ok else "FAIL", "shortship_annual_consistency",
+                        f"${ss_annual/1e6:.2f}M", f"${computed_annual/1e6:.2f}M"))
 
     conn.close()
 

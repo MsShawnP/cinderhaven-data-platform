@@ -92,16 +92,24 @@ See each repo for derivation details.
 | Deductions — forward exposure | $861K | retailer-deduction-recovery | ⚠️ Awaiting regen |
 | Fulfillment — portfolio fill rate (retailer) | 92.0% | cinderhaven-data-platform | ✅ Confirmed (causal, from shipment lines) |
 | Fulfillment — portfolio fill rate (distributor) | 94.2% | cinderhaven-data-platform | ✅ Confirmed (causal, from shipment lines) |
-| OTIF — internal fill rate | 95% | otif-blind-spot | ⚠️ Awaiting regen (pipeline fill: 92/94%) |
-| OTIF — retailer-scored | 86% | otif-blind-spot | ⚠️ Awaiting regen |
-| OTIF — annual exposure (total) | ~$433K/yr | otif-blind-spot | ⚠️ Awaiting regen |
-| OTIF — annual fines | ~$136K/yr | otif-blind-spot | ⚠️ Awaiting regen |
-| OTIF — shelf-velocity damage | ~$297K/yr | otif-blind-spot | ⚠️ Awaiting regen |
+| Short-ship — forgone revenue (3yr) | $5,537,092 | short-ship-cost | ✅ Confirmed |
+| Short-ship — compliance fines (3yr) | $368,758 | short-ship-cost | ✅ Confirmed |
+| Short-ship — chargebacks (3yr) | $344,066 | short-ship-cost | ✅ Confirmed |
+| Short-ship — deductions (3yr) | $331,289 | short-ship-cost | ✅ Confirmed |
+| Short-ship — total cost (3yr) | $6,581,205 | short-ship-cost | ✅ Confirmed |
+| Short-ship — total cost (annual) | $2,193,735 | short-ship-cost | ✅ Confirmed |
+| Short-ship — dimension count | 4 | short-ship-cost | ✅ Confirmed |
+| OTIF — internal fill rate (portfolio) | 92.0% | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — retailer-scored (Walmart) | 61.4% | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — gap (Walmart) | 30.6 pts | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — annual fines (measured) | $55,002 | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — annual velocity damage (modeled) | $368,099 | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — total annual exposure | $423,101 | cinderhaven-data-platform | ✅ Confirmed |
 | Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ⚠️ Awaiting regen (COGS fix inverts) |
 | Revenue lifecycle — cents per wholesale retailer $ | 86¢ | contract-to-cash | ✅ Confirmed (86.38¢; 85–87¢ band; relocked 2026-06-13 Group E) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
-| Thesis range | $1.4M–$3.1M/yr | the-ten-decisions | ⚠️ Awaiting regen |
+| Thesis range | $3.1M–$4.6M/yr | the-ten-decisions | ✅ Confirmed |
 | Trade — all-in (trailing-52w) | ~$3.7M/yr, 11.3% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-12) |
 | Trade — operational waste | ~$460K/yr | trade-spend-data-diagnostic | ✅ Confirmed |
 | Trade — chargebacks | 6,563 (5,885 ret + 678 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven) |
@@ -173,6 +181,12 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 Usage rule: The 16% figure (per all deduction $) stands alone as the exposure diagnostic. The 42% and 65% figures (both per disputed $) are a matched pair — the fix story. Never cite 65% without 42% as baseline. Never pair 16% with 65% (different denominators; see SUPERSEDED and DECISIONS.md 2026-06-13 Option C).
 
 | Lifecycle (retailer wholesale) | "86 cents per invoiced wholesale dollar (85–87¢ band)" |
+| Short-ship cost (annual) | "~$2.2M/yr in fulfillment shortfall costs across four dimensions" |
+| Short-ship cost (3yr) | "$6.6M in total fulfillment shortfall costs over 36 months" |
+| Short-ship framing | "92% fill rate costs ~$2.2M/yr — every dollar traces to a platform event" |
+| Thesis range | "$3.1M to $4.6M a year in quantifiable operational cost across eight decisions" |
+
+**OVERLAP SCOPING NOTE:** OTIF exposure includes $38.7K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
 
 **Rule:** Pieces copy these phrasings. They never re-derive figures from raw data.
 
@@ -233,6 +247,11 @@ disputes, evidence-quality tiers).
 | $53.0M short-ship shipped revenue | Pre-causal short-ship-cost project figure | Same — project needs regen against causal data |
 | $11.16M all-in trade (36mo) | Pre-causal 36-mo total | Causal op waste reduction changes total to $11.1M |
 | $1.44M operational waste (36mo) | Pre-causal 36-mo op waste | Now $1.38M |
+| $1.4M–$3.1M thesis range | Superseded 2026-06-14, recomputed from updated decision figures including 4-dimension short-ship rebuild ($2.2M/yr replaces $200–500K), PDHA causal attribution ($93K replaces $25–100K), channel story inversion ($50–100K replaces $300–500K), lifecycle confirmation (86¢, $350–500K replaces $400–700K) | New range $3.1M–$4.6M/yr |
+| 95%/86% OTIF internal/retailer-scored | Superseded 2026-06-14, replaced by platform causal OTIF: 92.0% internal, 61.4% Walmart retailer-scored, 30.6pt gap | |
+| $433K/$136K/$297K OTIF exposure | Superseded 2026-06-14, replaced by $423K total ($55K measured fines + $368K modeled velocity damage) | |
+| 69.3% synthetic fill rate | Superseded 2026-06-14, short-ship project order generator retired, replaced by platform causal fill rates (92%/94%) | |
+| 8-dimension short-ship cost model | Superseded 2026-06-14, replaced by 4-dimension model grounded in platform events | |
 
 ---
 
