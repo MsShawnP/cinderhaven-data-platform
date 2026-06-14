@@ -9,6 +9,109 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-13 — Channel inversion + lifecycle fix (10+4 surfaces)
+
+**Started from:** Phase 5 Tier 4 gate pending. Channel-profitability
+pipeline had run partial (live revenue, stale deductions). Needed
+exact figures before narrative rewrite.
+
+**Did:**
+- Re-ran channel-profitability pipeline fully against relocked
+  Postgres (all data streams live — revenue, deductions, disputes,
+  COGS). Extracted the 4 key figures:
+  - Retail contribution margin: 50.6%
+  - Distributor contribution margin: 45.3%
+  - Per-million delta: retail returns $53,140 more per $1M
+  - Net cash per dollar: retail 50.6¢, distributor 45.3¢
+- Revenue drifted from 2026-05-22 snapshot (UNFI −$805K, KeHE +$458K
+  largest swings). Deductions now from relocked canonical set.
+- Applied approved verbatim replacement blocks [A]–[D] across 7 files
+  in lailara-website (12 edits total):
+  - [A] hero sentence: 3 surfaces (channel-profitability page, phase-2
+    engagement content)
+  - [B] findings paragraph: 2 surfaces (channel-profitability page,
+    phase-2 engagement content)
+  - [C] shorthand: 4 surfaces (ten-decisions page, ten-decisions
+    content, channel-profitability blog, ten-decisions blog)
+  - [D] lifecycle 83¢→86¢ / 17¢→14¢: 4 surfaces (channel-profitability
+    page, phase-2 engagement content, ten-decisions content,
+    contract-to-cash blog)
+- Site build verified clean. Committed 817a012, pushed.
+
+**Not touched (per guardrails):**
+- the-ten-decisions/page.tsx line 454 ("83 cents") — lifecycle
+  reference not in approved list
+- $458K data cost (8 surfaces) — depends on PDHA deferred item
+- Recovery denominator restatement (9 surfaces) — needs approved
+  two-metric phrasing
+- $32.8M/$53M short-ship figures
+- OTIF figures ($433K, $136K, $297K, 95%/86%)
+- 33 CODE_FIX entries across downstream projects
+- Chargeback prediction model AUC regression
+
+**State:** Channel story inversion fixed on 10 surfaces. Lifecycle
+figure fixed on 4 surfaces. All committed and pushed. No broken code.
+
+**Next:** Remaining Phase 5 text changes — recovery denominator
+restatement (9 surfaces, needs approved phrasing), $458K (8 surfaces,
+blocked on PDHA), remaining lifecycle references, OTIF figures. Or
+CODE_FIX entries to unblock downstream pipelines.
+
+---
+
+## 2026-06-13 — Phase 5 public surface sweep complete (Tiers 1–4)
+
+**Started from:** Phase 4 canonical relock complete. Cascade inventory
+(§5.1–5.4) ready for downstream sweep.
+
+**Did:**
+- **Tier 1 (8 high-impact):** 5 pipelines ran, 5 repos committed+pushed
+  (contract-to-cash, retailer-deduction-recovery, otif-blind-spot,
+  channel-profitability-analysis, short-ship-cost). 28 text changes, 19
+  CODE_FIX entries cataloged. ACCEPTED.
+- **Tier 2 (7 moderate):** 3 pipelines ran (chargeback-prediction-model
+  AUC dropped 0.7834→0.6986 due to 1,222 unmapped receiving_discrepancy
+  chargebacks; sku-rationalization scored JSON regenerated; retailer-
+  scorecard no changes). 2 repos committed+pushed. 62 text changes, 12
+  CODE_FIX. ACCEPTED.
+- **Tier 3 (12 low):** 2 of 12 affected (monday-morning-report,
+  product-master-data-model). 11 text changes, 2 CODE_FIX. ACCEPTED.
+- **Tier 4 (website):** 21 surfaces scanned across lailarallc.com. 56
+  text changes found (37 FIGURE_SWAP, 10 NARRATIVE_REWRITE for channel
+  story inversion, 9 DENOMINATOR_MISMATCH for recovery metrics).
+  **Fixed 2 LIVE-MISMATCHED pages** (trade-spend-deduction-recovery +
+  trade-promotion-leakage) — committed+pushed to lailara-website
+  (ef1bd41). Tier 4 catalog complete, gate pending.
+- **Security fix:** Removed hardcoded Fly.io password from trade-spend-
+  data-diagnostic extract script (a141819). Credential rotated by Shawn.
+
+**Cumulative:** 48 surfaces swept, 8 pipelines ran, 9 repos with
+committed output, 157 text changes cataloged, 33 CODE_FIX entries.
+
+**State:** PHASE5_CHANGE_REPORT.md in causal-fulfillment repo has full
+detail (2343448). All pipeline commits pushed. Two live-mismatched pages
+fixed. Remaining 147 text changes and 33 CODE_FIX entries are cataloged
+but not executed — awaiting prioritized resolution.
+
+**Key open items from the change report:**
+1. Channel story inversion (10 surfaces) — retail now beats distributor
+   by ~7pts; narrative re-review needed, not mechanical swap
+2. Recovery denominator restatement (9 surfaces) — "16%→65%" pairing
+   needs two-metric approved phrasing
+3. $458K data cost (8 surfaces) — depends on PDHA deferred item
+4. 83¢→86¢ lifecycle (4 surfaces) — mechanical swap
+5. Chargeback prediction model AUC regression — needs receiving_
+   discrepancy added to harmonization map
+6. 33 CODE_FIX entries across downstream projects
+
+**Next:** Shawn decides priority order for remaining text changes.
+Options: (1) fix channel-profitability inversion next (highest-impact
+narrative issue), (2) batch all mechanical FIGURE_SWAPs across the
+website, (3) address CODE_FIX entries to unblock blocked pipelines,
+(4) different project entirely.
+
+---
+
 ## 2026-06-13 — Phase 4 canonical relock complete
 
 **Started from:** Phase 4 drift report at the approval gate. Shawn
