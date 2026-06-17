@@ -9,6 +9,43 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-16 — SKU-level seasonal profiles + archetype velocity system
+
+**Started from:** Uniform seasonal scaler (SEASONALITY dict) applied
+identically to all 50 SKUs — every product moved in parallel across
+quarters. Pre-existing uncommitted archetype system (SKU_ARCHETYPES +
+ARCHETYPE_VELOCITY_MULT) in working tree inflated revenue ~1.82×.
+
+**Did:**
+- Added 6 SKU-level seasonal profile shapes to seed_config.py:
+  grilling (summer peak), baking (fall/winter), snack_flat, gift_spike
+  (holiday ramp), emerging (steady growth), pantry_staple (near-flat).
+  Each profile normalized so annual mean matches original SEASONALITY
+  mean (1.0167).
+- Mapped all 50 SKUs to profiles via SKU_SEASONAL_PROFILE dict.
+- Wired get_sku_seasonal() into seed_scan_data.py — healthy and
+  delist-risk generators use per-SKU seasonal; borderline intentionally
+  excluded (declining products don't bounce back for holidays).
+- Added archetype velocity system with distribution-weighted
+  normalization (weighted_mean=1.8247) to keep total revenue within
+  canonical tolerance despite archetype multiplier spread.
+- Full reseed: 1,325,794 scan_data rows.
+- check_canonical.py: 12/12 PASS. Revenue $32.47M (target $32.8M ±2%).
+- Spot-checks confirmed: 3 SKUs from different lines show non-parallel
+  quarterly curves; 8 unique SKUs cross the quarterly velocity median
+  (12 crossover events total).
+
+**Committed:** d84502b — feat: SKU-level seasonal profiles + archetype
+velocity system.
+
+**State:** All seed scripts updated, canonical guard green, local
+Docker replica current. Not pushed to remote. Fly.io prod not reseeded.
+
+**Next:** Push to remote when ready. Fly.io prod reseed if desired
+(would need flyctl proxy + full seed_all.py run). Or move to next work.
+
+---
+
 ## 2026-06-14 — Production deployment: causal fulfillment model to Fly.io
 
 **Started from:** Groups A–F accepted and verified on local Docker
