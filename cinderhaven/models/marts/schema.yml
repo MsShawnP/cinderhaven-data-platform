@@ -323,6 +323,41 @@ models:
       - name: product_line
         tests: [unique, not_null]
 
+  # ── Velocity analytics ────────────────────────────────
+  - name: mart_quarterly_sppd
+    description: >
+      Pre-aggregated Scans Per Point of Distribution per Day at
+      sku × year × quarter grain. SPPD = Total Units ÷ Carrying
+      Stores ÷ Days in Period. Single source of truth — downstream
+      tools query this instead of re-aggregating fct_scan_data.
+    columns:
+      - name: sku
+        description: Product SKU.
+        tests: [not_null]
+      - name: year
+        description: Calendar year.
+        tests: [not_null]
+      - name: quarter
+        description: Calendar quarter (1-4).
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+      - name: total_units
+        description: Total units sold across all carrying stores in the quarter.
+        tests: [not_null]
+      - name: carrying_stores
+        description: Count of distinct stores with at least one scan in the quarter.
+        tests: [not_null]
+      - name: days_in_period
+        description: Calendar days spanned by scan data in the quarter.
+        tests: [not_null]
+      - name: sppd
+        description: >
+          Scans Per Point of Distribution per Day.
+          Formula: total_units / carrying_stores / days_in_period.
+        tests: [not_null]
+
   # ── Cross-channel rollup ──────────────────────────────
   - name: mart_channel_contribution
     description: >
