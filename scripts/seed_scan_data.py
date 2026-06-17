@@ -28,6 +28,8 @@ from datetime import date, timedelta
 from seed_config import (
     ALL_SKUS, CHANNEL_VELOCITY_MULT, DATABASE_URL, RETAILERS, SEASONALITY,
     WINDOW_START, WINDOW_END, init_rng,
+    SKU_ARCHETYPES, ARCHETYPE_VELOCITY_MULT,
+    get_sku_seasonal,
 )
 
 # Map each retailer to 3-5 SKUs that will underperform at that retailer.
@@ -64,10 +66,14 @@ def get_week_endings(start: date, end: date) -> list[date]:
 
 
 def generate_healthy_velocity(rng, sku_info, week: date, volume_tier: str,
-                              channel_mult: float = 1.0) -> tuple[int, float]:
-    """Generate normal healthy scan data for a SKU-store-week."""
+                              channel_mult: float = 1.0,
+                              archetype_mult: float = 1.0,
+                              decline_factor: float = 1.0,
+                              seasonal: float | None = None) -> tuple[int, float]:
+    """Generate scan data for a SKU-store-week, scaled by archetype."""
     base_units = {"high": 15, "medium": 8, "low": 4}[volume_tier]
-    seasonal = SEASONALITY.get(week.month, 1.0)
+    if seasonal is None:
+        seasonal = SEASONALITY.get(week.month, 1.0)
 
     line_mult = {
         "Artisan Sauces": 1.2,
@@ -75,8 +81,9 @@ def generate_healthy_velocity(rng, sku_info, week: date, volume_tier: str,
         "Specialty Condiments": 0.85,
     }.get(sku_info["product_line"], 1.0)
 
-    adjusted = base_units * seasonal * line_mult * channel_mult
-    units = max(1, int(rng.gauss(adjusted, base_units * 0.3 * channel_mult)))
+    adjusted = base_units * seasonal * line_mult * channel_mult * archetype_mult * decline_factor
+    std_dev = base_units * 0.3 * channel_mult * max(archetype_mult, 0.5)
+    units = max(1, int(rng.gauss(adjusted, std_dev)))
     unit_price = sku_info["msrp"]
     dollars = round(units * unit_price * rng.uniform(0.85, 1.05), 2)
     return units, dollars
@@ -84,7 +91,8 @@ def generate_healthy_velocity(rng, sku_info, week: date, volume_tier: str,
 
 def generate_delist_risk_velocity(rng, sku_info, week: date, volume_tier: str,
                                   week_index: int, total_weeks: int,
-                                  channel_mult: float = 1.0) -> tuple[int, float] | None:
+                                  channel_mult: float = 1.0,
+                                  seasonal: float | None = None) -> tuple[int, float] | None:
     """Generate declining/sparse velocity for delist-risk SKUs.
 
     Returns None to simulate a missing week (sparse reporting).
@@ -98,7 +106,8 @@ def generate_delist_risk_velocity(rng, sku_info, week: date, volume_tier: str,
     decline_factor = 1.0 - 0.5 * (week_index / total_weeks)
     decline_factor = max(0.2, decline_factor)
 
-    seasonal = SEASONALITY.get(week.month, 1.0)
+    if seasonal is None:
+        seasonal = SEASONALITY.get(week.month, 1.0)
     units = max(1, int(base * decline_factor * seasonal + rng.gauss(0, 0.5 * channel_mult)))
 
     unit_price = sku_info["msrp"]
@@ -171,7 +180,24 @@ def main():
 
     print(f"Loaded {len(authorized)} distribution authorizations")
 
-    # Generate in chunks to manage memory
+    arch_rng = init_rng(seed=450)
+    sku_vel_mult = {}
+    for p in ALL_SKUS:
+        archetype = SKU_ARCHETYPES.get(p["sku"], "moderate")
+        low, high = ARCHETYPE_VELOCITY_MULT.get(archetype, (0.9, 1.8))
+        sku_vel_mult[p["sku"]] = arch_rng.uniform(low, high)
+
+    # Normalize so distribution-weighted mean velocity is 1.0
+    # (archetype multipliers average ~1.82× without this correction)
+    sku_slot_count = {}
+    for (sku, store_id) in authorized:
+        sku_slot_count[sku] = sku_slot_count.get(sku, 0) + 1
+    weighted_vel = sum(sku_vel_mult.get(sku, 1.0) * count for sku, count in sku_slot_count.items())
+    total_slots = sum(sku_slot_count.values())
+    weighted_mean = weighted_vel / total_slots if total_slots > 0 else 1.0
+    sku_vel_mult = {sku: v / weighted_mean for sku, v in sku_vel_mult.items()}
+    print(f"Velocity normalization: weighted_mean={weighted_mean:.4f}, total_slots={total_slots}")
+
     CHUNK_SIZE = 50000
     rows_buf = []
     total_rows = 0
@@ -191,11 +217,13 @@ def main():
 
             for sku in store_skus:
                 sku_info = sku_map[sku]
+                seasonal = get_sku_seasonal(sku, week.month)
 
                 if sku in delist_skus:
                     result = generate_delist_risk_velocity(
                         rng, sku_info, week, volume_tier or "medium",
-                        week_idx, total_weeks, ch_mult
+                        week_idx, total_weeks, ch_mult,
+                        seasonal=seasonal,
                     )
                     if result is None:
                         continue
@@ -206,8 +234,19 @@ def main():
                         week_idx, total_weeks, border_target
                     )
                 else:
+                    archetype = SKU_ARCHETYPES.get(sku, "moderate")
+                    decline = 1.0
+                    if archetype == "at_risk":
+                        progress = week_idx / total_weeks
+                        decline = 1.3 - 0.9 * progress
+                    elif archetype == "fading":
+                        progress = week_idx / total_weeks
+                        decline = 1.3 - 0.9 * progress
                     units, dollars = generate_healthy_velocity(
-                        rng, sku_info, week, volume_tier or "medium", ch_mult
+                        rng, sku_info, week, volume_tier or "medium", ch_mult,
+                        archetype_mult=sku_vel_mult[sku],
+                        decline_factor=decline,
+                        seasonal=seasonal,
                     )
 
                 rows_buf.append((sku, store_id, str(week), units, dollars))

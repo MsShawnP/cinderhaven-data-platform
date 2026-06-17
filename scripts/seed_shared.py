@@ -25,6 +25,7 @@ from seed_config import (
     RETAILERS, RETAILER_STORE_COUNTS, REGIONS, STATES_BY_REGION,
     VOLUME_TIERS, WHOLESALE_MULT, TRADE_SPEND_PCT,
     WINDOW_START, WINDOW_END, DEDUCTION_TYPES, SEASONALITY,
+    SKU_ARCHETYPES, ARCHETYPE_DISTRIBUTION,
     init_rng, compute_defect_profile,
 )
 
@@ -172,18 +173,25 @@ def seed_stores(cur, rng):
 def seed_distribution_log(cur, rng, stores):
     cols = ["sku", "store_id", "authorized_date", "deauthorized_date"]
     rows = []
+
+    sku_auth_rate = {}
+    for p in ALL_SKUS:
+        archetype = SKU_ARCHETYPES.get(p["sku"], "moderate")
+        low, high = ARCHETYPE_DISTRIBUTION[archetype]
+        sku_auth_rate[p["sku"]] = rng.uniform(low, high)
+
     for store in stores:
         store_id = store[0]
-        n_skus = rng.randint(8, 25)
-        chosen_skus = rng.sample([p["sku"] for p in ALL_SKUS], min(n_skus, len(ALL_SKUS)))
-        for sku in chosen_skus:
-            auth_date = WINDOW_START + timedelta(days=rng.randint(0, 180))
-            deauth = None
-            if rng.random() < 0.08:
-                deauth = auth_date + timedelta(days=rng.randint(90, 500))
-                if deauth > WINDOW_END:
-                    deauth = None
-            rows.append((sku, store_id, str(auth_date), str(deauth) if deauth else None))
+        for p in ALL_SKUS:
+            sku = p["sku"]
+            if rng.random() < sku_auth_rate[sku]:
+                auth_date = WINDOW_START + timedelta(days=rng.randint(0, 180))
+                deauth = None
+                if rng.random() < 0.08:
+                    deauth = auth_date + timedelta(days=rng.randint(90, 500))
+                    if deauth > WINDOW_END:
+                        deauth = None
+                rows.append((sku, store_id, str(auth_date), str(deauth) if deauth else None))
     copy_rows(cur, "raw.distribution_log", cols, rows)
     print(f"  distribution_log: {len(rows)} rows")
 

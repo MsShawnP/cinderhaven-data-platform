@@ -451,6 +451,196 @@ VAGUE_TEMPLATES = [
 ]
 # ── END SCENARIO SUPPORT ─────────────────────────────────────────
 
+# ── QUADRANT ARCHETYPE ASSIGNMENTS ──────────────────────────────
+# Drives distribution breadth (ACV%) and velocity (SPPD) variance
+# for the Spin Rate quadrant chart. NOT frozen — can be adjusted
+# without re-baselining portfolio financials.
+
+SKU_ARCHETYPES = {
+    # Stars: wide distribution + high velocity (upper-right quadrant)
+    "CHP-AS-001": "star",
+    "CHP-AS-002": "star",
+    "CHP-AS-006": "star",
+    "CHP-PS-002": "star",
+    "CHP-PS-009": "star",
+    "CHP-SC-001": "star",
+    "CHP-DG-007": "star",
+    "CHP-SB-001": "star",
+
+    # Hidden Gems: narrow distribution + high velocity (upper-left)
+    "CHP-AS-009": "hidden_gem",
+    "CHP-PS-004": "hidden_gem",
+    "CHP-SC-002": "hidden_gem",
+    "CHP-SC-009": "hidden_gem",
+    "CHP-DG-005": "hidden_gem",
+    "CHP-SB-003": "hidden_gem",
+    "CHP-SB-008": "hidden_gem",
+
+    # Wide but Dead: wide distribution + low velocity (lower-right)
+    "CHP-PS-005": "wide_dead",
+    "CHP-PS-006": "wide_dead",
+    "CHP-PS-008": "wide_dead",
+    "CHP-DG-003": "wide_dead",
+    "CHP-DG-004": "wide_dead",
+    "CHP-SB-004": "wide_dead",
+    "CHP-SB-007": "wide_dead",
+
+    # Question Marks: narrow distribution + low velocity (lower-left)
+    "CHP-AS-008": "question",
+    "CHP-SC-006": "question",
+    "CHP-SC-007": "question",
+    "CHP-DG-006": "question",
+    "CHP-DG-009": "question",
+    "CHP-SB-009": "question",
+
+    # At-Risk: moderate distribution + declining velocity
+    "CHP-AS-010": "at_risk",
+    "CHP-SC-010": "at_risk",
+    "CHP-SB-010": "at_risk",
+
+    # Fading: above-median velocity declining over time (watchlist candidates)
+    "CHP-PS-001": "fading",
+    "CHP-DG-002": "fading",
+    "CHP-SB-002": "fading",
+}
+
+ARCHETYPE_DISTRIBUTION = {
+    "star":       (0.50, 0.65),
+    "hidden_gem": (0.05, 0.15),
+    "wide_dead":  (0.40, 0.55),
+    "question":   (0.06, 0.18),
+    "at_risk":    (0.25, 0.40),
+    "fading":     (0.25, 0.40),
+    "moderate":   (0.20, 0.35),
+}
+
+ARCHETYPE_VELOCITY_MULT = {
+    "star":       (2.5, 3.5),
+    "hidden_gem": (3.0, 5.0),
+    "wide_dead":  (0.25, 0.55),
+    "question":   (0.35, 0.75),
+    "at_risk":    (1.8, 2.5),
+    "fading":     (2.2, 3.0),
+    "moderate":   (0.9, 1.8),
+}
+# ── END QUADRANT ARCHETYPES ─────────────────────────────────────
+
+# ── SKU-LEVEL SEASONAL PROFILES ──────────────────────────────────
+# Replaces the uniform SEASONALITY with per-SKU monthly multipliers.
+# Each profile shape is month → raw multiplier (unnormalized).
+# At import time, profiles are scaled so their annual mean matches
+# the uniform SEASONALITY mean — this preserves annual totals while
+# redistributing velocity across quarters.
+# NOT frozen — can be adjusted without re-baselining portfolio
+# financials (annual envelope unchanged, only quarterly shape moves).
+
+SEASONAL_PROFILE_SHAPES = {
+    "grilling": {
+        1: 0.65, 2: 0.70, 3: 0.85, 4: 1.05, 5: 1.30, 6: 1.40,
+        7: 1.35, 8: 1.25, 9: 1.00, 10: 0.85, 11: 0.70, 12: 0.65,
+    },
+    "baking": {
+        1: 0.90, 2: 0.85, 3: 0.80, 4: 0.75, 5: 0.70, 6: 0.65,
+        7: 0.65, 8: 0.70, 9: 0.95, 10: 1.20, 11: 1.50, 12: 1.65,
+    },
+    "snack_flat": {
+        1: 0.90, 2: 0.92, 3: 0.95, 4: 0.98, 5: 1.00, 6: 1.02,
+        7: 1.00, 8: 0.98, 9: 1.02, 10: 1.05, 11: 1.10, 12: 1.12,
+    },
+    "gift_spike": {
+        1: 0.50, 2: 0.60, 3: 0.70, 4: 0.80, 5: 0.85, 6: 0.85,
+        7: 0.80, 8: 0.85, 9: 1.00, 10: 1.20, 11: 1.70, 12: 2.00,
+    },
+    "emerging": {
+        1: 0.70, 2: 0.75, 3: 0.80, 4: 0.85, 5: 0.90, 6: 0.95,
+        7: 1.00, 8: 1.05, 9: 1.10, 10: 1.15, 11: 1.20, 12: 1.25,
+    },
+    "pantry_staple": {
+        1: 0.92, 2: 0.93, 3: 0.95, 4: 0.97, 5: 1.00, 6: 1.00,
+        7: 0.98, 8: 0.97, 9: 1.00, 10: 1.03, 11: 1.10, 12: 1.15,
+    },
+}
+
+SKU_SEASONAL_PROFILE = {
+    "CHP-AS-001": "grilling",      # Smoky Chipotle BBQ Sauce
+    "CHP-AS-002": "grilling",      # Roasted Garlic Marinara
+    "CHP-AS-003": "grilling",      # Spicy Habanero Hot Sauce
+    "CHP-AS-004": "grilling",      # Sweet Thai Chili Sauce
+    "CHP-AS-005": "grilling",      # Classic Tomato Basil
+    "CHP-AS-006": "gift_spike",    # Balsamic Fig Glaze
+    "CHP-AS-007": "grilling",      # Lemon Herb Chimichurri
+    "CHP-AS-008": "grilling",      # Mango Jalapeño Salsa
+    "CHP-AS-009": "gift_spike",    # Truffle Mushroom Sauce
+    "CHP-AS-010": "grilling",      # Carolina Gold BBQ
+
+    "CHP-PS-001": "pantry_staple", # Stone Ground Mustard
+    "CHP-PS-002": "gift_spike",    # Wildflower Honey
+    "CHP-PS-003": "pantry_staple", # Apple Cider Vinegar
+    "CHP-PS-004": "pantry_staple", # Extra Virgin Olive Oil
+    "CHP-PS-005": "pantry_staple", # Sea Salt Blend
+    "CHP-PS-006": "pantry_staple", # Cracked Black Pepper
+    "CHP-PS-007": "baking",        # Smoked Paprika
+    "CHP-PS-008": "baking",        # Italian Seasoning Blend
+    "CHP-PS-009": "baking",        # Maple Syrup Grade A
+    "CHP-PS-010": "pantry_staple", # Raw Agave Nectar
+
+    "CHP-SC-001": "gift_spike",    # Bourbon Bacon Jam
+    "CHP-SC-002": "gift_spike",    # Caramelized Onion Spread
+    "CHP-SC-003": "grilling",      # Pickled Jalapeño Relish
+    "CHP-SC-004": "gift_spike",    # Sun-Dried Tomato Tapenade
+    "CHP-SC-005": "grilling",      # Roasted Red Pepper Hummus
+    "CHP-SC-006": "emerging",      # Artichoke Spinach Dip
+    "CHP-SC-007": "emerging",      # Everything Bagel Spread
+    "CHP-SC-008": "gift_spike",    # Herb Compound Butter
+    "CHP-SC-009": "gift_spike",    # Raspberry Chipotle Glaze
+    "CHP-SC-010": "pantry_staple", # Lemon Curd
+
+    "CHP-DG-001": "baking",        # Wild Rice Blend
+    "CHP-DG-002": "pantry_staple", # Quinoa Medley
+    "CHP-DG-003": "baking",        # Steel Cut Oats
+    "CHP-DG-004": "pantry_staple", # Organic Lentils
+    "CHP-DG-005": "grilling",      # Sun-Dried Tomatoes
+    "CHP-DG-006": "snack_flat",    # Roasted Chickpeas
+    "CHP-DG-007": "snack_flat",    # Trail Mix Premium
+    "CHP-DG-008": "snack_flat",    # Dried Mango Slices
+    "CHP-DG-009": "baking",        # Coconut Flakes Unsweetened
+    "CHP-DG-010": "emerging",      # Mixed Nut Butter Granola
+
+    "CHP-SB-001": "gift_spike",    # Dark Chocolate Sea Salt Bites
+    "CHP-SB-002": "emerging",      # Almond Butter Protein Bites
+    "CHP-SB-003": "gift_spike",    # Coconut Cashew Clusters
+    "CHP-SB-004": "snack_flat",    # Spicy Sriracha Crackers
+    "CHP-SB-005": "snack_flat",    # Rosemary Olive Oil Crisps
+    "CHP-SB-006": "gift_spike",    # Honey Walnut Bites
+    "CHP-SB-007": "snack_flat",    # Cheddar Herb Popcorn
+    "CHP-SB-008": "gift_spike",    # Maple Pecan Clusters
+    "CHP-SB-009": "snack_flat",    # Everything Seasoning Pretzels
+    "CHP-SB-010": "emerging",      # Tahini Date Energy Bites
+}
+
+_UNIFORM_SEASONALITY_MEAN = sum(SEASONALITY.values()) / 12
+
+
+def _normalize_seasonal_profiles():
+    """Scale each profile so its annual mean matches the uniform SEASONALITY mean."""
+    normalized = {}
+    for name, shape in SEASONAL_PROFILE_SHAPES.items():
+        raw_mean = sum(shape.values()) / 12
+        scale = _UNIFORM_SEASONALITY_MEAN / raw_mean
+        normalized[name] = {m: round(v * scale, 4) for m, v in shape.items()}
+    return normalized
+
+
+SEASONAL_PROFILES = _normalize_seasonal_profiles()
+
+
+def get_sku_seasonal(sku: str, month: int) -> float:
+    """Return the normalized seasonal multiplier for a SKU in a given month."""
+    profile_name = SKU_SEASONAL_PROFILE.get(sku, "pantry_staple")
+    return SEASONAL_PROFILES[profile_name][month]
+
+# ── END SEASONAL PROFILES ────────────────────────────────────────
+
 
 def init_rng(seed: int = SEED) -> random.Random:
     """Create a seeded RNG for deterministic generation."""
