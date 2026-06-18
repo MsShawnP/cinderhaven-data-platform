@@ -358,6 +358,24 @@ models:
           Formula: total_units / carrying_stores / days_in_period.
         tests: [not_null]
 
+  - name: mart_sku_scan_totals
+    description: >
+      Full-history scan totals at SKU grain. Eliminates the runtime
+      GROUP BY over fct_scan_data for the unfiltered path in spinrate.
+    columns:
+      - name: sku
+        description: Product SKU.
+        tests: [unique, not_null]
+      - name: total_units
+        description: Total units sold across all stores and weeks.
+        tests: [not_null]
+      - name: total_dollars
+        description: Total dollar sales across all stores and weeks.
+        tests: [not_null]
+      - name: door_count
+        description: Count of distinct stores with at least one scan.
+        tests: [not_null]
+
   # ── Cross-channel rollup ──────────────────────────────
   - name: mart_channel_contribution
     description: >
