@@ -165,6 +165,24 @@ The `scripts/init-db.sh` entrypoint restores the Cinderhaven database from a pg_
 
 Default credentials: `postgres`/`postgres`, database `cinderhaven`.
 
+### External tables: co-packer S&OP (reseed after any restore)
+
+The `production-demand-forecast` project adds three co-packer tables to the
+`raw` schema that this platform does **not** own or generate:
+`sku_inventory`, `sku_production_config`, and `production_schedule`. Any
+restore, re-dump, or regen of this database drops or replaces them, so they
+must be reseeded afterward:
+
+```bash
+# from the production-demand-forecast repo, against the cinderhaven DB
+python db/seed_copack.py
+```
+
+Note: `backup-prod-2026-06-14.sql` contains a **stale** copy of these tables
+in the old `CHP-0001` SKU format. Restoring from it (or from any dump taken
+before the reseed) will reintroduce that format; re-running `seed_copack.py`
+restores the correct `CHP-AS-xxx` SKUs and the calibrated demo values.
+
 ## Documentation
 
 - **[Architecture](docs/architecture.md)** — pipeline diagram and
