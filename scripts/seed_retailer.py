@@ -143,10 +143,10 @@ def generate_orders_and_lines(rng):
 
 
 # Unit loss on a capacity-constrained order under the line mechanics in
-# generate_shipments — measured from generated data (Group B calibration
-# run: 0.4667 across 9,074 shorted orders). Used to back out the
-# constrained-order probability from the §2.1 fill targets.
-EXPECTED_CONSTRAINED_LOSS = 0.467
+# generate_shipments (3% zero-fill + 97% × uniform(0.03, 0.12) on 75% of
+# lines → 0.077 expected loss per constrained order). Used to back out
+# the constrained-order probability from the §2.1 fill targets.
+EXPECTED_CONSTRAINED_LOSS = 0.077
 
 # §2.1 targets are annual figures. Q4 months dip Q4_FILL_DIP below the
 # base rate and carry ~23% of annual units (SEASONALITY-weighted,
@@ -229,10 +229,10 @@ def generate_shipments(rng, orders, lines_by_order, fill_rng, timing_rng,
             shipped = units
             reason = None
             if constrained and fill_rng.random() < 0.75:
-                if fill_rng.random() < 0.30:
+                if fill_rng.random() < 0.03:
                     shipped = 0
                 else:
-                    shipped = units - math.ceil(units * fill_rng.uniform(0.20, 0.70))
+                    shipped = units - math.ceil(units * fill_rng.uniform(0.03, 0.12))
                 reason = _shortfall_reason(fill_rng, mix, sku, carrier,
                                            defect, eligible_share)
             order_line_rows.append([sku, units, shipped, reason])

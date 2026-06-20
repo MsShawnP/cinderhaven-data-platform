@@ -130,10 +130,9 @@ def generate_orders_and_lines(rng):
 
 
 # Unit loss on a constrained order — same line mechanics as the retailer
-# pipeline, measured from generated data (Group B calibration run: 0.4739
-# across 1,303 shorted orders; distributor lines run larger and cut a
-# little deeper than retailer lines).
-EXPECTED_CONSTRAINED_LOSS = 0.474
+# pipeline (3% zero-fill + 97% × uniform(0.03, 0.12) on 75% of lines
+# → 0.077 expected loss per constrained order).
+EXPECTED_CONSTRAINED_LOSS = 0.077
 
 # §1.6 targets are annual; same Q4 compensation as the retailer pipeline
 # (Q4 carries ~23% of annual units).
@@ -191,10 +190,10 @@ def generate_shipments(rng, orders, lines_by_order, fill_rng, defect,
             shipped = units
             reason = None
             if constrained and fill_rng.random() < 0.75:
-                if fill_rng.random() < 0.30:
+                if fill_rng.random() < 0.03:
                     shipped = 0
                 else:
-                    shipped = units - math.ceil(units * fill_rng.uniform(0.20, 0.70))
+                    shipped = units - math.ceil(units * fill_rng.uniform(0.03, 0.12))
                 reason = _shortfall_reason(fill_rng, sku, carrier, defect,
                                            eligible_share)
             order_line_rows.append([sku, units, shipped, reason])

@@ -99,24 +99,24 @@ See each repo for derivation details.
 | Short-ship — total cost (3yr) | $6,581,205 | short-ship-cost | ✅ Confirmed |
 | Short-ship — total cost (annual) | $2,193,735 | short-ship-cost | ✅ Confirmed |
 | Short-ship — dimension count | 4 | short-ship-cost | ✅ Confirmed |
-| OTIF — internal fill rate (portfolio) | 92.0% | cinderhaven-data-platform | ✅ Confirmed |
-| OTIF — retailer-scored (Walmart) | 61.4% | cinderhaven-data-platform | ✅ Confirmed |
-| OTIF — gap (Walmart) | 30.6 pts | cinderhaven-data-platform | ✅ Confirmed |
-| OTIF — annual fines (measured) | $55,002 | cinderhaven-data-platform | ✅ Confirmed |
-| OTIF — annual velocity damage (modeled) | $368,099 | cinderhaven-data-platform | ✅ Confirmed |
-| OTIF — total annual exposure | $423,101 | cinderhaven-data-platform | ✅ Confirmed |
+| OTIF — internal fill rate (portfolio) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — retailer-scored (Walmart) | 84.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — gap (Walmart) | 14.8 pts | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — annual fines (measured) | $23,697 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — annual velocity damage (modeled) | $33,500 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — total annual exposure | $57,197 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ⚠️ Awaiting regen (COGS fix inverts) |
 | Revenue lifecycle — cents per wholesale retailer $ | 86¢ | contract-to-cash | ✅ Confirmed (86.38¢; 85–87¢ band; relocked 2026-06-13 Group E) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
 | Thesis range | $3.1M–$4.6M/yr | the-ten-decisions | ✅ Confirmed |
-| Trade — all-in (trailing-52w) | ~$3.7M/yr, 11.3% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-12) |
-| Trade — operational waste | ~$460K/yr | trade-spend-data-diagnostic | ✅ Confirmed |
-| Trade — chargebacks | 6,563 (5,885 ret + 678 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven) |
+| Trade — all-in (trailing-52w) | ~$3.6M/yr, 11.0% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
+| Trade — operational waste | ~$380K/yr | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
+| Trade — chargebacks | 3,363 (2,879 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20) |
 
-**Product data $458K note:** This figure predates the causal fulfillment model and needs regen. The old derivation (677 retailer chargebacks / $686,534 / 18mo annualized to $458K) attributed all chargebacks to data quality. The causal model shows only 281 of 5,885 retailer chargebacks are Path A data-defect; the remaining 5,604 are fulfillment-event-driven. Data-attributable cost is expected to decrease substantially (design doc §5.1 estimates ~$50–95K/yr). The $458K figure stands as a placeholder until the PDHA R pipeline regens against causal data. Previous $461K was from the pre-date-shift window; $430K was from a stale cache; $296K was from a pre-reseed calibration. All superseded.
+**Product data $458K note:** This figure predates the causal fulfillment model and needs regen. The old derivation (677 retailer chargebacks / $686,534 / 18mo annualized to $458K) attributed all chargebacks to data quality. The causal model shows only 281 of 2,879 retailer chargebacks are Path A data-defect; the remaining 2,598 are fulfillment-event-driven. Data-attributable cost is expected to decrease substantially (design doc §5.1 estimates ~$50–95K/yr). The $458K figure stands as a placeholder until the PDHA R pipeline regens against causal data. Previous $461K was from the pre-date-shift window; $430K was from a stale cache; $296K was from a pre-reseed calibration. All superseded.
 
-**Deductions $1.59M scope note (verified 2026-06-13):** $1,587,572 is a cross-channel total across all 9 trading partners: retailer $1,303,883 / 20,002 rows (Walmart, Kroger, Whole Foods, Sprouts, Costco, Regional Group) + distributor $283,690 / 2,423 rows (UNFI, KeHE, DPI Northwest). Deduction count increased (+40%) from causal event-driven short_ship and late_delivery deductions; deduction dollars decreased (−4.6%) because amounts are proportional to actual shortfall value rather than random 2–10% of order value. `fct_retailer_deductions` in Postgres covers the retailer portion only; queries against that table return $1.30M by design — that is a scope difference, not drift or a data error.
+**Deductions $1.35M scope note (verified 2026-06-20):** $1,346,815 is a cross-channel total across all 9 trading partners: retailer $1,118,682 / 14,947 rows (Walmart, Kroger, Whole Foods, Sprouts, Costco, Regional Group) + distributor $228,133 / 1,970 rows (UNFI, KeHE, DPI Northwest). Event-driven short_ship and late_delivery deductions are proportional to actual shortfall value; tuned 2026-06-20 to realistic specialty food failure rates (7-15% of shipments fail in-full with 5-10% shortfall severity). `fct_retailer_deductions` in Postgres covers the retailer portion only; queries against that table return ~$1.12M by design — that is a scope difference, not drift or a data error.
 
 ---
 
@@ -140,17 +140,17 @@ trade rows reverified 2026-06-12 on the certified local replica.
 
 | Measure | Value | Definition |
 |---------|-------|------------|
-| All-in trade cost (annualized) | $3.7M/yr | Structural trade + operational waste excl promo_billback |
-| All-in trade cost (trailing-52w) | $3.7M/yr | Same methodology, trailing 52-week window |
-| All-in trade rate | 11.3% | Of trailing-52w scan revenue ($32.8M) |
-| All-in trade cost (36mo) | $11.1M | 2023-01-01 to 2026-01-02 |
-| Structural trade (36mo) | $9.7M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
-| Operational waste (36mo) | $1.38M | Trailing-365 deductions excl promo_billback |
-| Operational waste (annual) | ~$460K/yr | Recoverable via disputes |
+| All-in trade cost (annualized) | $3.6M/yr | Structural trade + operational waste excl promo_billback |
+| All-in trade cost (trailing-52w) | $3.6M/yr | Same methodology, trailing 52-week window |
+| All-in trade rate | 11.0% | Of trailing-52w scan revenue ($32.8M) |
+| All-in trade cost (36mo) | $10.8M | 2023-01-01 to 2026-01-02 |
+| Structural trade (36mo) | $9.6M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
+| Operational waste (36mo) | $1.14M | 36mo deductions excl promo_billback |
+| Operational waste (annual) | ~$380K/yr | Recoverable via disputes |
 | Structural trade (annual) | ~$3.2M/yr | Rate × trailing-52w channel revenue |
-| Structural trade rate | 9.9% | Of trailing-52w scan revenue ($32.8M) |
-| Operational waste rate | 1.4% | Of trailing-52w scan revenue ($32.8M) |
-| Chargebacks | 6,563 | 5,885 retailer + 678 distributor; event-driven from fulfillment data |
+| Structural trade rate | 9.8% | Of trailing-52w scan revenue ($32.8M) |
+| Operational waste rate | 1.2% | Of trailing-52w scan revenue ($32.8M) |
+| Chargebacks | 3,363 | 2,879 retailer + 484 distributor; event-driven from fulfillment data |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
 | Scan revenue (trailing-52w) | $32.8M | |
 | EBITDA check | 14.9% trade + 11% EBITDA = 25.9% | Leaves 74.1% for COGS+SGA (plausible) |
@@ -162,7 +162,7 @@ All-in trade cost = structural trade + operational waste (excl promo_billback).
 - **Structural trade** = AVG(trade_spend_pct) × trailing-52w scan revenue per channel.
 - **Operational waste** = trailing-365 deductions excluding promo_billback (already captured in structural rates — including it would double-count).
 - **Chargebacks** (separate table) overlap with deduction types and are NOT added to all-in.
-- **Recoverable layer** = operational waste only (~$480K/yr). The $8.8M structural trade is contracted, not recoverable via disputes.
+- **Recoverable layer** = operational waste only (~$380K/yr). The $9.6M structural trade is contracted, not recoverable via disputes.
 
 ### APPROVED PHRASINGS
 
@@ -171,8 +171,8 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | Context | Exact phrasing |
 |---------|----------------|
 | Product data cost (annual) | "~$458K/yr in chargeback cost attributable to data-quality defects" ⚠️ awaiting PDHA regen |
-| Trade context (annual) | "~$3.7M/yr all-in trade spend, 11.3% of scan revenue (trailing 52 weeks)" |
-| Recoverable layer | "~$460K/yr operational deduction waste; 6,563 chargebacks over 36 months" |
+| Trade context (annual) | "~$3.6M/yr all-in trade spend, 11.0% of scan revenue (trailing 52 weeks)" |
+| Recoverable layer | "~$380K/yr operational deduction waste; 3,363 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$11.1M all-in trade over 36 months" |
 | Deduction recovery — base rate | "~16% of deduction dollars recovered through disputes" |
 | Deduction recovery — win rate | "~42% win rate per disputed dollar" |
@@ -186,7 +186,7 @@ Usage rule: The 16% figure (per all deduction $) stands alone as the exposure di
 | Short-ship framing | "92% fill rate costs ~$2.2M/yr — every dollar traces to a platform event" |
 | Thesis range | "$3.1M to $4.6M a year in quantifiable operational cost across eight decisions" |
 
-**OVERLAP SCOPING NOTE:** OTIF exposure includes $38.7K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
+**OVERLAP SCOPING NOTE:** OTIF exposure includes $36.2K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
 
 **Rule:** Pieces copy these phrasings. They never re-derive figures from raw data.
 
@@ -237,10 +237,17 @@ disputes, evidence-quality tiers).
 | $3.4M/yr / 10.5% all-in trade | Locked 2026-06-04 figure | Superseded 2026-06-12 — check_canonical.py rate_map silently priced Kroger and Sprouts at the 7% regional fallback; seeded rates are 10%/9%. True all-in $3.7M/yr / 11.3% |
 | ~$3.0M/yr / 9.0% structural trade | Locked 2026-06-04 figure | Superseded 2026-06-12 — same rate_map bug. True structural $3.2M/yr / 9.9% |
 | $3.5M/yr (t-52w) / $10.26M (36mo) / $8.8M structural (36mo) | Locked 2026-06-04 derived variants | Superseded 2026-06-12 — same rate_map bug. True $3.7M / $11.16M / $9.7M |
-| 837 chargebacks (677 ret + 160 dist) | Pre-causal chargeback count | Causal model generates event-driven chargebacks from fulfillment events; count is 6,563 (5,885 + 678) |
-| $1.66M / 16,023 deduction backlog | Pre-causal deduction totals | Causal event-driven deductions change count (+40%) and dollars (−4.6%); new total $1.59M / 22,425 |
-| ~$480K/yr operational waste | Pre-causal op waste | Event-driven amounts proportional to shortfall value; new ~$460K/yr |
-| 1.5% operational waste rate | Pre-causal waste rate | New 1.4% |
+| 837 chargebacks (677 ret + 160 dist) | Pre-causal chargeback count | Causal model generates event-driven chargebacks from fulfillment events; count was 6,563, now 4,749 after fill-rate tuning |
+| 6,563 chargebacks (5,885 ret + 678 dist) | Pre-tuning causal chargeback count | Superseded 2026-06-20 — fill rates and receiving discrepancy rates tuned to realistic specialty food ranges; new count 3,363 (2,879 + 484) |
+| $1.66M / 16,023 deduction backlog | Pre-causal deduction totals | Superseded by causal model; then re-tuned 2026-06-20 to $1.38M / 19,279 |
+| $1.59M / 22,425 deductions | Pre-tuning causal deduction totals | Superseded 2026-06-20 — fill-rate tuning reduced event-driven deductions; new $1.35M / 16,917 |
+| $1.38M / 19,279 deductions | Second-pass tuning deduction totals | Superseded 2026-06-20 — third pass further tightened fill targets; new $1.35M / 16,917 |
+| ~$480K/yr operational waste | Pre-causal op waste | Superseded; then re-tuned 2026-06-20 to ~$380K/yr |
+| ~$460K/yr operational waste | Pre-tuning causal op waste | Superseded 2026-06-20 — fill-rate tuning; new ~$380K/yr |
+| ~$390K/yr operational waste | Second-pass tuning op waste | Superseded 2026-06-20 — third pass; new ~$380K/yr |
+| 1.5% operational waste rate | Pre-causal waste rate | Superseded; then re-tuned to 1.2% |
+| 1.4% operational waste rate | Pre-tuning causal waste rate | Superseded 2026-06-20 — fill-rate tuning; new 1.2% |
+| $3.7M/yr / 11.3% all-in trade | Pre-tuning causal all-in | Superseded 2026-06-20 — fill-rate tuning reduced op waste; new $3.6M/yr / 11.0% |
 | ~44% per-disputed recovery | Pre-causal coincidental blend | Tier-conditioned evidence distribution produces 41.8%; not a quality regression |
 | "16.5% → 65%" recovery narrative | Before→after using different denominators | 16% is per all deduction $; 65% is per strong-evidence disputed $. Never present as X%→Y%. Replaced by two-metric restatement (Option C, DECISIONS.md 2026-06-13) |
 | $32.8M short-ship total cost (3yr, 8 dimensions) | Pre-causal short-ship-cost project figure | Causal model provides event-driven fulfillment data; project needs full regen. Fill rates (92%/94%) replace as pipeline-native metrics |
@@ -249,7 +256,9 @@ disputes, evidence-quality tiers).
 | $1.44M operational waste (36mo) | Pre-causal 36-mo op waste | Now $1.38M |
 | $1.4M–$3.1M thesis range | Superseded 2026-06-14, recomputed from updated decision figures including 4-dimension short-ship rebuild ($2.2M/yr replaces $200–500K), PDHA causal attribution ($93K replaces $25–100K), channel story inversion ($50–100K replaces $300–500K), lifecycle confirmation (86¢, $350–500K replaces $400–700K) | New range $3.1M–$4.6M/yr |
 | 95%/86% OTIF internal/retailer-scored | Superseded 2026-06-14, replaced by platform causal OTIF: 92.0% internal, 61.4% Walmart retailer-scored, 30.6pt gap | |
-| $433K/$136K/$297K OTIF exposure | Superseded 2026-06-14, replaced by $423K total ($55K measured fines + $368K modeled velocity damage) | |
+| $433K/$136K/$297K OTIF exposure | Superseded 2026-06-14, replaced by $423K; then superseded 2026-06-20 by $57K ($24K fines + $34K velocity) after fill-rate tuning | |
+| $423K ($55K fines + $368K velocity) OTIF exposure | Superseded 2026-06-20 — fill-rate tuning reduced failure rates to realistic specialty food ranges; new $57K ($24K + $34K) | |
+| 92.0% / 61.4% / 30.6pt OTIF | Pre-tuning OTIF rates | Superseded 2026-06-20 — new 99.2% internal, 84.5% Walmart, 14.8pt gap | |
 | 69.3% synthetic fill rate | Superseded 2026-06-14, short-ship project order generator retired, replaced by platform causal fill rates (92%/94%) | |
 | 8-dimension short-ship cost model | Superseded 2026-06-14, replaced by 4-dimension model grounded in platform events | |
 
