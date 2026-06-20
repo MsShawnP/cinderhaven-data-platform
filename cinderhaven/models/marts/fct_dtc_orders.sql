@@ -27,8 +27,11 @@ select
     e.discount_code,
     e.discount_amount,
 
+    e.fulfillment_cost,
+
     e.transaction_id,
     e.processing_fee,
+    e.platform_fee,
     e.net_payment,
     e.gateway,
 
@@ -44,6 +47,7 @@ select
 
     e.gross_revenue,
     e.total_fees,
+    e.total_fulfillment,
     e.total_returns,
     e.net_revenue,
     e.net_revenue - coalesce(oc.total_cogs, 0) as gross_profit

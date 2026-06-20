@@ -37,8 +37,11 @@ select
     o.discount_code,
     o.discount_amount,
 
+    o.fulfillment_cost,
+
     t.transaction_id,
     t.processing_fee,
+    t.platform_fee,
     t.net_amount as net_payment,
     t.gateway,
 
@@ -49,11 +52,15 @@ select
     coalesce(cb.total_chargeback_amount, 0) as total_chargeback_amount,
 
     o.total as gross_revenue,
-    coalesce(t.processing_fee, 0) as total_fees,
+    coalesce(t.processing_fee, 0)
+        + coalesce(t.platform_fee, 0) as total_fees,
+    coalesce(o.fulfillment_cost, 0) as total_fulfillment,
     coalesce(r.total_refund_amount, 0)
         + coalesce(cb.total_chargeback_amount, 0) as total_returns,
     o.total
         - coalesce(t.processing_fee, 0)
+        - coalesce(t.platform_fee, 0)
+        - coalesce(o.fulfillment_cost, 0)
         - coalesce(r.total_refund_amount, 0)
         - coalesce(cb.total_chargeback_amount, 0) as net_revenue
 

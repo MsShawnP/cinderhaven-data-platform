@@ -14,5 +14,6 @@ select
     total_tax,
     total,
     discount_code,
-    discount_amount
+    discount_amount,
+    fulfillment_cost
 from source

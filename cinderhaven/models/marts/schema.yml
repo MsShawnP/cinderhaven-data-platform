@@ -390,3 +390,9 @@ models:
               values: ['Retailer', 'Distributor', 'DTC']
       - name: gross_revenue
         tests: [not_null]
+      - name: total_fulfillment
+        description: DTC shipping/fulfillment cost (0 for Retailer and Distributor).
+        tests: [not_null]
+      - name: total_platform_fees
+        description: DTC platform + payment processing fees (0 for Retailer and Distributor).
+        tests: [not_null]

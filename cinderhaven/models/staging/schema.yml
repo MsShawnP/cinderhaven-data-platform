@@ -449,6 +449,9 @@ models:
           - not_null
           - accepted_values:
               values: ['paid', 'partially_refunded', 'refunded']
+      - name: fulfillment_cost
+        description: Company cost to pick, pack, and ship (separate from customer-facing shipping_cost).
+        tests: [not_null]
 
   - name: stg_shopify_order_lines
     description: ~22,300 Shopify DTC line items.
@@ -468,6 +471,9 @@ models:
       - name: order_id
         tests: [not_null]
       - name: processing_fee
+        tests: [not_null]
+      - name: platform_fee
+        description: Shopify platform transaction fee (separate from payment processing_fee).
         tests: [not_null]
 
   - name: stg_shopify_payouts

@@ -387,7 +387,8 @@ CREATE TABLE raw.shopify_orders (
     total_tax               NUMERIC(10,2) NOT NULL DEFAULT 0,
     total                   NUMERIC(10,2) NOT NULL,
     discount_code           TEXT,
-    discount_amount         NUMERIC(10,2) NOT NULL DEFAULT 0
+    discount_amount         NUMERIC(10,2) NOT NULL DEFAULT 0,
+    fulfillment_cost        NUMERIC(10,2) NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_shopify_orders_created ON raw.shopify_orders(created_at);
 
@@ -407,6 +408,7 @@ CREATE TABLE raw.shopify_transactions (
     transaction_date        TIMESTAMP NOT NULL,
     order_amount            NUMERIC(10,2) NOT NULL,
     processing_fee          NUMERIC(10,2) NOT NULL,
+    platform_fee            NUMERIC(10,2) NOT NULL DEFAULT 0,
     net_amount              NUMERIC(10,2) NOT NULL,
     gateway                 TEXT,
     card_brand              TEXT

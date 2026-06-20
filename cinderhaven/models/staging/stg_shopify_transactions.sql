@@ -8,6 +8,7 @@ select
     transaction_date,
     order_amount,
     processing_fee,
+    platform_fee,
     net_amount,
     gateway,
     card_brand

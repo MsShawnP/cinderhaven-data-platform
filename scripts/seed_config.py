@@ -641,6 +641,93 @@ def get_sku_seasonal(sku: str, month: int) -> float:
 
 # ── END SEASONAL PROFILES ────────────────────────────────────────
 
+# ── DTC COST LAYERS (isolated RNG stream, seed=700) ──────────────
+# Shipping/fulfillment, packaging-aware returns, platform fees.
+# Isolated from SEED=42 order generation so existing order data is
+# unchanged. Only DTC cost columns are affected.
+DTC_COST_SEED = 700
+
+# SKU packaging type — drives return/damage rates in seed_dtc.py
+SKU_PACKAGING = {
+    # Artisan Sauces: all glass bottles/jars
+    "CHP-AS-001": "glass", "CHP-AS-002": "glass", "CHP-AS-003": "glass",
+    "CHP-AS-004": "glass", "CHP-AS-005": "glass", "CHP-AS-006": "glass",
+    "CHP-AS-007": "glass", "CHP-AS-008": "glass", "CHP-AS-009": "glass",
+    "CHP-AS-010": "glass",
+    # Pantry Staples: glass for liquids/jars, non-glass for dry spices
+    "CHP-PS-001": "glass",      # Stone Ground Mustard (jar)
+    "CHP-PS-002": "glass",      # Wildflower Honey (jar)
+    "CHP-PS-003": "glass",      # Apple Cider Vinegar (bottle)
+    "CHP-PS-004": "glass",      # Extra Virgin Olive Oil (bottle)
+    "CHP-PS-005": "non_glass",  # Sea Salt Blend (canister)
+    "CHP-PS-006": "non_glass",  # Cracked Black Pepper (grinder)
+    "CHP-PS-007": "non_glass",  # Smoked Paprika (tin)
+    "CHP-PS-008": "non_glass",  # Italian Seasoning Blend (pouch)
+    "CHP-PS-009": "glass",      # Maple Syrup Grade A (bottle)
+    "CHP-PS-010": "glass",      # Raw Agave Nectar (bottle)
+    # Specialty Condiments: mostly glass jars, a few plastic tubs
+    "CHP-SC-001": "glass",      # Bourbon Bacon Jam (jar)
+    "CHP-SC-002": "glass",      # Caramelized Onion Spread (jar)
+    "CHP-SC-003": "glass",      # Pickled Jalapeño Relish (jar)
+    "CHP-SC-004": "glass",      # Sun-Dried Tomato Tapenade (jar)
+    "CHP-SC-005": "non_glass",  # Roasted Red Pepper Hummus (tub)
+    "CHP-SC-006": "non_glass",  # Artichoke Spinach Dip (tub)
+    "CHP-SC-007": "glass",      # Everything Bagel Spread (jar)
+    "CHP-SC-008": "non_glass",  # Herb Compound Butter (tub)
+    "CHP-SC-009": "glass",      # Raspberry Chipotle Glaze (bottle)
+    "CHP-SC-010": "glass",      # Lemon Curd (jar)
+    # Dried Goods: all pouches/bags
+    "CHP-DG-001": "non_glass", "CHP-DG-002": "non_glass",
+    "CHP-DG-003": "non_glass", "CHP-DG-004": "non_glass",
+    "CHP-DG-005": "non_glass", "CHP-DG-006": "non_glass",
+    "CHP-DG-007": "non_glass", "CHP-DG-008": "non_glass",
+    "CHP-DG-009": "non_glass", "CHP-DG-010": "non_glass",
+    # Snack Bites: all bags/pouches
+    "CHP-SB-001": "non_glass", "CHP-SB-002": "non_glass",
+    "CHP-SB-003": "non_glass", "CHP-SB-004": "non_glass",
+    "CHP-SB-005": "non_glass", "CHP-SB-006": "non_glass",
+    "CHP-SB-007": "non_glass", "CHP-SB-008": "non_glass",
+    "CHP-SB-009": "non_glass", "CHP-SB-010": "non_glass",
+}
+
+# Quarterly fulfillment cost as % of order total (base rate before
+# weight multiplier). Q4 is highest due to carrier surcharges and
+# insulated holiday packaging.
+DTC_FULFILLMENT_RATE_BY_QUARTER = {
+    1: (0.185, 0.205),
+    2: (0.175, 0.195),
+    3: (0.185, 0.205),
+    4: (0.210, 0.235),
+}
+
+# Weight multiplier per product line — glass/heavy items cost more to ship
+DTC_FULFILLMENT_WEIGHT_MULT = {
+    "Artisan Sauces":       (1.10, 1.25),
+    "Pantry Staples":       (0.95, 1.10),
+    "Specialty Condiments": (1.05, 1.20),
+    "Dried Goods":          (0.80, 0.90),
+    "Snack Bites":          (0.75, 0.85),
+}
+
+# Shopify platform transaction fee (on top of payment processing)
+DTC_PLATFORM_FEE_RATE = (0.020, 0.028)
+
+# Packaging-aware return/damage rates (probability per order containing
+# that packaging type). Applied per-order weighted by glass/non-glass
+# SKU value in the order.
+DTC_RETURN_RATE_GLASS = (0.055, 0.075)
+DTC_RETURN_RATE_NON_GLASS = (0.020, 0.035)
+
+DTC_REFUND_REASONS_GLASS = [
+    "breakage_in_transit", "breakage_in_transit", "transit_damage",
+    "defective", "customer_request",
+]
+DTC_REFUND_REASONS_NON_GLASS = [
+    "customer_request", "customer_request", "wrong_item",
+    "not_as_described", "quality_issue",
+]
+# ── END DTC COST LAYERS ──────────────────────────────────────────
+
 
 def init_rng(seed: int = SEED) -> random.Random:
     """Create a seeded RNG for deterministic generation."""

@@ -11,7 +11,9 @@ with retailer as (
         (select sum(deduction_amount) from {{ ref('int_retailer_payments') }}) as total_deductions,
         (select sum(coalesce(recovered_amount, 0)) from {{ ref('int_retailer_payments') }}) as total_recovered,
         (select sum(chargeback_amount) from {{ ref('stg_retailer_chargebacks') }}) as total_chargebacks,
-        (select sum(promo_cost) from {{ ref('stg_promotions') }}) as total_trade_spend
+        (select sum(promo_cost) from {{ ref('stg_promotions') }}) as total_trade_spend,
+        0::numeric as total_fulfillment,
+        0::numeric as total_platform_fees
 ),
 
 distributor as (
@@ -26,7 +28,9 @@ distributor as (
         (select sum(deduction_amount) from {{ ref('stg_distributor_deductions') }}) as total_deductions,
         (select sum(coalesce(recovered_amount, 0)) from {{ ref('stg_distributor_disputes') }}) as total_recovered,
         (select sum(chargeback_amount) from {{ ref('stg_distributor_chargebacks') }}) as total_chargebacks,
-        0::numeric as total_trade_spend
+        0::numeric as total_trade_spend,
+        0::numeric as total_fulfillment,
+        0::numeric as total_platform_fees
 ),
 
 dtc as (
@@ -40,7 +44,9 @@ dtc as (
         (select sum(refund_amount) from {{ ref('stg_shopify_refunds') }}) as total_deductions,
         0::numeric as total_recovered,
         (select sum(chargeback_amount) from {{ ref('stg_shopify_chargebacks') }}) as total_chargebacks,
-        0::numeric as total_trade_spend
+        0::numeric as total_trade_spend,
+        (select sum(fulfillment_cost) from {{ ref('stg_shopify_orders') }}) as total_fulfillment,
+        (select sum(processing_fee + platform_fee) from {{ ref('stg_shopify_transactions') }}) as total_platform_fees
 ),
 
 channels as (
@@ -64,6 +70,8 @@ select
     c.total_recovered,
     c.total_chargebacks,
     c.total_trade_spend,
+    c.total_fulfillment,
+    c.total_platform_fees,
     c.gross_revenue
         - coalesce(c.total_deductions, 0)
         + coalesce(c.total_recovered, 0)
@@ -73,7 +81,9 @@ select
         - coalesce(c.total_deductions, 0)
         + coalesce(c.total_recovered, 0)
         - coalesce(c.total_chargebacks, 0)
-        - coalesce(c.total_trade_spend, 0) as contribution_margin,
+        - coalesce(c.total_trade_spend, 0)
+        - coalesce(c.total_fulfillment, 0)
+        - coalesce(c.total_platform_fees, 0) as contribution_margin,
     case
         when t.total_gross_revenue > 0
         then round(c.gross_revenue / t.total_gross_revenue, 4)
