@@ -165,23 +165,23 @@ The `scripts/init-db.sh` entrypoint restores the Cinderhaven database from a pg_
 
 Default credentials: `postgres`/`postgres`, database `cinderhaven`.
 
-### External tables: co-packer S&OP (reseed after any restore)
+### External tables: co-packer S&OP (`copack` schema)
 
-The `production-demand-forecast` project adds three co-packer tables to the
-`raw` schema that this platform does **not** own or generate:
-`sku_inventory`, `sku_production_config`, and `production_schedule`. Any
-restore, re-dump, or regen of this database drops or replaces them, so they
-must be reseeded afterward:
+The `production-demand-forecast` project owns five tables in a dedicated
+`copack` schema: `sku_inventory`, `sku_production_config`,
+`production_schedule`, `co_packers`, and `production_lines`. This schema is
+**not** touched by `seed_all.py` — `DROP SCHEMA IF EXISTS raw CASCADE` leaves
+`copack` intact, so co-packer tables survive platform reseeds.
+
+To seed or re-seed the co-packer tables:
 
 ```bash
 # from the production-demand-forecast repo, against the cinderhaven DB
 python db/seed_copack.py
 ```
 
-Note: `backup-prod-2026-06-14.sql` contains a **stale** copy of these tables
-in the old `CHP-0001` SKU format. Restoring from it (or from any dump taken
-before the reseed) will reintroduce that format; re-running `seed_copack.py`
-restores the correct `CHP-AS-xxx` SKUs and the calibrated demo values.
+The app's `search_path` is `copack,raw,public` — co-packer tables resolve
+first, platform tables fall through to `raw`.
 
 ## Documentation
 
