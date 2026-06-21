@@ -85,8 +85,8 @@ See each repo for derivation details.
 |--------|-------|------------|--------|
 | SKU rationalization — kill candidates | 19 of 50 | sku-rationalization-framework | ✅ Confirmed |
 | SKU rationalization — fix-or-kill | 22 of 50 | sku-rationalization-framework | ✅ Confirmed |
-| Product data — annualized cost | **$458K** | product-data-health-audit | ⚠️ Awaiting regen (inputs changed; expect ~$50–95K after causal attribution) |
-| Deductions — total backlog | $1.59M | retailer-deduction-recovery | ✅ Confirmed (22,425 rows cross-channel) |
+| Product data — annualized cost | **$93K** | product-data-health-audit | ✅ Confirmed (causal attribution; 281 of 2,879 retailer chargebacks are data-defect) |
+| Deductions — total backlog | $1.35M | retailer-deduction-recovery | ✅ Confirmed (16,917 rows cross-channel) |
 | Deductions — recovery per all deduction $ | ~16% | retailer-deduction-recovery | ✅ Confirmed (16.16%) |
 | Deductions — win rate per disputed $ | ~42% | retailer-deduction-recovery | ✅ Confirmed (41.80%; tier-conditioned) |
 | Deductions — forward exposure | $861K | retailer-deduction-recovery | ⚠️ Awaiting regen |
@@ -101,6 +101,7 @@ See each repo for derivation details.
 | Short-ship — dimension count | 4 | short-ship-cost | ✅ Confirmed |
 | OTIF — internal fill rate (portfolio) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — retailer-scored (Walmart) | 84.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
+| OTIF — retailer-scored (portfolio) | 88.2% | cinderhaven-data-platform | ✅ Confirmed (OTIF pipeline run, commit 22f91c9) |
 | OTIF — gap (Walmart) | 14.8 pts | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — annual fines (measured) | $23,697 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — annual velocity damage (modeled) | $33,500 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
@@ -114,7 +115,7 @@ See each repo for derivation details.
 | Trade — operational waste | ~$380K/yr | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — chargebacks | 3,363 (2,879 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20) |
 
-**Product data $458K note:** This figure predates the causal fulfillment model and needs regen. The old derivation (677 retailer chargebacks / $686,534 / 18mo annualized to $458K) attributed all chargebacks to data quality. The causal model shows only 281 of 2,879 retailer chargebacks are Path A data-defect; the remaining 2,598 are fulfillment-event-driven. Data-attributable cost is expected to decrease substantially (design doc §5.1 estimates ~$50–95K/yr). The $458K figure stands as a placeholder until the PDHA R pipeline regens against causal data. Previous $461K was from the pre-date-shift window; $430K was from a stale cache; $296K was from a pre-reseed calibration. All superseded.
+**Product data $93K note:** The causal fulfillment regen attributes only 281 of 2,879 retailer chargebacks to Path A data-defects (the remaining 2,598 are fulfillment-event-driven), producing **$93K/yr** in data-attributable chargeback cost — within design doc §5.1's ~$50–95K/yr estimate. Supersedes the pre-causal $458K (which annualized 677 retailer chargebacks / $686,534 / 18mo and attributed all chargebacks to data quality), as well as the earlier $461K (pre-date-shift window), $430K (stale cache), and $296K (pre-reseed calibration). All superseded.
 
 **Deductions $1.35M scope note (verified 2026-06-20):** $1,346,815 is a cross-channel total across all 9 trading partners: retailer $1,118,682 / 14,947 rows (Walmart, Kroger, Whole Foods, Sprouts, Costco, Regional Group) + distributor $228,133 / 1,970 rows (UNFI, KeHE, DPI Northwest). Event-driven short_ship and late_delivery deductions are proportional to actual shortfall value; tuned 2026-06-20 to realistic specialty food failure rates (7-15% of shipments fail in-full with 5-10% shortfall severity). `fct_retailer_deductions` in Postgres covers the retailer portion only; queries against that table return ~$1.12M by design — that is a scope difference, not drift or a data error.
 
@@ -170,7 +171,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 
 | Context | Exact phrasing |
 |---------|----------------|
-| Product data cost (annual) | "~$458K/yr in chargeback cost attributable to data-quality defects" ⚠️ awaiting PDHA regen |
+| Product data cost (annual) | "~$93K/yr in chargeback cost attributable to data-quality defects" |
 | Trade context (annual) | "~$3.6M/yr all-in trade spend, 11.0% of scan revenue (trailing 52 weeks)" |
 | Recoverable layer | "~$380K/yr operational deduction waste; 3,363 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$11.1M all-in trade over 36 months" |
@@ -227,7 +228,8 @@ disputes, evidence-quality tiers).
 | 21.5% Walmart trade_spend_pct | Old seed_config value | Now 12.0% in current seed_config |
 | $461K product data cost | Pre-date-shift PDHA figure (2026-06-06) | Date-window shift (2024-2026 → 2023-2025) produces $458K |
 | $430K product data cost | Pre-fresh-pull PDHA figure (stale cache) | Fresh Postgres export (2026-06-06) produced $461K; date shift produces $458K |
-| $296K product data cost | Website recalibration (2026-06-02) against pre-reseed data | SSOT reseeded; current pipeline produces $458K |
+| $296K product data cost | Website recalibration (2026-06-02) against pre-reseed data | SSOT reseeded; superseded by causal regen → $93K |
+| $458K product data cost | Pre-causal-regen placeholder (attributed all 677 chargebacks to data quality) | Causal attribution isolates 281 data-defect chargebacks → $93K/yr |
 | $60K chargebacks | the-ten-decisions early draft figure | Never matched any pipeline output; superseded by $458K |
 | 864 chargebacks | Pre-date-shift total (690 ret + 174 dist) | Date-window shift produces 837 (677 ret + 160 dist) |
 | 86¢ per dollar | Pre-date-shift contract-to-cash (CY2025) | CY2024 data produces 83¢ |
@@ -379,7 +381,7 @@ freeze guard (`check_canonical.py`) is the gate.
 | 3 product lines | **5 product lines** | product-data-health-audit old copy |
 | 4 contracted retailers | **6 contracted retailers** | product-data-health-audit old copy |
 | 45 SKUs | **50 SKUs** | the-ten-decisions exec-summary.qmd:33 |
-| ~$361K product data cost | **~$458K** | about/page.tsx (site), old process docs |
+| ~$361K product data cost | **~$93K** | about/page.tsx (site), old process docs |
 | 96% internal OTIF | **95%** | the-ten-decisions copy, old blog |
 | $74.2M shipped (short-ship) | **$53M** | old copy |
 | 44.7% cost-of-shipped | **drop the percentage** (single dimension misapplied) | old copy |
