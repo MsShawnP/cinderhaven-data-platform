@@ -90,14 +90,14 @@ See each repo for derivation details.
 | Deductions — recovery per all deduction $ | ~16% | retailer-deduction-recovery | ✅ Confirmed (16.16%) |
 | Deductions — win rate per disputed $ | ~42% | retailer-deduction-recovery | ✅ Confirmed (41.80%; tier-conditioned) |
 | Deductions — forward exposure | $861K | retailer-deduction-recovery | ⚠️ Awaiting regen |
-| Fulfillment — portfolio fill rate (retailer) | 92.0% | cinderhaven-data-platform | ✅ Confirmed (causal, from shipment lines) |
-| Fulfillment — portfolio fill rate (distributor) | 94.2% | cinderhaven-data-platform | ✅ Confirmed (causal, from shipment lines) |
-| Short-ship — forgone revenue (3yr) | $5,537,092 | short-ship-cost | ✅ Confirmed |
-| Short-ship — compliance fines (3yr) | $368,758 | short-ship-cost | ✅ Confirmed |
-| Short-ship — chargebacks (3yr) | $344,066 | short-ship-cost | ✅ Confirmed |
-| Short-ship — deductions (3yr) | $331,289 | short-ship-cost | ✅ Confirmed |
-| Short-ship — total cost (3yr) | $6,581,205 | short-ship-cost | ✅ Confirmed |
-| Short-ship — total cost (annual) | $2,193,735 | short-ship-cost | ✅ Confirmed |
+| Fulfillment — portfolio fill rate (retailer) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
+| Fulfillment — portfolio fill rate (distributor) | 99.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
+| Short-ship — forgone revenue (3yr) | $523,326 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
+| Short-ship — compliance fines (3yr) | $164,543 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
+| Short-ship — chargebacks (3yr) | $118,814 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
+| Short-ship — deductions (3yr) | $87,490 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
+| Short-ship — total cost (3yr) | $894,174 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
+| Short-ship — total cost (annual) | $298,058 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
 | Short-ship — dimension count | 4 | short-ship-cost | ✅ Confirmed |
 | OTIF — internal fill rate (portfolio) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — retailer-scored (Walmart) | 84.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
@@ -110,7 +110,7 @@ See each repo for derivation details.
 | Revenue lifecycle — cents per wholesale retailer $ | 86¢ | contract-to-cash | ✅ Confirmed (86.38¢; 85–87¢ band; relocked 2026-06-13 Group E) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
-| Thesis range | $3.1M–$4.6M/yr | the-ten-decisions | ✅ Confirmed |
+| Thesis range | $3.1M–$4.6M/yr | the-ten-decisions | ⚠️ Awaiting regen — short-ship component dropped from $2.2M/yr to $298K/yr. Range cannot be recomputed until all ten decision figures are current. |
 | Trade — all-in (trailing-52w) | ~$3.6M/yr, 11.0% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — operational waste | ~$380K/yr | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — chargebacks | 3,363 (2,879 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20) |
@@ -182,12 +182,12 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 Usage rule: The 16% figure (per all deduction $) stands alone as the exposure diagnostic. The 42% and 65% figures (both per disputed $) are a matched pair — the fix story. Never cite 65% without 42% as baseline. Never pair 16% with 65% (different denominators; see SUPERSEDED and DECISIONS.md 2026-06-13 Option C).
 
 | Lifecycle (retailer wholesale) | "86 cents per invoiced wholesale dollar (85–87¢ band)" |
-| Short-ship cost (annual) | "~$2.2M/yr in fulfillment shortfall costs across four dimensions" |
-| Short-ship cost (3yr) | "$6.6M in total fulfillment shortfall costs over 36 months" |
-| Short-ship framing | "92% fill rate costs ~$2.2M/yr — every dollar traces to a platform event" |
+| Short-ship cost (annual) | "~$300K/yr in fulfillment shortfall costs across four dimensions" |
+| Short-ship cost (3yr) | "$894K in total fulfillment shortfall costs over 36 months" |
+| Short-ship framing | "99% unit fill still costs $300K/yr — the gap between unit fill and in-full is where the money hides" |
 | Thesis range | "$3.1M to $4.6M a year in quantifiable operational cost across eight decisions" |
 
-**OVERLAP SCOPING NOTE:** OTIF exposure includes $36.2K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
+**OVERLAP SCOPING NOTE:** OTIF exposure includes $39.6K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
 
 **Rule:** Pieces copy these phrasings. They never re-derive figures from raw data.
 
@@ -263,6 +263,8 @@ disputes, evidence-quality tiers).
 | 92.0% / 61.4% / 30.6pt OTIF | Pre-tuning OTIF rates | Superseded 2026-06-20 — new 99.2% internal, 84.5% Walmart, 14.8pt gap | |
 | 69.3% synthetic fill rate | Superseded 2026-06-14, short-ship project order generator retired, replaced by platform causal fill rates (92%/94%) | |
 | 8-dimension short-ship cost model | Superseded 2026-06-14, replaced by 4-dimension model grounded in platform events | |
+| $6,581,205 total 3yr / $2,193,735 annual short-ship cost | Pre-tuning short-ship totals | Superseded 2026-06-26, replaced by $894K/3yr ($298K/yr) after fill rate retuning to 99.2%/99.5%. Old 92%/94% unit fill targets produced per-retailer fills too low to sustain the relationship. |
+| 92.0% retailer / 94.2% distributor fill rates | Pre-tuning unit fill rates | Superseded 2026-06-26, replaced by 99.2%/99.5%. Old rates reflected deep concentrated shortfalls; new rates reflect shallow widespread shortfalls consistent with specialty food operations. |
 
 ---
 
