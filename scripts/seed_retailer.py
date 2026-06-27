@@ -467,6 +467,8 @@ def generate_disputes(rng, deductions):
     disp_num = 0
 
     for ded in deductions:
+        if ded[4] == "slotting":
+            continue
         if rng.random() > 0.40:
             continue
         disp_num += 1
@@ -657,6 +659,8 @@ def generate_causal_disputes(sel_rng, out_rng, deductions, evidence_states,
     disputes, ev_rows = [], []
     disp_num = 0
     for d, ev in zip(deductions, evidence_states):
+        if d[4] == "slotting":
+            continue
         if sel_rng.random() >= RET_DISPUTE_PROPENSITY[ev["tier"]]:
             continue
         ded_date = date.fromisoformat(d[7])
