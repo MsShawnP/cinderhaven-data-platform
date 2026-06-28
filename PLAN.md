@@ -18,6 +18,18 @@ with causal model data (2,399,045 rows), dbt build 437/437 PASS,
 canonical freeze guard 12/12 GREEN. Volume extended 1GB→3GB (permanent).
 Backup of pre-causal state preserved at project root.
 
+**DTC cost layers deployed (2026-06-20).** Fulfillment cost (18–22%,
+weight-based, Q4 surcharge), platform/payment fees (5–6%), and
+packaging-aware returns added to DTC pipeline. Prod reseeded
+(2,305,185 rows), dbt build 457/457 PASS, DTC margin 52.8%.
+
+**Downstream cascade complete (2026-06-20).** All 12 downstream tools
+regenerated from reseeded platform. 6 committed+deployed (short-ship-cost,
+retailer-deduction-recovery, contract-to-cash, where-the-money-comes-from,
+trade-spend-leakage, sku-rationalization-framework). 5 no-delta
+(data independent of failure rates). 1 blocked (recall-blast-radius —
+DDL schema mismatch, structurally independent of this cascade).
+
 ---
 
 ## Goal (2026-05-15 — dirty dataset arc, COMPLETE)

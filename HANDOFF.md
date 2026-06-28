@@ -9,6 +9,127 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-28 — Slotting dispute exclusion
+
+**Started from:** Downstream cascade complete. 333 slotting deductions
+had won/partial dispute outcomes with $24.6K in false recovery.
+
+**Did:** Fixed dispute generation to exclude slotting (negotiated cost
+of access, not disputable). Iterated through three approaches:
+(1) in-loop `continue` before draws — shifted RNG for all subsequent
+deductions; (2) pre-loop filter — identical result to (1), both skip
+the same draws; (3) consume all draws, skip only the INSERT — preserves
+RNG stream byte-identical for non-slotting deductions. Reseeded and
+rebuilt dbt 457/457 PASS three times. Grepped all ~45 repos for
+surfaces citing canonical 16% recovery / 42% win rate — found ~29
+surfaces across 8+ repos.
+
+**State:** `seed_retailer.py` committed (`a72dfaf`). Database reseeded.
+Slotting disputes: 0. Current figures: 16,917 deductions / $1.35M,
+6,011 disputes, 14.69% recovery, 50.15% win rate. CINDERHAVEN_CANONICAL.md
+NOT updated. No downstream re-export yet. Surface audit complete.
+
+**Next:** Decide new canonical recovery (~14.7%) and win rate (~50%)
+values. Update CINDERHAVEN_CANONICAL.md. Re-export retailer-deduction-
+recovery JSON and validate. Update ~29 downstream surfaces citing
+16% and 42%.
+
+---
+
+## 2026-06-20 — Downstream cascade: 12-tool regen from reseed
+
+**Started from:** Shipment failure distributions tuned to realistic
+specialty food ranges (prior session). 12 downstream tools needed
+data regeneration to reflect lower failure rates. Two previously
+deployed (otif-blind-spot, channel-profitability-analysis).
+
+**Did:**
+- Regenerated all 12 tools. 5 had meaningful data changes, 4 had
+  output unchanged (data independent of failure rates), 3 were
+  initially blocked.
+- Committed 5 tools with changes:
+  - short-ship-cost (994438f) — $894K/3yr at 99.3% fill
+  - retailer-deduction-recovery (ca47736) — 16,917 deductions / $1.35M
+  - contract-to-cash (14ca206) — 82.9c headline
+  - trade-spend-leakage (1710823) — 2,569 instances / $248K
+  - sku-rationalization-framework (b285f77) — 50 SKUs rescored
+- Deployed all 5: 3 Cloudflare Pages + 2 Fly.io
+- Fixed where-the-money-comes-from (14b458a):
+  - SQL GROUP BY bug: inner SELECTs had raw `po_date`/`deduction_date`
+    but GROUP BY used `DATE_TRUNC(...)` — invalid in standard PostgreSQL
+  - Added `--local` flag: psycopg2 direct connection via DATABASE_URL
+    or --dsn, eliminating flyctl subprocess dependency
+  - Seed metadata timestamps now use `datetime.now()` instead of
+    hardcoded "2026-05-22"
+  - Regenerated against local DB: $1.35M deductions, $87K short-ship
+  - First Cloudflare Pages deploy for this project (project created)
+- Cleared stale `CLOUDFLARE_API_TOKEN` env var (53 chars) — it was
+  overriding `wrangler login` browser OAuth. Must be cleared from
+  system env vars permanently.
+
+**No-delta tools (data independent of failure rates):**
+- trade-spend-data-diagnostic (.db gitignored)
+- product-data-health-audit (.db gitignored)
+- retailer-scorecard-renegotiation-simulator (output identical)
+- retail-velocity-decision-tool (output identical)
+- production-demand-forecast (calibrate output identical)
+
+**Still blocked:**
+- recall-blast-radius (at `active/recall-blast-radius`, not
+  `published/`): DDL schema mismatch — genealogy tables' FK references
+  `sku_id` column that doesn't exist in platform tables. Genealogy data
+  is structurally independent of shipment failure rates anyway.
+
+**State:** 11 of 12 tools resolved (6 committed+deployed, 5 no-delta).
+1 blocked (recall-blast-radius — likely not affected by this cascade).
+All committed tools pushed to their remotes via deploy. No broken code.
+
+**Next:** recall-blast-radius DDL fix if needed (separate concern from
+this cascade). CINDERHAVEN_CANONICAL.md short-ship figure update
+($6.6M → $894K) — major change that affects thesis range. Custom
+domain setup for where-the-money-comes-from (.pages.dev only currently).
+
+---
+
+## 2026-06-20 — DTC cost layers: production deployment to Fly.io
+
+**Started from:** DTC cost layers built and verified locally in prior
+session (commits 6069c2b, 457/457 dbt, 12/12 canonical, DTC margin
+52.8%). Channel-profitability already updated and deployed (67f851f).
+Prod Fly.io Postgres still on pre-cost-layer schema.
+
+**Did:**
+- Reset Fly.io postgres password via SSH local trust auth (pg_hba.conf
+  uses `trust` for local socket, `md5` for TCP — exploited local socket
+  to run ALTER USER)
+- Reseeded prod Fly.io Postgres via flyctl proxy (localhost:5433):
+  2,305,185 rows across 41 tables in 639s. New columns confirmed:
+  shopify_orders.fulfillment_cost, shopify_transactions.platform_fee
+- Ran dbt build against prod with `--threads 1`: **457/457 PASS**
+  (87 models, 370 tests, 0 errors, 30 min)
+- Verified prod DTC margin: **52.8%** ($299,091 / $566,125) — matches
+  local exactly. Fulfillment $113,885 (20.1%), platform fees $30,563
+  (5.4% of DTC rev incl. payment processing), refunds $21,967 (3.9%)
+- Reverted ~/.dbt/profiles.yml port from 5433 back to 5432 (both
+  cinderhaven and edi_reconciliation profiles)
+
+**Downstream tools affected by DTC data changes:**
+1. **channel-profitability** — already updated and deployed (67f851f)
+2. **the-question-engine** — Q09 (channel contribution) needs re-run
+3. **contract-to-cash** — needs JSON re-export from new mart data
+4. **where-the-money-comes-from** — needs snapshot re-export
+
+**State:** Prod Fly.io Postgres fully current with DTC cost layers.
+All 457 dbt tests pass against prod. profiles.yml reverted to local
+Docker port. flyctl proxy (PID 19652) may still be running on 5433.
+No broken code.
+
+**Next:** Re-run 3 downstream tools against updated prod data
+(the-question-engine Q09, contract-to-cash, where-the-money-comes-from).
+Or move to next work.
+
+---
+
 ## 2026-06-16 — SKU-level seasonal profiles + archetype velocity system
 
 **Started from:** Uniform seasonal scaler (SEASONALITY dict) applied

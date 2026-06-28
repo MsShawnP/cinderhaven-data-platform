@@ -301,3 +301,17 @@ cents per dollar — internally consistent. Headline changed from
 **Status:** Resolved
 
 **Tags:** fly.io, postgres, disk, volume, dbt, materialization, crash-loop, WAL
+
+---
+
+### 2026-06-28 — Filtering slotting deductions before or inside dispute loop both break RNG stream
+
+**Attempted:** Two approaches to exclude slotting from dispute generation: (1) `if d[4] == "slotting": continue` before the first `sel_rng.random()` draw, (2) pre-loop filter `candidates = [d for d in deductions if d[4] != "slotting"]`. Both produced identical results — 14.5% recovery / 50.9% win rate vs canonical 16.16% / 41.80%.
+
+**Why it didn't work:** Both approaches skip the RNG draws for slotting deductions. Since each deduction consumes multiple conditional draws (selection, outcome, partial recovery fraction, close date, labor, evidence rows), skipping any deduction shifts the entire draw sequence for all subsequent deductions. Pre-loop filter and in-loop continue are mechanically equivalent — neither consumes draws for the skipped deductions.
+
+**What we tried instead:** Let slotting deductions run through the FULL dispute generation logic — consume every RNG draw, build the dispute object — but skip only the INSERT (append to output list). This preserves the RNG stream byte-identical to the pre-fix baseline for all non-slotting deductions.
+
+**Status:** Resolved — third approach works. Note: canonical 16%/42% still shift to ~14.7%/~50% because those rates were computed WITH slotting disputes in the population. This is a compositional effect, not an RNG issue.
+
+**Tags:** rng, determinism, seed, dispute, slotting, random-stream-preservation

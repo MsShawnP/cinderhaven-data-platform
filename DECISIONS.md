@@ -288,6 +288,14 @@ Each entry:
 
 ---
 
+### 2026-06-28 — Slotting deductions are non-disputable; exclude from dispute generation
+- **Why:** Slotting is a negotiated cost of shelf access — a contractual fee, not an operational error. It is never disputable. All other deduction types (short_ship, promo_billback, late_delivery, label_fine, pallet_fine, spoilage, damaged, pricing_error) have legitimate dispute paths and remain disputable.
+- **Scope:** `seed_retailer.py` — both `generate_disputes()` (legacy) and `generate_causal_disputes()` (causal). Distributor pipeline unaffected (distributors don't generate slotting deductions).
+- **Implementation rule:** Slotting deductions must run through the full dispute generation logic (consuming every RNG draw) but skip the INSERT. This preserves the random stream for all non-slotting deductions. Never filter slotting before the loop or `continue` before RNG draws — both break the stream.
+- **Do not:** Add other deduction types to the exclusion list without explicit approval. promo_billback is disputable (brands dispute unauthorized promo rates).
+
+---
+
 ## Writing & Voice
 
 [Voice, style, terminology decisions specific to this project]
