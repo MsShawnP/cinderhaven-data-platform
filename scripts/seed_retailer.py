@@ -467,8 +467,6 @@ def generate_disputes(rng, deductions):
     disp_num = 0
 
     for ded in deductions:
-        if ded[4] == "slotting":
-            continue
         if rng.random() > 0.40:
             continue
         disp_num += 1
@@ -498,6 +496,9 @@ def generate_disputes(rng, deductions):
         labor = round(rng.uniform(0.25, 4.0), 2)
         quality = rng.choice(["strong", "strong", "moderate", "weak"])
         method = rng.choice(["portal", "email", "phone"])
+
+        if ded[4] == "slotting":
+            continue
 
         disputes.append((
             f"RDISP-{disp_num:05d}", ded_id, str(filed), method,
@@ -659,8 +660,6 @@ def generate_causal_disputes(sel_rng, out_rng, deductions, evidence_states,
     disputes, ev_rows = [], []
     disp_num = 0
     for d, ev in zip(deductions, evidence_states):
-        if d[4] == "slotting":
-            continue
         if sel_rng.random() >= RET_DISPUTE_PROPENSITY[ev["tier"]]:
             continue
         ded_date = date.fromisoformat(d[7])
@@ -696,11 +695,15 @@ def generate_causal_disputes(sel_rng, out_rng, deductions, evidence_states,
         method = ("phone" if out_rng.random() < DISPUTE_METHOD_PHONE_P
                   else method_by_retailer.get(d[1]) or "email")
 
+        ev = _evidence_rows(out_rng, dispute_id, d[4], ev)
+        if d[4] == "slotting":
+            continue
+
         disputes.append((
             dispute_id, d[0], str(filed), method, tier, outcome,
             recovered, str(closed) if closed else None, labor,
         ))
-        ev_rows.extend(_evidence_rows(out_rng, dispute_id, d[4], ev))
+        ev_rows.extend(ev)
     return disputes, ev_rows
 
 
