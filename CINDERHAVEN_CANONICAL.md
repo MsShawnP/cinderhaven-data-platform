@@ -87,8 +87,9 @@ See each repo for derivation details.
 | SKU rationalization — fix-or-kill | 22 of 50 | sku-rationalization-framework | ✅ Confirmed |
 | Product data — annualized cost | **$93K** | product-data-health-audit | ✅ Confirmed (causal attribution; 281 of 2,879 retailer chargebacks are data-defect) |
 | Deductions — total backlog | $1.35M | retailer-deduction-recovery | ✅ Confirmed (16,917 rows cross-channel) |
-| Deductions — recovery per all deduction $ | ~16% | retailer-deduction-recovery | ✅ Confirmed (16.16%) |
+| Deductions — recovery per all deduction $ | ~15% | retailer-deduction-recovery | ✅ Confirmed (14.69%) |
 | Deductions — win rate per disputed $ | ~42% | retailer-deduction-recovery | ✅ Confirmed (41.80%; tier-conditioned) |
+| Deductions — dispute rate | ~35% | retailer-deduction-recovery | ✅ Confirmed (35.5%) |
 | Deductions — forward exposure | $861K | retailer-deduction-recovery | ⚠️ Awaiting regen |
 | Fulfillment — portfolio fill rate (retailer) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
 | Fulfillment — portfolio fill rate (distributor) | 99.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
@@ -175,11 +176,13 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | Trade context (annual) | "~$3.6M/yr all-in trade spend, 11.0% of scan revenue (trailing 52 weeks)" |
 | Recoverable layer | "~$380K/yr operational deduction waste; 3,363 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$11.1M all-in trade over 36 months" |
-| Deduction recovery — base rate | "~16% of deduction dollars recovered through disputes" |
-| Deduction recovery — win rate | "~42% win rate per disputed dollar" |
+| Deduction recovery — base rate | "~15% of deduction dollars recovered — not because disputes fail, but because most are never filed" |
+| Deduction recovery — win rate | "~42% win rate per disputed dollar, but only ~35% of deductions are ever disputed" |
+| Deduction recovery — silent write-off | "~65% of deductions go uncontested — $826K in silent write-offs" |
+| Deduction recovery — paired narrative | "Cinderhaven wins 42% of the disputes it files. The problem isn't winning — it's filing. Two-thirds of deductions are written off without a fight." |
 | Deduction recovery — ceiling | "~65% recovery rate on strong-evidence disputes" |
 
-Usage rule: The 16% figure (per all deduction $) stands alone as the exposure diagnostic. The 42% and 65% figures (both per disputed $) are a matched pair — the fix story. Never cite 65% without 42% as baseline. Never pair 16% with 65% (different denominators; see SUPERSEDED and DECISIONS.md 2026-06-13 Option C).
+Usage rule: The 15% recovered / 42% win rate / 65% never filed are the same-denominator story told three ways. Pair freely. The old rule ("never pair 16% with 65%") no longer applies — the slotting dispute fix removed 333 fake disputes that distorted the denominators.
 
 | Lifecycle (retailer wholesale) | "86 cents per invoiced wholesale dollar (85–87¢ band)" |
 | Short-ship cost (annual) | "~$300K/yr in fulfillment shortfall costs across four dimensions" |
@@ -252,6 +255,8 @@ disputes, evidence-quality tiers).
 | $3.7M/yr / 11.3% all-in trade | Pre-tuning causal all-in | Superseded 2026-06-20 — fill-rate tuning reduced op waste; new $3.6M/yr / 11.0% |
 | ~44% per-disputed recovery | Pre-causal coincidental blend | Tier-conditioned evidence distribution produces 41.8%; not a quality regression |
 | "16.5% → 65%" recovery narrative | Before→after using different denominators | 16% is per all deduction $; 65% is per strong-evidence disputed $. Never present as X%→Y%. Replaced by two-metric restatement (Option C, DECISIONS.md 2026-06-13) |
+| ~16% recovery per all deduction $ | Pre-slotting-fix recovery rate (16.16%) | Superseded 2026-06-28 — slotting dispute fix (a72dfaf) removed 333 fake disputes; recalibrated to 14.69% (~15%) |
+| "~16% of deduction dollars recovered through disputes" | Pre-slotting-fix approved phrasing | Superseded 2026-06-28 — replaced by "~15% recovered — not because disputes fail, but because most are never filed" |
 | $32.8M short-ship total cost (3yr, 8 dimensions) | Pre-causal short-ship-cost project figure | Causal model provides event-driven fulfillment data; project needs full regen. Fill rates (92%/94%) replace as pipeline-native metrics |
 | $53.0M short-ship shipped revenue | Pre-causal short-ship-cost project figure | Same — project needs regen against causal data |
 | $11.16M all-in trade (36mo) | Pre-causal 36-mo total | Causal op waste reduction changes total to $11.1M |
