@@ -451,10 +451,17 @@ def generate_deductions(rng, orders, remittance_map, deduction_codes_by_retailer
             matching = [c for c in codes if c[4] == ded_type]
             code_id = matching[0][0] if matching else None
 
+            if ded_type == "slotting":
+                ded_deadline = None
+            elif deadline <= WINDOW_END + timedelta(days=90):
+                ded_deadline = str(deadline)
+            else:
+                ded_deadline = None
+
             deductions.append((
                 f"RD-{ded_num:06d}", retailer_id, order_id, rem_id,
                 ded_type, code_id, amount, str(ded_date),
-                str(deadline) if deadline <= WINDOW_END + timedelta(days=90) else None,
+                ded_deadline,
                 rng.random() < 0.03,
             ))
 
