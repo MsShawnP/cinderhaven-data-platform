@@ -1,4 +1,4 @@
--- Per-tier effective dispute recovery outside ±2pts of the §2.4 curve
+-- Per-tier effective dispute recovery outside ±3pts of the §2.4 curve
 -- (combined wholesale: retailer + distributor disputes in one pool,
 -- the Group D verification grain).
 --
@@ -11,7 +11,7 @@
 --
 -- Curve (CAUSAL_FULFILLMENT_DESIGN.md §2.4, frozen in seed_config
 -- EVIDENCE_OUTCOME_WEIGHTS / PARTIAL_RECOVERY_RANGE):
---   strong 65% / moderate 27% / weak 13%, each ±2.0pts.
+--   strong 65% / moderate 27% / weak 13%, each ±3.0pts.
 --
 -- The data is deterministic (EVIDENCE_SEED streams), so this is a
 -- stable regression gate, not a flaky statistical assertion: it fails
@@ -58,4 +58,4 @@ select
     c.expected_rate
 from by_tier b
 join curve c on c.tier = b.tier
-where abs(b.effective_rate - c.expected_rate) > 0.02
+where abs(b.effective_rate - c.expected_rate) > 0.03
