@@ -30,6 +30,15 @@ trade-spend-leakage, sku-rationalization-framework). 5 no-delta
 (data independent of failure rates). 1 blocked (recall-blast-radius —
 DDL schema mismatch, structurally independent of this cascade).
 
+**Slotting dispute fix cascade (2026-06-28).** 333 fake slotting disputes
+removed. Canonical restatement: recovery ~16%→~15%, win rate stays ~42%,
+dispute rate ~35% added. 5 repos updated (Phase A). JSON re-exported
+(Phase B). 10-tool regen (Phase C): 2 data changes committed
+(trade-spend-leakage, sku-rationalization-framework), 4 no-delta, 2
+gitignored extracts, 1 skipped (recall-blast-radius). 2 bugs fixed:
+production-demand-forecast search_path, contract-to-cash NULL recovered.
+All pushed.
+
 ---
 
 ## Goal (2026-05-15 — dirty dataset arc, COMPLETE)

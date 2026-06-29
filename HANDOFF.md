@@ -9,6 +9,57 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-28 — Slotting dispute fix: canonical cascade + downstream regen
+
+**Started from:** 333 slotting deductions had fake disputes/recovery.
+Prior session committed the seed fix (a72dfaf), reseeded DB, and
+completed Phase A (canonical restatement across 5 repos) and Phase B
+(JSON re-export in retailer-deduction-recovery).
+
+**Did:**
+- **Phase C: 10-tool downstream regen against local Docker Postgres**
+  - 4 no-delta: retailer-scorecard, channel-profitability-analysis,
+    retail-velocity-decision-tool, production-demand-forecast (after fix)
+  - 2 data changed + committed: trade-spend-leakage (cc08567, results.db),
+    sku-rationalization-framework (f848358 + 47112e0, thresholds + rescore)
+  - 2 extracted but gitignored: trade-spend-data-diagnostic (14,947 deductions),
+    product-data-health-audit (50 SKUs, 2,873 chargebacks)
+  - 1 skipped: recall-blast-radius (DDL schema mismatch — `sku_id` vs `sku`)
+
+- **Fix 1: production-demand-forecast** (72837e7)
+  - `_calibrate.py` had `search_path=raw,public` but `sku_production_config`
+    lives in `copack` schema. Fixed to `search_path=copack,raw,public`.
+  - Ran seed_copack.py (5 tables), _calibrate.py (50 SKUs), and
+    precompute_forecast.py (50 forecast + 3,900 doom-loop rows).
+  - Copack schema now has 8 tables including snapshot tables.
+
+- **Fix 2: contract-to-cash** (8e28fcc)
+  - `export_json.py` crashed on `round(row["recovered"], 2)` when
+    `SUM(recovered_amount)` returned NULL for undisputed deduction types.
+  - Fixed with `round(row["recovered"] or 0, 2)`.
+  - Re-exported all JSON. CY2024 headline: 82.8¢/dollar (matches
+    canonical "CY2024 produces 83¢" in supersedes table).
+
+- **Fix 3: recall-blast-radius** — STILL BLOCKED
+  - Repo at `active/recall-blast-radius` (not `published/`).
+  - `seed.py` DDL references `sku_id` column in FK constraints but
+    platform uses `sku`. Insert expects `retailer_name` but platform
+    column is `name`. Non-trivial schema mismatch.
+
+- All 5 commits pushed to remotes.
+
+**State:** All downstream tools regenerated or confirmed no-delta.
+5 commits across 4 repos, all pushed. Docker Postgres has copack
+schema with snapshot tables. recall-blast-radius remains blocked
+(separate concern — structurally independent of slotting fix).
+
+**Next:** recall-blast-radius DDL alignment (needs schema rewrite to
+match platform column names). lailara-website deploy (Phase A commits
+pushed but site not redeployed). Contract-to-cash Cloudflare deploy
+(push triggers it if wired up).
+
+---
+
 ## 2026-06-28 — Slotting dispute exclusion
 
 **Started from:** Downstream cascade complete. 333 slotting deductions
