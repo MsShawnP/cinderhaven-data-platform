@@ -111,7 +111,7 @@ See each repo for derivation details.
 | Revenue lifecycle — cents per wholesale retailer $ | 86¢ | contract-to-cash | ✅ Confirmed (86.38¢; 85–87¢ band; relocked 2026-06-13 Group E) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
-| Thesis range | $3.1M–$4.6M/yr | the-ten-decisions | ⚠️ Awaiting regen — short-ship component dropped from $2.2M/yr to $298K/yr. Range cannot be recomputed until all ten decision figures are current. |
+| Thesis range | $1.4M–$2.3M/yr | the-ten-decisions | ✅ Recomputed 2026-06-29 — Decision 4 dropped from $2.0M–$2.4M to $298K; Decisions 2, 6 awaiting regen (using current placeholders); range may tighten toward $1.2M low if D2/D6 drop |
 | Trade — all-in (trailing-52w) | ~$3.6M/yr, 11.0% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — operational waste | ~$380K/yr | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — chargebacks | 3,363 (2,879 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20) |
@@ -188,7 +188,7 @@ Usage rule: The 15% recovered / 42% win rate / 65% never filed are the same-deno
 | Short-ship cost (annual) | "~$300K/yr in fulfillment shortfall costs across four dimensions" |
 | Short-ship cost (3yr) | "$894K in total fulfillment shortfall costs over 36 months" |
 | Short-ship framing | "99% unit fill still costs $300K/yr — the gap between unit fill and in-full is where the money hides" |
-| Thesis range | "$3.1M to $4.6M a year in quantifiable operational cost across eight decisions" |
+| Thesis range | "$1.4M to $2.3M a year in quantifiable operational cost across eight decisions" |
 
 **OVERLAP SCOPING NOTE:** OTIF exposure includes $39.6K/yr in short_ship chargebacks also counted in short-ship cost. Thesis range counts these once, under short-ship cost (Decision 4).
 
@@ -261,7 +261,8 @@ disputes, evidence-quality tiers).
 | $53.0M short-ship shipped revenue | Pre-causal short-ship-cost project figure | Same — project needs regen against causal data |
 | $11.16M all-in trade (36mo) | Pre-causal 36-mo total | Causal op waste reduction changes total to $11.1M |
 | $1.44M operational waste (36mo) | Pre-causal 36-mo op waste | Now $1.38M |
-| $1.4M–$3.1M thesis range | Superseded 2026-06-14, recomputed from updated decision figures including 4-dimension short-ship rebuild ($2.2M/yr replaces $200–500K), PDHA causal attribution ($93K replaces $25–100K), channel story inversion ($50–100K replaces $300–500K), lifecycle confirmation (86¢, $350–500K replaces $400–700K) | New range $3.1M–$4.6M/yr |
+| $1.4M–$3.1M thesis range | Superseded 2026-06-14, recomputed from updated decision figures including 4-dimension short-ship rebuild ($2.2M/yr replaces $200–500K), PDHA causal attribution ($93K replaces $25–100K), channel story inversion ($50–100K replaces $300–500K), lifecycle confirmation (86¢, $350–500K replaces $400–700K) | New range $3.1M–$4.6M/yr; itself superseded 2026-06-29 |
+| $3.1M–$4.6M thesis range | Superseded 2026-06-29 — Decision 4 fill-rate retuning dropped fulfillment from $2.0M–$2.4M/yr to $298K/yr ($894K/3yr at 99.2%/99.5% fill). All other decisions unchanged. Decisions 2 ($93K) and 6 ($50K–$100K) carry placeholder values pending regen; if both drop, low end slides toward $1.2M | New range $1.4M–$2.3M/yr |
 | 95%/86% OTIF internal/retailer-scored | Superseded 2026-06-14, replaced by platform causal OTIF: 92.0% internal, 61.4% Walmart retailer-scored, 30.6pt gap | |
 | $433K/$136K/$297K OTIF exposure | Superseded 2026-06-14, replaced by $423K; then superseded 2026-06-20 by $57K ($24K fines + $34K velocity) after fill-rate tuning | |
 | $423K ($55K fines + $368K velocity) OTIF exposure | Superseded 2026-06-20 — fill-rate tuning reduced failure rates to realistic specialty food ranges; new $57K ($24K + $34K) | |
