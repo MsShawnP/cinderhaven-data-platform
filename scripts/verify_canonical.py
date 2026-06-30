@@ -39,23 +39,23 @@ DOCUMENTED = {
     "Distributors": 3,
     "Lifecycle retailer (¢/$)": 87.2,
     "Lifecycle combined (¢/$)": 87.3,
-    "Deductions backlog cross-channel ($)": 1_350_000,
+    "Deductions backlog cross-channel ($)": 1_346_815,
     "Deductions rows cross-channel": 16_917,
     "Deductions retailer-only ($)": 1_118_682,
     "Deductions retailer rows": 14_947,
-    "Chargebacks total": 3_363,
-    "Chargebacks retailer": 2_879,
+    "Chargebacks total": 3_357,
+    "Chargebacks retailer": 2_873,
     "Chargebacks distributor": 484,
-    "OTIF internal fill": 0.992,
-    "OTIF Walmart retailer-scored": 0.845,
-    "OTIF total exposure ($)": 57_197,
+    "OTIF internal fill": 0.9923,
+    "OTIF Walmart retailer-scored": 0.8445,
+    "OTIF total exposure ($)": 57_196,
     "Short-ship total 3yr ($)": 894_174,
     "Channel retail advantage / $1M ($)": 54_000,
     "PDHA product-data cost ($/yr)": 93_000,
     "Trade all-in ($/yr)": 3_600_000,
     "Trade all-in rate": 0.110,
-    "Distributor lifecycle (¢/$)": 92.74,   # flagged: predates 06-20 retuning
-    "Combined wholesale lifecycle (¢/$)": 88.38,  # flagged
+    "Distributor lifecycle (¢/$)": 93.13,
+    "Combined wholesale lifecycle (¢/$)": 89.08,
 }
 
 rows: list[tuple[str, object, object]] = []  # (label, live, documented)
@@ -92,13 +92,23 @@ def from_db():
     trydb("Contracted retailers", "SELECT COUNT(*) FROM raw.retailers")
     trydb("Distributors", "SELECT COUNT(*) FROM raw.distributors")
 
-    # Lifecycle (retailer b2b): net / gross from payments mart.
+    # Lifecycle: retailer, distributor, and combined wholesale (net / gross).
+    g_r = n_r = g_d = n_d = None
     try:
         cur.execute("SELECT SUM(gross_amount), SUM(net_amount) FROM fct_retailer_payments")
-        g, n = cur.fetchone()
-        rec("Lifecycle retailer (¢/$)", round(float(n) / float(g) * 100, 1) if g else None)
+        g_r, n_r = cur.fetchone()
+        rec("Lifecycle retailer (¢/$)", round(float(n_r) / float(g_r) * 100, 1) if g_r else None)
     except Exception as e:
         conn.rollback(); rec("Lifecycle retailer (¢/$)", f"ERR: {e.__class__.__name__}")
+    try:
+        cur.execute("SELECT SUM(gross_amount), SUM(net_amount) FROM fct_distributor_payments")
+        g_d, n_d = cur.fetchone()
+        rec("Distributor lifecycle (¢/$)", round(float(n_d) / float(g_d) * 100, 2) if g_d else None)
+    except Exception as e:
+        conn.rollback(); rec("Distributor lifecycle (¢/$)", f"ERR: {e.__class__.__name__}")
+    if g_r and g_d:
+        rec("Combined wholesale lifecycle (¢/$)",
+            round((float(n_r) + float(n_d)) / (float(g_r) + float(g_d)) * 100, 2))
 
     # Deductions retailer-only.
     try:
@@ -159,14 +169,19 @@ def main():
     from_json()
     print(f"\n  {'Figure':<42}{'Live':>16}{'Documented':>16}  Δ")
     print("  " + "-" * 76)
+    mismatches = 0
     for label, live, doc in rows:
         flag = ""
         if isinstance(live, (int, float)) and isinstance(doc, (int, float)) and doc:
             if abs(live - doc) / abs(doc) > 0.02:
                 flag = "  <-- MISMATCH"
+                mismatches += 1
         print(f"  {label:<42}{str(live):>16}{str(doc):>16}{flag}")
-    print("\n  Reconcile any MISMATCH lines in CINDERHAVEN_CANONICAL.md.")
-    print("  (Distributor / combined lifecycle have no live query here — refresh from contract-to-cash distributor run.)")
+    if mismatches:
+        print(f"\n  {mismatches} MISMATCH(es) — reconcile CINDERHAVEN_CANONICAL.md to the live SSOT.")
+        sys.exit(1)
+    print("\n  OK — canonical matches the live SSOT (within 2% tolerance).")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
