@@ -59,6 +59,29 @@ this session.
 
 ---
 
+## 2026-06-30 20:00 — Fleet regen (truncated): trade-spend rates updated, jobs incomplete
+
+**Started from:** Full fleet regen in progress. verify_canonical.py showed 2 near-misses (chargebacks 2,873 vs 2,879, deductions backlog ~$1,347K vs $1,350K). contract-to-cash, where-the-money-comes-from, sku-rationalization-framework done. trade-spend workbook built. Multiple background jobs running (short-ship-cost, otif-blind-spot, PDHA, baked SQLite exports).
+
+**Did:**
+- Updated `trade-spend-data-diagnostic/validate_workbook.py`: waste $407K→$343K, all-in 10.5%→10.3%, structural 9.2%→9.21%, waste rate 1.2%→1.1%
+- Updated `trade-spend-data-diagnostic/tests/test_canonical_regression.py`: all-in tolerance 0.102→0.103, structural 0.090→0.092
+- otif-blind-spot background job confirmed complete (46,760 shipments, Walmart OTIF 84.5%, total exposure $57,196)
+- Session hit context limit before any commits or test runs
+
+**State:** trade-spend-data-diagnostic files edited but NOT committed, NOT tested. otif-blind-spot exports done, NOT committed. Background jobs for short-ship-cost, PDHA, retailer-deduction-recovery SQLite, retail-velocity-decision-tool SQLite completed (exit codes unknown — never verified). xfail decorators still in retailer-deduction-recovery (lines 81, 89) and retail-velocity-decision-tool (lines 43, 53, 61). Platform repo dirty: .gitignore, CINDERHAVEN_CANONICAL.md, README.md modified; .pre-commit-config.yaml, scripts/verify_canonical.py untracked.
+
+**Next:**
+1. Start flyctl proxy on port 5433
+2. Verify short-ship-cost, PDHA, baked SQLite job outputs (check task output files or re-run)
+3. If SQLite exports good: remove xfail decorators in rdr (lines 81, 89) and rvdt (lines 43, 53, 61)
+4. Update CINDERHAVEN_CANONICAL.md: chargebacks 2,879→2,873, deductions backlog $1,350K→$1,347K
+5. Run test suites for each repo
+6. Commit + push all 9 downstream repos + platform repo
+7. Consider committing /tmp/export_rdr.py and /tmp/export_rvdt.py as scripts/export_from_postgres.py
+
+---
+
 ## 2026-06-28 — Slotting dispute fix: canonical cascade + downstream regen
 
 **Started from:** 333 slotting deductions had fake disputes/recovery.

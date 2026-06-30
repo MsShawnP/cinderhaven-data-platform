@@ -304,6 +304,20 @@ cents per dollar — internally consistent. Headline changed from
 
 ---
 
+### 2026-06-30 — Full fleet regen in one session triggered two context compactions
+
+**Attempted:** Run all 9 downstream repo exports, baked SQLite rebuilds, xfail removal, test suites, and commits in a single session.
+
+**Why it didn't work:** Volume of background jobs + output inspection + file edits across 9 repos consumed context faster than the work could be verified and committed. Hit compaction twice without completing a single commit.
+
+**What we tried instead:** (next session) Split regen across sessions by repo group — batch 3-4 repos per session, commit each batch before moving on.
+
+**Status:** Open — regen still incomplete as of 2026-06-30.
+
+**Tags:** context-compaction, fleet-regen, session-management, downstream-repos
+
+---
+
 ### 2026-06-28 — Filtering slotting deductions before or inside dispute loop both break RNG stream
 
 **Attempted:** Two approaches to exclude slotting from dispute generation: (1) `if d[4] == "slotting": continue` before the first `sel_rng.random()` draw, (2) pre-loop filter `candidates = [d for d in deductions if d[4] != "slotting"]`. Both produced identical results — 14.5% recovery / 50.9% win rate vs canonical 16.16% / 41.80%.

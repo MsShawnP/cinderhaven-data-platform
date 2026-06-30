@@ -85,7 +85,7 @@ See each repo for derivation details.
 |--------|-------|------------|--------|
 | SKU rationalization — kill candidates | 19 of 50 | sku-rationalization-framework | ✅ Confirmed |
 | SKU rationalization — fix-or-kill | 22 of 50 | sku-rationalization-framework | ✅ Confirmed |
-| Product data — annualized cost | **$93K** | product-data-health-audit | ✅ Confirmed (causal attribution; 281 of 2,879 retailer chargebacks are data-defect) |
+| Product data — annualized cost | **$93K** | product-data-health-audit | ✅ Confirmed (causal attribution; 281 of 2,873 retailer chargebacks are data-defect) |
 | Deductions — total backlog | $1.35M | retailer-deduction-recovery | ✅ Confirmed (16,917 rows cross-channel) |
 | Deductions — recovery per all deduction $ | ~15% | retailer-deduction-recovery | ✅ Confirmed (14.69%) |
 | Deductions — win rate per disputed $ | ~42% | retailer-deduction-recovery | ✅ Confirmed (41.80%; tier-conditioned) |
@@ -107,16 +107,16 @@ See each repo for derivation details.
 | OTIF — annual fines (measured) | $23,697 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — annual velocity damage (modeled) | $33,500 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
 | OTIF — total annual exposure | $57,197 | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20) |
-| Channel — distribution vs retail delta | $91K per $1M deployed | where-the-money-comes-from | ⚠️ Awaiting regen (COGS fix inverts) |
-| Revenue lifecycle — cents per wholesale retailer $ | 86¢ | contract-to-cash | ✅ Confirmed (86.38¢; 85–87¢ band; relocked 2026-06-13 Group E) |
+| Channel — retail vs distribution delta | $54K per $1M deployed (retail advantage; 51.0% vs 45.6%) | where-the-money-comes-from | ✅ Confirmed (regenned 2026-06-29; SUPERSEDES $91K distribution-wins) |
+| Revenue lifecycle — cents per wholesale retailer $ | 87¢ | contract-to-cash | ✅ Confirmed (87.2¢ retailer / 87.3¢ combined on live post-06-20-tuning mart 2026-06-30; supersedes 86.38¢ pre-tuning) |
 | Launch economics — gross revenue Year 1 | $499,200 | cost-of-saying-yes | ✅ Operator-validated |
 | Launch economics — net cash Year 1 | −$36,320 | cost-of-saying-yes | ✅ Operator-validated |
 | Thesis range | $1.4M–$2.3M/yr | the-ten-decisions | ✅ Recomputed 2026-06-29 — Decision 4 dropped from $2.0M–$2.4M to $298K; Decisions 2, 6 awaiting regen (using current placeholders); range may tighten toward $1.2M low if D2/D6 drop |
 | Trade — all-in (trailing-52w) | ~$3.6M/yr, 11.0% of scan revenue | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
 | Trade — operational waste | ~$380K/yr | trade-spend-data-diagnostic | ✅ Confirmed (relocked 2026-06-20) |
-| Trade — chargebacks | 3,363 (2,879 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20) |
+| Trade — chargebacks | 3,357 (2,873 ret + 484 dist) | cinderhaven-data-platform | ✅ Confirmed (causal, event-driven; tuned 2026-06-20; slotting fix removed 6 fake retailer chargebacks 2026-06-28; verified live 2026-06-30) |
 
-**Product data $93K note:** The causal fulfillment regen attributes only 281 of 2,879 retailer chargebacks to Path A data-defects (the remaining 2,598 are fulfillment-event-driven), producing **$93K/yr** in data-attributable chargeback cost — within design doc §5.1's ~$50–95K/yr estimate. Supersedes the pre-causal $458K (which annualized 677 retailer chargebacks / $686,534 / 18mo and attributed all chargebacks to data quality), as well as the earlier $461K (pre-date-shift window), $430K (stale cache), and $296K (pre-reseed calibration). All superseded.
+**Product data $93K note:** The causal fulfillment regen attributes only 281 of 2,873 retailer chargebacks to Path A data-defects (the remaining 2,592 are fulfillment-event-driven), producing **$93K/yr** in data-attributable chargeback cost — within design doc §5.1's ~$50–95K/yr estimate. Supersedes the pre-causal $458K (which annualized 677 retailer chargebacks / $686,534 / 18mo and attributed all chargebacks to data quality), as well as the earlier $461K (pre-date-shift window), $430K (stale cache), and $296K (pre-reseed calibration). All superseded.
 
 **Deductions $1.35M scope note (verified 2026-06-20):** $1,346,815 is a cross-channel total across all 9 trading partners: retailer $1,118,682 / 14,947 rows (Walmart, Kroger, Whole Foods, Sprouts, Costco, Regional Group) + distributor $228,133 / 1,970 rows (UNFI, KeHE, DPI Northwest). Event-driven short_ship and late_delivery deductions are proportional to actual shortfall value; tuned 2026-06-20 to realistic specialty food failure rates (7-15% of shipments fail in-full with 5-10% shortfall severity). `fct_retailer_deductions` in Postgres covers the retailer portion only; queries against that table return ~$1.12M by design — that is a scope difference, not drift or a data error.
 
@@ -152,7 +152,7 @@ trade rows reverified 2026-06-12 on the certified local replica.
 | Structural trade (annual) | ~$3.2M/yr | Rate × trailing-52w channel revenue |
 | Structural trade rate | 9.8% | Of trailing-52w scan revenue ($32.8M) |
 | Operational waste rate | 1.2% | Of trailing-52w scan revenue ($32.8M) |
-| Chargebacks | 3,363 | 2,879 retailer + 484 distributor; event-driven from fulfillment data |
+| Chargebacks | 3,357 | 2,873 retailer + 484 distributor; event-driven from fulfillment data |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
 | Scan revenue (trailing-52w) | $32.8M | |
 | EBITDA check | 14.9% trade + 11% EBITDA = 25.9% | Leaves 74.1% for COGS+SGA (plausible) |
@@ -174,7 +174,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 |---------|----------------|
 | Product data cost (annual) | "~$93K/yr in chargeback cost attributable to data-quality defects" |
 | Trade context (annual) | "~$3.6M/yr all-in trade spend, 11.0% of scan revenue (trailing 52 weeks)" |
-| Recoverable layer | "~$380K/yr operational deduction waste; 3,363 chargebacks over 36 months" |
+| Recoverable layer | "~$380K/yr operational deduction waste; 3,357 chargebacks over 36 months" |
 | 36-mo total (only when a real multi-year total is needed) | "$11.1M all-in trade over 36 months" |
 | Deduction recovery — base rate | "~15% of deduction dollars recovered — not because disputes fail, but because most are never filed" |
 | Deduction recovery — win rate | "~42% win rate per disputed dollar, but only ~35% of deductions are ever disputed" |
@@ -184,7 +184,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 
 Usage rule: The 15% recovered / 42% win rate / 65% never filed are the same-denominator story told three ways. Pair freely. The old rule ("never pair 16% with 65%") no longer applies — the slotting dispute fix removed 333 fake disputes that distorted the denominators.
 
-| Lifecycle (retailer wholesale) | "86 cents per invoiced wholesale dollar (85–87¢ band)" |
+| Lifecycle (retailer wholesale) | "87 cents per invoiced wholesale dollar (86–88¢ band)" |
 | Short-ship cost (annual) | "~$300K/yr in fulfillment shortfall costs across four dimensions" |
 | Short-ship cost (3yr) | "$894K in total fulfillment shortfall costs over 36 months" |
 | Short-ship framing | "99% unit fill still costs $300K/yr — the gap between unit fill and in-full is where the money hides" |
@@ -198,26 +198,31 @@ Usage rule: The 15% recovered / 42% win rate / 65% never filed are the same-deno
 
 Source: `raw.retailer_remittances`, 222 rows, 36 months.
 
-| Layer | Amount (36mo) | % of gross |
-|---|---|---|
-| Gross invoiced | $52,128,777 | 100.0% |
-| Trade allowance | −$4,967,008 | 9.53% |
-| Operational deductions | −$1,303,883 | 2.50% |
-| Chargebacks applied | −$693,209 | 1.33% |
-| Timing residual | −$138,066 | 0.26% |
-| **Net collected** | **$45,026,612** | **86.38%** |
+**Updated 2026-06-30 to the live post-06-20-tuning mart.** The deduction
+retuning ($1.66M→$1.12M) raised net collected and moved the lifecycle from
+86.38¢ to **87.2¢ retailer / 87.3¢ combined**. The 86.38¢ figure below it
+(now superseded) was the pre-tuning waterfall.
+
+| Layer | Amount (36mo) | % of gross | Note |
+|---|---|---|---|
+| Gross invoiced | $52,128,777 | 100.0% | matches live mart gross_payments |
+| Trade allowance | −$4,967,008 | 9.53% | structural (scan-revenue %), unchanged by deduction tuning |
+| Operational deductions | −$1,118,682 | 2.15% | live mart `fct_retailer_payments` / `fct_retailer_deductions` (14,947 rows) |
+| Chargebacks + timing residual | −$575,533 | 1.10% | derived residual (gross − net − trade − deductions); precise split pending a fresh waterfall query |
+| **Net collected** | **$45,467,554** | **87.22%** | live mart net_received (b2b) |
+
+Pre-tuning (superseded): Operational deductions −$1,303,883, Chargebacks −$693,209,
+Timing −$138,066, Net collected $45,026,612 (86.38%).
 
 | Metric | Value | Target |
 |---|---|---|
-| Classification rate | 98.1% | ≥97% |
-| Residual rate | 1.9% | 1–3% |
-| Lifecycle | 86¢ per $ | 85–87¢ band |
+| Lifecycle (retailer) | 87¢ per $ | 86–88¢ band |
+| Lifecycle (combined w/ DTC) | 87.3¢ | app headline |
 
-Distributor lifecycle: 92.74¢ per $ (lower trade rates, fewer deduction
-types, no receiving_discrepancy category). Combined wholesale: 88.38¢.
-The canonical 86¢ is the retailer figure because the retailer channel
-carries the full complexity (trade, operational deductions, chargebacks,
-disputes, evidence-quality tiers).
+Distributor lifecycle: 92.74¢ per $ and combined wholesale 88.38¢ predate the
+06-20 retuning and will tick up on refresh. The canonical 87¢ is the retailer
+figure because the retailer channel carries the full complexity (trade,
+operational deductions, chargebacks, disputes, evidence-quality tiers).
 
 ### SUPERSEDES — dead values (do not use anywhere)
 
@@ -235,7 +240,7 @@ disputes, evidence-quality tiers).
 | $458K product data cost | Pre-causal-regen placeholder (attributed all 677 chargebacks to data quality) | Causal attribution isolates 281 data-defect chargebacks → $93K/yr |
 | $60K chargebacks | the-ten-decisions early draft figure | Never matched any pipeline output; superseded by $458K |
 | 864 chargebacks | Pre-date-shift total (690 ret + 174 dist) | Date-window shift produces 837 (677 ret + 160 dist) |
-| 86¢ per dollar | Pre-date-shift contract-to-cash (CY2025) | CY2024 data produces 83¢ |
+| 82.8¢ / 83¢ per dollar | Stale contract-to-cash single-year cut (CY2024, pre-reseed dataset) | Superseded — live post-06-20-tuning mart yields ~87¢ (87.2¢ retailer / 87.3¢ combined; regenerated 2026-06-30 against live DB). Pre-tuning backup yielded 86.4–86.9¢. No window produces 83¢. 87¢ is canonical |
 | $33.1M short-ship | Pre-date-shift short-ship total cost | Date-window shift produces $32.8M |
 | 10.8% all-in trade rate | Pre-date-shift trade rate | Date-window shift produces 10.5%; itself superseded 2026-06-12 (rate_map fix) |
 | 9.2% structural trade rate | Pre-date-shift structural rate | Date-window shift produces 9.0%; itself superseded 2026-06-12 (rate_map fix) |
@@ -244,6 +249,7 @@ disputes, evidence-quality tiers).
 | $3.5M/yr (t-52w) / $10.26M (36mo) / $8.8M structural (36mo) | Locked 2026-06-04 derived variants | Superseded 2026-06-12 — same rate_map bug. True $3.7M / $11.16M / $9.7M |
 | 837 chargebacks (677 ret + 160 dist) | Pre-causal chargeback count | Causal model generates event-driven chargebacks from fulfillment events; count was 6,563, now 4,749 after fill-rate tuning |
 | 6,563 chargebacks (5,885 ret + 678 dist) | Pre-tuning causal chargeback count | Superseded 2026-06-20 — fill rates and receiving discrepancy rates tuned to realistic specialty food ranges; new count 3,363 (2,879 + 484) |
+| 3,363 chargebacks (2,879 ret + 484 dist) | Post-06-20-tuning count | Superseded 2026-06-30 — slotting dispute fix (a72dfaf) removed 6 fake dispute-linked retailer chargebacks; live count 3,357 (2,873 + 484) |
 | $1.66M / 16,023 deduction backlog | Pre-causal deduction totals | Superseded by causal model; then re-tuned 2026-06-20 to $1.38M / 19,279 |
 | $1.59M / 22,425 deductions | Pre-tuning causal deduction totals | Superseded 2026-06-20 — fill-rate tuning reduced event-driven deductions; new $1.35M / 16,917 |
 | $1.38M / 19,279 deductions | Second-pass tuning deduction totals | Superseded 2026-06-20 — third pass further tightened fill targets; new $1.35M / 16,917 |

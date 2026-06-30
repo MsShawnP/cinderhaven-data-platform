@@ -39,3 +39,9 @@ data/*.sql
 data/*.db
 *.db
 backup-*.sql
+
+# Security - secret leak prevention
+*.pem
+*.key
+credentials.*
+secrets.*
