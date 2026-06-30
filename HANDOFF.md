@@ -9,6 +9,56 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-06-30 — Slotting fix cascade: regen fixes + verify blocked
+
+**Started from:** Phase C (10-tool downstream regen) complete from
+prior session. 3 tools skipped: production-demand-forecast (search_path
+bug), contract-to-cash (NULL recovered), recall-blast-radius (no repo).
+
+**Did:**
+- **Fix 1: production-demand-forecast** (72837e7, pushed)
+  - `_calibrate.py` had `search_path=raw,public` but `sku_production_config`
+    lives in `copack` schema. Fixed to `search_path=copack,raw,public`.
+  - Ran seed_copack.py (5 tables), _calibrate.py (50 SKUs), and
+    precompute_forecast.py (50 forecast + 3,900 doom-loop rows).
+  - Copack schema now has 8 tables including snapshot tables.
+
+- **Fix 2: contract-to-cash** (8e28fcc, pushed)
+  - `export_json.py` crashed on `round(row["recovered"], 2)` when
+    `SUM(recovered_amount)` returned NULL for undisputed deduction types.
+  - Fixed with `round(row["recovered"] or 0, 2)`.
+  - Re-exported all JSON. CY2024 headline: 82.8¢/dollar (matches
+    canonical "CY2024 produces 83¢" in supersedes table).
+
+- **Fix 3: recall-blast-radius** — STILL BLOCKED
+  - Repo at `active/recall-blast-radius` (not `published/`).
+  - `seed.py` DDL references `sku_id` column in FK constraints but
+    platform uses `sku`. Insert expects `retailer_name` but platform
+    column is `name`. Non-trivial schema mismatch.
+
+- All 5 commits pushed (production-demand-forecast, contract-to-cash,
+  trade-spend-leakage, sku-rationalization-framework).
+
+- **verify_canonical.py** — attempted but Docker Desktop went down
+  mid-session. Needs the Docker stale-socket workaround (rename
+  `%LOCALAPPDATA%\Docker\run` + `docker-secrets-engine` aside, relaunch).
+
+**State:** All regen fixes committed and pushed. Docker Postgres is
+DOWN (Docker Desktop crashed). Platform repo has pre-existing uncommitted
+changes from a prior session: `.gitignore`, `CINDERHAVEN_CANONICAL.md`,
+`README.md` (modified), plus `.pre-commit-config.yaml` and
+`scripts/verify_canonical.py` (untracked). These were NOT touched
+this session.
+
+**Next:**
+1. Docker stale-socket fix (memory: docker-desktop-stale-socket-fix.md)
+2. Run `verify_canonical.py` against local Docker Postgres
+3. Investigate + commit the pre-existing dirty files in platform repo
+4. recall-blast-radius DDL alignment (separate concern)
+5. lailara-website deploy (Phase A commits pushed but not deployed)
+
+---
+
 ## 2026-06-28 — Slotting dispute fix: canonical cascade + downstream regen
 
 **Started from:** 333 slotting deductions had fake disputes/recovery.
@@ -26,37 +76,12 @@ completed Phase A (canonical restatement across 5 repos) and Phase B
     product-data-health-audit (50 SKUs, 2,873 chargebacks)
   - 1 skipped: recall-blast-radius (DDL schema mismatch — `sku_id` vs `sku`)
 
-- **Fix 1: production-demand-forecast** (72837e7)
-  - `_calibrate.py` had `search_path=raw,public` but `sku_production_config`
-    lives in `copack` schema. Fixed to `search_path=copack,raw,public`.
-  - Ran seed_copack.py (5 tables), _calibrate.py (50 SKUs), and
-    precompute_forecast.py (50 forecast + 3,900 doom-loop rows).
-  - Copack schema now has 8 tables including snapshot tables.
-
-- **Fix 2: contract-to-cash** (8e28fcc)
-  - `export_json.py` crashed on `round(row["recovered"], 2)` when
-    `SUM(recovered_amount)` returned NULL for undisputed deduction types.
-  - Fixed with `round(row["recovered"] or 0, 2)`.
-  - Re-exported all JSON. CY2024 headline: 82.8¢/dollar (matches
-    canonical "CY2024 produces 83¢" in supersedes table).
-
-- **Fix 3: recall-blast-radius** — STILL BLOCKED
-  - Repo at `active/recall-blast-radius` (not `published/`).
-  - `seed.py` DDL references `sku_id` column in FK constraints but
-    platform uses `sku`. Insert expects `retailer_name` but platform
-    column is `name`. Non-trivial schema mismatch.
-
-- All 5 commits pushed to remotes.
+- All commits from Phase A/B pushed to remotes.
 
 **State:** All downstream tools regenerated or confirmed no-delta.
-5 commits across 4 repos, all pushed. Docker Postgres has copack
-schema with snapshot tables. recall-blast-radius remains blocked
-(separate concern — structurally independent of slotting fix).
+Docker Postgres has copack schema with snapshot tables.
 
-**Next:** recall-blast-radius DDL alignment (needs schema rewrite to
-match platform column names). lailara-website deploy (Phase A commits
-pushed but site not redeployed). Contract-to-cash Cloudflare deploy
-(push triggers it if wired up).
+**Next:** Fix 3 skipped tools, run verify_canonical.py.
 
 ---
 
