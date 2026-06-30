@@ -8,5 +8,6 @@ select
     retailer_id,
     reason,
     sku,
-    amount as chargeback_amount
+    amount as chargeback_amount,
+    triggered_by_field
 from source
