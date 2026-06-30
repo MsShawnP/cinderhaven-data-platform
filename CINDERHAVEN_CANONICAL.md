@@ -219,10 +219,7 @@ Timing −$138,066, Net collected $45,026,612 (86.38%).
 | Lifecycle (retailer) | 87¢ per $ | 86–88¢ band |
 | Lifecycle (combined w/ DTC) | 87.3¢ | app headline |
 
-Distributor lifecycle: 92.74¢ per $ and combined wholesale 88.38¢ predate the
-06-20 retuning and will tick up on refresh. The canonical 87¢ is the retailer
-figure because the retailer channel carries the full complexity (trade,
-operational deductions, chargebacks, disputes, evidence-quality tiers).
+Distributor lifecycle: 93.13¢ per $ and combined wholesale 89.08¢ (verified 2026-06-30 from live Postgres SSOT; supersedes 92.74¢ / 88.38¢ which predated the 06-20 retuning). The canonical 87¢ is the retailer figure because the retailer channel carries the full complexity (trade, operational deductions, chargebacks, disputes, evidence-quality tiers).
 
 ### SUPERSEDES — dead values (do not use anywhere)
 
