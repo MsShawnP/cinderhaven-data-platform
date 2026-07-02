@@ -17,6 +17,26 @@ Each entry:
 
 ---
 
+## Infrastructure & Ops
+
+### 2026-07-02 — Stop guessing at cinderhaven-db's flypgadmin credential; rebuild or escalate instead
+- **Why:** Two independent, researched theories for how the `pg`
+  health-check role (`flypgadmin`) gets its password set on boot
+  (`OPERATOR_PASSWORD` reconcile, then `SU_PASSWORD` reconcile) both
+  failed on the real machine. The mechanism postgres-flex actually uses
+  here isn't understood, and further SQL/secrets experiments on a
+  production DB with live app traffic aren't worth the risk for a
+  monitoring-only check. See FAILURES.md 2026-07-02 entry.
+- **Scope:** cinderhaven-db (Fly.io Postgres) `pg` health check
+  specifically. Does not apply to the app-facing `postgres` role, which
+  is confirmed fine.
+- **Do not:** Attempt a third credential-alignment theory via
+  `ALTER ROLE` or `flyctl secrets set` on this machine. Next step is
+  either rebuilding cinderhaven-db fresh from the platform seed pipeline
+  (consistent credentials from birth) or a Fly support ticket.
+
+---
+
 ## Architecture & Pipeline
 
 ### ~~2026-05-12 — Keep stack unlocked until /clarify completes~~
