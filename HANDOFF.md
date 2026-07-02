@@ -9,6 +9,54 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-07-02 — lailara-website footer fixes + cinderhaven-db pg check (still blocked)
+
+**Started from:** Fleet regen from the slotting-fix cascade truncated last
+session (uncommitted edits in several downstream repos). cinderhaven-db's
+internal `pg` health check critical since 2026-06-25.
+
+**Did:**
+- Committed and pushed 4 blog-post footer fixes in lailara-website/site
+  (PDHA $458K→$93K on 3 posts, OTIF 95%/86%/$433K→99%/84%/~$57K on 1
+  post). Deployed via GitHub Actions → Cloudflare Workers. Verified live.
+- Diagnosed and attempted to fix cinderhaven-db's `pg` health check in two
+  scoped rounds:
+  - Round 1: found `OPERATOR_PASSWORD` secret out of sync with the
+    `postgres` role's real password (root cause of the 06-20 app-level
+    reset never propagating to the Fly secret). Fixed via `flyctl secrets
+    set OPERATOR_PASSWORD=...` — confirmed durable. Attempted `ALTER ROLE
+    flypgadmin` via direct SQL to fix the health-check role too — didn't
+    survive a restart.
+  - Round 2: took a verified `pg_dump` backup first (on-volume + off-box,
+    byte-identical, 38.6MB/427 objects), confirmed single-machine
+    topology, then tried the theory that `flypgadmin` reconciles to
+    `SU_PASSWORD` on boot. Set a new `SU_PASSWORD` secret, confirmed
+    propagation — `flypgadmin` still didn't authenticate with it, no
+    reconcile log fired. Stopped per explicit instruction rather than try
+    a third theory.
+- Updated the `cinderhaven-db-pg-health-check-blocked` memory file with
+  full history of both attempts.
+
+**State:** lailara-website clean, pushed, deployed, verified live.
+cinderhaven-data-platform clean, no local changes. cinderhaven-db `pg`
+check still critical; `postgres`-role auth and all spot-checked apps
+confirmed fine. Backup dump still on the Fly volume
+(`/data/backups/pre-su-password-fix-2026-07-01.dump`) and in local
+scratchpad — not yet cleaned up. trade-spend-data-diagnostic /
+retailer-deduction-recovery / product-data-health-audit commits and the
+flyctl proxy kill requested earlier this session were NOT executed —
+flagging so they aren't assumed done.
+
+**Next:**
+1. cinderhaven-db `pg` check: rebuild `cinderhaven-db` fresh from the
+   platform pipeline, or open a Fly support ticket — stop guessing at
+   credential-reconciliation theories. Delete the backup dump once
+   resolved either way.
+2. Revisit the trade-spend-data-diagnostic / RDR / PDHA commits + flyctl
+   proxy kill — still outstanding.
+
+---
+
 ## 2026-06-30 — Slotting fix cascade: regen fixes + verify blocked
 
 **Started from:** Phase C (10-tool downstream regen) complete from

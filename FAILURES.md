@@ -30,6 +30,35 @@ failed and may have its own entry below]
 
 ## Entries
 
+### 2026-07-02 — cinderhaven-db flypgadmin credential fixes don't survive restart
+
+**Attempted:** Two independent theories to fix the `pg` health check,
+which authenticates as the `flypgadmin` role: (1) `ALTER ROLE flypgadmin
+WITH PASSWORD` via direct SQL to match `OPERATOR_PASSWORD`; (2) set a new
+`SU_PASSWORD` secret expecting postgres-flex to reconcile `flypgadmin` to
+it on boot.
+
+**Why it didn't work:** (1) verified working immediately via psql, but
+the long-running checker process (`start_admin_server`/`start_monitor`)
+kept failing with the same auth error even right after, and a
+`/proc/<pid>/environ` check post-restart showed a different
+`OPERATOR_PASSWORD` value than expected — something resets or bypasses
+the SQL-level change. (2) `SU_PASSWORD` secret propagated correctly to
+the machine env (confirmed via `printenv`), but `flypgadmin` still didn't
+authenticate with it, and no boot-reconcile log fired for it at all
+(unlike the `postgres`/`OPERATOR_PASSWORD` case, which did log a WARN and
+did resolve permanently).
+
+**What we tried instead:** Nothing further — stopped per explicit
+instruction after the second theory failed, rather than attempt a third.
+Recommended path: rebuild `cinderhaven-db` fresh from the platform
+pipeline, or escalate to Fly support, rather than continue guessing at
+undocumented credential-reconciliation behavior.
+
+**Status:** Open
+
+**Tags:** fly-postgres, flypgadmin, health-check, credentials, postgres-flex
+
 ### 2026-06-13 — Deferred remittance INSERT caused FK violation on deductions
 
 **Attempted:** In Group E, deferred writing remittances to the DB
