@@ -30,6 +30,72 @@ failed and may have its own entry below]
 
 ## Entries
 
+### 2026-07-02 — flyctl ssh console -C "sh -c \"...\$VAR...\"" silently corrupts inline secrets
+
+**Attempted:** Passing a password through nested shell layers inline —
+`flyctl ssh console -C "sh -c \"...\$OPERATOR_PASSWORD...\""` — to run an
+`ALTER ROLE ... WITH PASSWORD` on the remote Postgres.
+
+**Why it didn't work:** the escaping required to survive
+(my Bash tool's shell) → (flyctl's `-C` arg) → (remote `sh -c`) → (psql
+`-c` argument) is fragile enough that a single missing backslash causes
+silent corruption, not a visible error. Twice, `$VAR` inside the nested
+quotes got mis-expanded (once evaluated locally against an unset local
+variable, once passed through empty) and Postgres accepted it as a valid
+`ALTER ROLE`, just with an empty password — masked by a NOTICE
+(`empty string is not a valid password, clearing password`) that's easy
+to miss in a wall of connection output. Net effect: two full password
+resets that silently made a role *less* authenticatable, not more.
+
+**What we tried instead:** stopped constructing SQL inline. Wrote the
+`ALTER ROLE` statement to a local file, uploaded it with
+`flyctl ssh sftp put` (using `MSYS_NO_PATHCONV=1` and a `//data/...`
+remote path to dodge Git Bash's path-conversion mangling), then ran it
+with a plain `flyctl ssh console -C "psql -f /data/....sql"` — one shell
+layer, no variable interpolation, no quoting risk. Worked cleanly, no
+NOTICE. Same file-based pattern used for a `PGPASSFILE`-based auth test
+afterward, for the same reason.
+
+**Status:** Resolved (as a technique — use file upload, not inline
+`-C "sh -c \"...\$VAR...\""`, for any future secret-bearing remote
+command on this or similar Fly machines).
+
+**Tags:** flyctl, ssh, shell-quoting, secrets, sftp, fly-postgres
+
+### 2026-07-02 — cinderhaven-db pg health check PROVEN unrepairable in place
+
+**Attempted:** One final, careful in-place repair round after two prior
+sessions' failed theories: confirmed `flypgadmin` role exists and has a
+password (not a missing-role issue), confirmed none of the 3 tracked
+secrets (`OPERATOR_PASSWORD`, `SU_PASSWORD`, `REPL_PASSWORD`) currently
+authenticate as it, realigned it to `OPERATOR_PASSWORD` via a clean
+file-uploaded `ALTER ROLE` (see the shell-quoting entry above), then
+independently verified — via a `PGPASSFILE`-based test and a byte-level
+comparison of the live checker process's own `/proc/<pid>/environ` — that
+the DB-level password is correct AND identical to what the checker
+process has in its own environment.
+
+**Why it didn't work:** the checker (`start_admin_server` on port 5500,
+serving `/flycheck/pg`) still rejected the connection with the identical
+`flypgadmin` auth error immediately after, using a credential proven
+correct by every external test available. This rules out "wrong secret,"
+"stale env," and "needs a restart" as explanations — the checker isn't
+authenticating with the plain env-var password the way a normal libpq
+client does. Something else (cached SCRAM state, a different internal
+credential source, or a bug in this postgres-flex build) is involved,
+and it's outside anything reachable via SQL or `flyctl secrets set`.
+
+**What we tried instead:** Stopped. Per explicit instruction, did not
+escalate to provisioning a fresh Fly Postgres app + 6-app `DATABASE_URL`
+cutover as part of this close-out task. Documented as a scoped future
+task in HANDOFF.md and the `cinderhaven-db-pg-health-check-blocked`
+memory file instead.
+
+**Status:** Open (by design — not worth pursuing further without a real
+infra change or Fly support)
+
+**Tags:** fly-postgres, flypgadmin, health-check, credentials, postgres-flex
+
 ### 2026-07-02 — cinderhaven-db flypgadmin credential fixes don't survive restart
 
 **Attempted:** Two independent theories to fix the `pg` health check,
