@@ -9,6 +9,55 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-07-02 (close-out) — flyctl proxy killed, 3 downstream repos already clean, cinderhaven-data re-archived, pg check PROVEN unrepairable in place
+
+**Started from:** Four-item close-out list: kill lingering flyctl proxy,
+push outstanding commits in 3 downstream repos, decide + execute
+cinderhaven-db pg-check fix, re-archive cinderhaven-data.
+
+**Did:**
+- Killed the lingering `flyctl proxy 5432 -a cinderhaven-db` process
+  (PID 17268). Left the persistent `fly agent run` helper process alone —
+  that's shared infra for all flyctl commands, not a leftover.
+- Checked trade-spend-data-diagnostic, retailer-deduction-recovery, and
+  product-data-health-audit: all three were already clean and 0
+  ahead/behind origin — the 2026-06-30 "regen: reconcile..." commits
+  already covered what an earlier HANDOFF entry described as pending.
+  Nothing to commit or push.
+- cinderhaven-db pg check: user overrode the earlier REBUILD decision —
+  data already verified clean via verify_canonical.py this session, so
+  no reseed; and no 6-app DATABASE_URL cutover as a bolt-on to a
+  close-out task. Instead ran one clean, careful in-place repair attempt:
+  confirmed `flypgadmin` role exists/has a password (not a missing-role
+  problem), confirmed none of the 3 tracked secrets currently match it,
+  realigned it to `OPERATOR_PASSWORD` via a file-uploaded SQL script
+  (inline shell-quoting through `flyctl ssh console -C` had silently
+  corrupted the password to empty twice before this — see FAILURES.md),
+  then proved via independent, quoting-safe checks that (a) the DB-level
+  password is now provably correct and (b) the checker process's own
+  live environment has the identical value — and the checker STILL
+  rejects it. This rules out every credential-mismatch theory. Per the
+  user's explicit fallback, did NOT escalate to a fresh-Postgres-app
+  rebuild — documented as a scoped future task instead.
+- Re-archived `cinderhaven-data` via `gh api -X PATCH ... archived=true`.
+  Confirmed `"archived": true`.
+
+**State:** flyctl proxy gone. 3 downstream repos confirmed already
+in sync with origin, nothing pending. cinderhaven-data archived on
+GitHub. cinderhaven-db `pg` check still critical — but now backed by
+airtight proof it's not a credential-value problem, so no more
+SQL/secrets attempts are worth trying without Fly support or a genuine
+rebuild. App-facing `postgres` role and all 6 downstream apps unaffected
+throughout. `cinderhaven-db-pg-health-check-blocked` memory file has the
+full attempt-3 writeup.
+
+**Next:** If the pg check is ever worth fixing: provision a fresh Fly
+Postgres app (clean credentials from birth), run the seed pipeline
+against it, repoint the 6 apps' `DATABASE_URL` secrets — or open a Fly
+support ticket. Otherwise treat it as a known cosmetic-only red check.
+
+---
+
 ## 2026-07-02 — lailara-website footer fixes + cinderhaven-db pg check (still blocked)
 
 **Started from:** Fleet regen from the slotting-fix cascade truncated last
