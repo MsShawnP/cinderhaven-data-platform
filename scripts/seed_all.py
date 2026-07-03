@@ -6,6 +6,8 @@
 4. Distributor pipeline
 5. DTC/Shopify pipeline
 6. Scan data (depends on stores + distribution_log from shared)
+6.5. Void patterns for Void Finder (depends on scan data; adds the
+     never-scanned cluster, went-dark scatter, and store addresses)
 
 Usage:
     python scripts/seed_all.py
@@ -102,6 +104,9 @@ def main():
 
     print("\nStep 6: Seeding scan data (this is the big one)...")
     run_generator("seed_scan_data")
+
+    print("\nStep 6.5: Seeding void patterns (Void Finder)...")
+    run_generator("seed_void_patterns")
 
     print("\nStep 7: Verifying...")
     conn = psycopg2.connect(DATABASE_URL)
