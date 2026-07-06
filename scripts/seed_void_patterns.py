@@ -47,10 +47,16 @@ CLUSTER_REGION = "Southeast"
 CLUSTER_SKUS = ["CHP-AS-001", "CHP-AS-002", "CHP-AS-006"]
 MOD_RESET_AUTH_DATE = date(2025, 6, 30)
 
-# Went-dark scatter.
-WENT_DARK_PAIRS = 30
-WENT_DARK_MIN_WEEKS = 8    # dark at least this many weeks by WINDOW_END
-WENT_DARK_MAX_WEEKS = 20
+# Went-dark scatter — realistic background voids at every banner. Real
+# CPG brands carry ~1-3% of item-store combos dark at any time, skewed
+# but never zero. We sample a share of each retailer's currently-
+# scanning pairs (with a floor so the small banners still show), so all
+# six retailers and all five regions carry nonzero background voids
+# while the Kroger-SE never-scanned cluster stays the dominant story.
+WENT_DARK_TARGET_RATE = 0.022      # ~2.2% of each retailer's live pairs
+WENT_DARK_MIN_PER_RETAILER = 12    # floor so small banners aren't ~zero
+WENT_DARK_MIN_WEEKS = 6            # dark at least this many weeks by WINDOW_END
+WENT_DARK_MAX_WEEKS = 40           # varied staleness
 # Never touch SKUs whose velocity patterns other tools curate.
 CURATED_SKUS = {
     # seed_scan_data.DELIST_RISK_SKUS + BORDERLINE_SKUS, flattened.
@@ -65,8 +71,8 @@ CURATED_SKUS = {
 } | set(CLUSTER_SKUS)
 
 # Deletion guard: abort if any retailer loses more than this share of
-# its trailing-52-week scan revenue (locked tolerance is 2%).
-MAX_RETAILER_REVENUE_DELETION = 0.01
+# its trailing-52-week scan revenue (locked canonical tolerance is 2%).
+MAX_RETAILER_REVENUE_DELETION = 0.015
 
 _CITIES = {
     "NY": ["Albany", "Buffalo", "Rochester"], "NJ": ["Newark", "Trenton"],
@@ -107,7 +113,7 @@ def seed_cluster(cur) -> int:
     )
     cluster_stores = [r[0] for r in cur.fetchall()]
 
-    inserted = 0
+    inserted_pairs = []
     for sku in CLUSTER_SKUS:
         cur.execute(
             "SELECT store_id FROM raw.distribution_log WHERE sku = %s",
@@ -123,42 +129,58 @@ def seed_cluster(cur) -> int:
                 "VALUES (%s, %s, %s, NULL)",
                 (sku, store_id, MOD_RESET_AUTH_DATE),
             )
-            inserted += 1
+            inserted_pairs.append((sku, store_id))
 
-    # Defensive: a reseeded scan table generated after these auths
-    # would have scans for the new pairs — the mod reset means the
-    # set never happened, so those rows must not exist.
-    cur.execute(
-        "DELETE FROM raw.scan_data sd USING raw.stores s "
-        "WHERE sd.store_id = s.store_id "
-        "AND s.retailer_id = %s AND s.region = %s "
-        "AND sd.sku = ANY(%s) AND sd.week_ending >= %s",
-        (CLUSTER_RETAILER, CLUSTER_REGION, CLUSTER_SKUS, MOD_RESET_AUTH_DATE),
-    )
-    return inserted
+    # Defensive: a reseeded scan table generated after these auths could
+    # carry scans for the NEWLY-authorized pairs — the mod reset means
+    # their shelf set never happened, so those rows must not exist. Only
+    # the inserted pairs are cleared; pre-existing pairs that already
+    # carried a cluster SKU keep scanning, so we never manufacture
+    # spurious went-dark voids at the cluster retailer.
+    for sku, store_id in inserted_pairs:
+        cur.execute(
+            "DELETE FROM raw.scan_data WHERE sku = %s AND store_id = %s "
+            "AND week_ending >= %s",
+            (sku, store_id, MOD_RESET_AUTH_DATE),
+        )
+    return len(inserted_pairs)
 
 
 def pick_went_dark_pairs(cur):
-    """Deterministic sample of healthy, currently-scanning pairs."""
+    """Deterministic, retailer-stratified sample of healthy, currently-
+    scanning pairs. Each retailer contributes a share of its own live
+    pairs (with a floor), so background voids scatter across all six
+    banners and all five regions instead of piling onto one. The
+    Kroger-SE cluster cell is reserved for the never-scanned story."""
     rng = init_rng(seed=VOID_SEED)
     recent_cutoff = WINDOW_END - timedelta(weeks=4)
     cur.execute(
         """
-        SELECT sd.sku, sd.store_id
+        SELECT s.retailer_id, sd.sku, sd.store_id
         FROM raw.scan_data sd
         JOIN raw.stores s ON s.store_id = sd.store_id
         WHERE sd.week_ending >= %s
           AND NOT (s.retailer_id = %s AND s.region = %s)
-        GROUP BY sd.sku, sd.store_id
-        ORDER BY sd.sku, sd.store_id
+        GROUP BY s.retailer_id, sd.sku, sd.store_id
+        ORDER BY s.retailer_id, sd.sku, sd.store_id
         """,
         (recent_cutoff, CLUSTER_RETAILER, CLUSTER_REGION),
     )
-    candidates = [
-        (sku, store_id) for sku, store_id in cur.fetchall()
-        if sku not in CURATED_SKUS
-    ]
-    picked = rng.sample(candidates, min(WENT_DARK_PAIRS, len(candidates)))
+    by_retailer: dict[str, list] = {}
+    for retailer_id, sku, store_id in cur.fetchall():
+        if sku in CURATED_SKUS:
+            continue
+        by_retailer.setdefault(retailer_id, []).append((sku, store_id))
+
+    picked = []
+    for retailer_id, candidates in sorted(by_retailer.items()):
+        k = max(
+            WENT_DARK_MIN_PER_RETAILER,
+            round(len(candidates) * WENT_DARK_TARGET_RATE),
+        )
+        k = min(k, len(candidates))
+        picked.extend(rng.sample(candidates, k))
+
     cutoffs = {
         pair: WINDOW_END - timedelta(
             weeks=rng.randint(WENT_DARK_MIN_WEEKS, WENT_DARK_MAX_WEEKS)
@@ -261,7 +283,7 @@ def main():
     inserted = seed_cluster(cur)
     print(f"  cluster authorizations inserted: {inserted}")
 
-    print(f"Seeding went-dark scatter ({WENT_DARK_PAIRS} pairs)...")
+    print("Seeding went-dark scatter (retailer-stratified)...")
     cutoffs = pick_went_dark_pairs(cur)
     deleted = apply_went_dark(cur, cutoffs)
     check_deletion_guard(cur, deleted)
