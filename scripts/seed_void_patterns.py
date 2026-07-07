@@ -1,6 +1,6 @@
 """Seed void patterns for Void Finder (tool #5).
 
-Two patterns, mirroring how voids happen in the wild:
+Three patterns, mirroring how voids happen in the wild:
 
 1. NEVER-SCANNED CLUSTER — the "aha": a mid-2025 planogram reset at
    one retailer+region authorized a product line's star items in
@@ -9,6 +9,13 @@ Two patterns, mirroring how voids happen in the wild:
    (sku, store) pairs that were NOT previously authorized. No scan
    rows exist for those pairs, so nothing is deleted and the locked
    canonical revenue figures cannot move.
+
+1b. NEVER-SCANNED SCATTER — isolated new-item setup failures happen at
+   every banner, not just the cluster retailer. A handful of stores
+   (1-3 per non-cluster banner) were authorized for a healthy item and
+   the shelf set never happened. Same INSERT-only mechanism as the
+   cluster (no scans, no revenue movement), sized so each banner shows
+   a small nonzero never-scanned bar while the cluster stays dominant.
 
 2. WENT-DARK SCATTER — items that were selling and quietly stopped:
    a deterministic sample of healthy (sku, store) pairs across all
@@ -46,6 +53,25 @@ CLUSTER_REGION = "Southeast"
 # the Velocity Decision Tool's stories stay untouched.
 CLUSTER_SKUS = ["CHP-AS-001", "CHP-AS-002", "CHP-AS-006"]
 MOD_RESET_AUTH_DATE = date(2025, 6, 30)
+
+# Never-scanned SCATTER — isolated new-item setup failures at the five
+# non-cluster banners. One healthy, uncurated item per banner (Dried
+# Goods / Snack Bites lines — no other tool curates their velocity, and
+# each scans at every banner so the void gets clean tier+region
+# comparables). Authorized in a recent reset with no scan rows, so each
+# banner shows a small nonzero never-scanned bar while the Kroger-SE
+# cluster stays the dominant story. INSERT-only: canonical revenue can't
+# move. Recent auth dates keep void_weeks (hence dollars) small.
+NEVER_SCATTER_SEED = 720
+NEVER_SCATTER_MIN_STORES = 1
+NEVER_SCATTER_MAX_STORES = 3
+NEVER_SCATTER_ASSIGNMENTS = [
+    ("RET-WALMART",    "CHP-DG-007", date(2025, 10, 24)),
+    ("RET-COSTCO",     "CHP-SB-001", date(2025, 11,  7)),
+    ("RET-WHOLEFOODS", "CHP-DG-002", date(2025, 10, 31)),
+    ("RET-SPROUTS",    "CHP-SB-006", date(2025, 11,  7)),
+    ("RET-REGIONAL",   "CHP-DG-010", date(2025, 10, 24)),
+]
 
 # Went-dark scatter — realistic background voids at every banner. Real
 # CPG brands carry ~1-3% of item-store combos dark at any time, skewed
@@ -142,6 +168,51 @@ def seed_cluster(cur) -> int:
             "DELETE FROM raw.scan_data WHERE sku = %s AND store_id = %s "
             "AND week_ending >= %s",
             (sku, store_id, MOD_RESET_AUTH_DATE),
+        )
+    return len(inserted_pairs)
+
+
+def seed_never_scanned_scatter(cur) -> int:
+    """Authorize a small, unclustered set of never-scanned voids across
+    the five non-cluster banners. One healthy uncurated item per banner,
+    1-3 stores that don't already carry it, authorized recently with no
+    scans. Returns pairs inserted. INSERT-only, like the cluster: no scan
+    rows exist for these pairs, so locked canonical revenue cannot move."""
+    rng = init_rng(seed=NEVER_SCATTER_SEED)
+    inserted_pairs = []
+    for retailer_id, sku, auth_date in NEVER_SCATTER_ASSIGNMENTS:
+        cur.execute(
+            "SELECT store_id FROM raw.distribution_log WHERE sku = %s",
+            (sku,),
+        )
+        already = {r[0] for r in cur.fetchall()}
+        cur.execute(
+            "SELECT store_id FROM raw.stores WHERE retailer_id = %s ORDER BY store_id",
+            (retailer_id,),
+        )
+        candidates = [r[0] for r in cur.fetchall() if r[0] not in already]
+        if not candidates:
+            continue
+        k = min(
+            rng.randint(NEVER_SCATTER_MIN_STORES, NEVER_SCATTER_MAX_STORES),
+            len(candidates),
+        )
+        for store_id in rng.sample(candidates, k):
+            cur.execute(
+                "INSERT INTO raw.distribution_log "
+                "(sku, store_id, authorized_date, deauthorized_date) "
+                "VALUES (%s, %s, %s, NULL)",
+                (sku, store_id, auth_date),
+            )
+            inserted_pairs.append((sku, store_id, auth_date))
+
+    # Defensive (mirrors the cluster): a scan table regenerated after
+    # these auths must not carry scans for the never-scanned pairs.
+    for sku, store_id, auth_date in inserted_pairs:
+        cur.execute(
+            "DELETE FROM raw.scan_data WHERE sku = %s AND store_id = %s "
+            "AND week_ending >= %s",
+            (sku, store_id, auth_date),
         )
     return len(inserted_pairs)
 
@@ -282,6 +353,11 @@ def main():
           f"({CLUSTER_RETAILER} × {CLUSTER_REGION} × {len(CLUSTER_SKUS)} SKUs)...")
     inserted = seed_cluster(cur)
     print(f"  cluster authorizations inserted: {inserted}")
+
+    print("Seeding never-scanned scatter "
+          f"({len(NEVER_SCATTER_ASSIGNMENTS)} non-cluster banners)...")
+    scattered = seed_never_scanned_scatter(cur)
+    print(f"  never-scanned scatter authorizations inserted: {scattered}")
 
     print("Seeding went-dark scatter (retailer-stratified)...")
     cutoffs = pick_went_dark_pairs(cur)
