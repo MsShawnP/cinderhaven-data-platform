@@ -9,6 +9,31 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-07-18 — Canonical drift check workflow fix
+
+**Started from:** No active arc. User reported canonical drift check
+GitHub Actions workflow failing since July 11 (3 consecutive daily
+failures).
+
+**Did:** Diagnosed root cause — `POSTGRES_PASSWORD` GitHub Actions
+secret out of sync with actual DB password. Likely drifted when Fly
+reconciled the `postgres` role to the modified `OPERATOR_PASSWORD`
+(changed July 2 during pg health check debugging) after an internal
+restart between July 10–11. Verified DB accessible with local .env
+password via flyctl proxy. Updated GitHub secret via stdin pipe from
+.env (credential never exposed). Triggered manual run — passed.
+
+**State:** Canonical drift check green again. Fly.io DB running,
+pg health check still cosmetic-critical (known, documented). No code
+changes — only the GitHub Actions secret was updated. flyctl proxy
+may be running on port 5433 (will die on reboot).
+
+**Next:** No active work arc. Outstanding items: pg health check
+rebuild (Fly support or fresh app), recall-blast-radius DDL alignment.
+Otherwise choose new work.
+
+---
+
 ## 2026-07-02 (close-out) — flyctl proxy killed, 3 downstream repos already clean, cinderhaven-data re-archived, pg check PROVEN unrepairable in place
 
 **Started from:** Four-item close-out list: kill lingering flyctl proxy,
