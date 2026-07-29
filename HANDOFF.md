@@ -9,6 +9,102 @@ For things that didn't work, see FAILURES.md.
 
 ---
 
+## 2026-07-29 — Phase 1: canonical verified against Postgres, both contradictions resolved, pre-Phase-2 baseline recorded
+
+**Started from:** Two-phase instruction from user. Phase 1 (measure,
+read-only) to run tonight; Phase 2 (enrich the generator) explicitly
+blocked pending go-ahead — a CEO may see the live site within 48 hours
+and Phase 2 moves published figures across ~20 repos.
+
+**Did:**
+- Could not reach the live Fly Postgres — no `flyctl`, no Fly
+  credentials in this remote environment. Substituted a deterministic
+  local replica: native PostgreSQL 16 cluster, `scripts/seed_all.py`
+  (SEED=42, frozen block untouched), then `dbt build` — 457/457 PASS.
+  Replica reproduces every documented row count exactly (2,873/484
+  chargebacks, 14,947/1,970 deductions, 50 SKUs, 222 remittances);
+  `verify_canonical.py` zero delta, `check_canonical.py` 12/12 PASS.
+  Caveat recorded in canonical: this cannot detect a manual edit made
+  directly against production.
+- Verified 17 canonical figures. One drift found: trailing-52w scan
+  revenue measures **$32,323,139.62 against a documented $32.8M**
+  (−1.5%), passing the freeze guard only on its ±2% tolerance.
+  Deliberately NOT corrected in the locked tables — it is the
+  denominator for the published 11.0% / 9.8% / 1.2% trade rates, so
+  correcting it moves percentages portfolio-wide. Flagged for an
+  explicit user decision.
+- **Contradiction 1 resolved:** `invoiced == gross_payments` is exact
+  by construction. `generate_remittances()` partitions every order into
+  exactly one retailer-month remittance with `gross = sum(order
+  totals)`; `finalize_remittances()` sets `net = gross −
+  total_deductions`. No aging bucket, no bad-debt concept anywhere in
+  the schema. Uncollected receivables are $0. The data is right;
+  contract-to-cash's hero copy is wrong and needs rewriting.
+- **Contradiction 2 resolved:** 32,539,868 and 32,800,000 are the same
+  measure (trailing-52w scan revenue) at different generator vintages.
+  `seed_void_patterns.py` DELETEs scan rows under a ≤1% per-retailer
+  guard; each step stayed inside the 2% tolerance so canonical was
+  never updated. Both stale; current value $32,323,139.62.
+- Recorded the pre-Phase-2 baseline in canonical: revenue by year,
+  growth decomposition, trade rates, deduction rates by year and
+  partner, seasonality, COGS availability, authorizations, promotions.
+
+**Three Phase 2 premises measured as wrong:**
+- **COGS already exists.** Listed under NEEDED as "the number does not
+  exist." It exists at every layer — `raw.sku_costs`, `dim_products`,
+  `mart_channel_contribution`, `dim_category_benchmarks`,
+  `int_loaded_contribution_by_sku`. 85 cost/margin columns, populated
+  for 50/50 SKUs, margin 33.3%–65.3%. Whatever blocks the four tools,
+  it is not data availability.
+- **There is no growth to reshape.** Invoiced $25.09M / $25.64M /
+  $25.15M — flat, down in 2025. Doors fixed at 640 all three years, so
+  growth decomposes to 100% velocity / 0% new doors; active sku-store
+  pairs decline 9,943 → 9,584 → 9,127. Distribution-led growth would
+  have to be manufactured, not tilted.
+- **Seasonality exists and is strong** — CV 27.0%, 2.92×
+  peak-to-trough. Pooling all 3 years hides that 2023 is a launch ramp
+  (Jan index 8.3). True 2024–25 shape: Nov/Dec holiday peak, February
+  the second-weakest month (~70). Super Bowl peak genuinely absent, but
+  the fix is reshaping an existing signal, not adding one. If the
+  forecast tool renders noise against a 2.9× seasonal, that points at
+  the tool.
+
+Stop-date claims all confirmed: authorizations effectively end 2023
+(49 rows in 2025 are void-finder inserts), last deauthorization
+2024-11-10, promotions end 2024-11-03. Extra finding: `promo_billback`
+deductions continue through 2025 (546 rows), so billbacks already
+outlive the promotions that would justify them.
+
+Opportunistic check of one unsourced hypothesis: "best-selling SKU
+carries the worst margin" is false for #1 (margin rank 21/50), but #2
+and #5 sit in the worst four and revenue-vs-margin correlation is
+already −0.357. A mild version is in the data. Other unsourced
+hypotheses not investigated, per instruction.
+
+**State:** Commit `5c50a40` on `claude/cinderhaven-verify-enrich-het3l0`,
+pushed. Draft PR #1 open, CI green (`python-check`, `dbt-validate`).
+Documentation-only change — one file, `CINDERHAVEN_CANONICAL.md`, gains
+a "Verification Run 2026-07-29" section plus a "Last refreshed from
+Postgres" line. No locked figure edited, no generator or seed touched.
+Local replica still running on port 5432 (`/var/lib/postgresql/ccdata`);
+it is ephemeral to this container. Self check-in armed on PR #1.
+
+**Two setup discrepancies worth knowing:**
+`reference/CINDERHAVEN_CANONICAL.md` does not exist — the file is at the
+repo root, has no ASSERTED markers, no "Verification Queries" section,
+and does not name the two contradictions. Queries were written from
+scratch. If a separate copy is being edited elsewhere, the two have
+diverged.
+
+**Next:** Phase 2 is blocked pending explicit go-ahead. Before its
+change set is worth drafting, two things need resolving: what actually
+blocks the four margin tools given COGS exists, and whether the flat /
+declining revenue and fixed 640-door base get rewritten (a much larger
+change than "enrich"). Also open: whether to correct the $32.8M scan
+revenue denominator, which cascades to published trade rates.
+
+---
+
 ## 2026-07-18 — Canonical drift check workflow fix
 
 **Started from:** No active arc. User reported canonical drift check
