@@ -58,6 +58,35 @@ DOCUMENTED = {
     "Combined wholesale lifecycle (¢/$)": 89.08,
 }
 
+# Source the period-explicit values from the machine-readable SSOT so this
+# check compares like to like instead of trusting prose. Default period is
+# cy2025; all-time counts are period-independent.
+CANONICAL_YAML = ROOT / "reference" / "canonical_values.yml"
+if not CANONICAL_YAML.exists():
+    print(
+        f"canonical file not found at {CANONICAL_YAML} — this is a hard "
+        f"failure, not a skip. A drift check that silently finds nothing "
+        f"passes green while checking nothing; refusing to do that.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+try:
+    import yaml
+except ImportError:
+    print("PyYAML not installed. pip install pyyaml", file=sys.stderr)
+    sys.exit(1)
+_cv = yaml.safe_load(CANONICAL_YAML.read_text(encoding="utf-8"))
+DOCUMENTED["SKU count"] = _cv["universe"]["skus_total"]["all_time"]
+DOCUMENTED["Product lines"] = _cv["universe"]["product_lines"]["all_time"]
+DOCUMENTED["Contracted retailers"] = _cv["universe"]["retailers"]["all_time"]
+DOCUMENTED["Distributors"] = _cv["universe"]["distributors"]["all_time"]
+DOCUMENTED["Chargebacks retailer"] = _cv["chargebacks"]["retailer_count"]["all_time"]
+DOCUMENTED["Chargebacks distributor"] = _cv["chargebacks"]["distributor_count"]["all_time"]
+DOCUMENTED["Chargebacks total"] = (
+    _cv["chargebacks"]["retailer_count"]["all_time"]
+    + _cv["chargebacks"]["distributor_count"]["all_time"]
+)
+
 rows: list[tuple[str, object, object]] = []  # (label, live, documented)
 
 

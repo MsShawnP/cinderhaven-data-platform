@@ -16,7 +16,7 @@ from pathlib import Path
 
 import psycopg2
 
-CANONICAL_PATH = Path(__file__).resolve().parent.parent / "CINDERHAVEN_CANONICAL.md"
+CANONICAL_PATH = Path(__file__).resolve().parent.parent / "reference" / "CINDERHAVEN_CANONICAL.md"
 
 TOLERANCE_PCT = 0.02  # 2% tolerance on dollar figures
 TOLERANCE_RATE_PP = 0.005  # 0.5 percentage points on rates
@@ -81,6 +81,12 @@ def to_float(val):
 
 
 def parse_canonical():
+    if not CANONICAL_PATH.exists():
+        raise SystemExit(
+            f"canonical file not found at {CANONICAL_PATH} — this is a hard "
+            f"failure, not a skip. A drift check that silently finds nothing "
+            f"passes green while checking nothing; refusing to do that."
+        )
     text = CANONICAL_PATH.read_text(encoding="utf-8")
     expected = {}
 
