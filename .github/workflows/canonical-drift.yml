@@ -44,5 +44,10 @@ jobs:
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          DATABASE_URL="postgresql://postgres:REDACTED@localhost:5432/cinderhaven" \
+          # Interpolate the secret from the step env at runtime. It must NOT be
+          # committed literally: a prior "redact creds" pass replaced it with the
+          # literal string REDACTED, which silently broke auth (the job sent
+          # "REDACTED" as the password). Keep the secret out of the file AND
+          # functional by expanding $POSTGRES_PASSWORD here.
+          DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/cinderhaven" \
             python scripts/verify_canonical.py
