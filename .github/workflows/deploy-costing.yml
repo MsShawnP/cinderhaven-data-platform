@@ -1,0 +1,220 @@
+name: Deploy costing schema to production
+
+# Deploys the additive `costing` schema (cost side + balance sheet) to the
+# production Fly Postgres.
+#
+# DISPATCH ONLY. Never on push, never on schedule. This job executes DDL and a
+# generator against production, unlike canonical-drift.yml which is read-only.
+#
+# Safety properties:
+#   - A pre-flight guard refuses to run if `costing` already holds rows, unless
+#     force_recreate is explicitly set. costing_schema.sql opens with
+#     DROP SCHEMA IF EXISTS costing CASCADE, so this guard is the only thing
+#     standing between a re-run and silent data loss.
+#   - The nine protected tables are hashed before and after. Any delta fails
+#     the job loudly and immediately.
+#   - seed_all.py is NEVER invoked. It drops and recreates the raw schema.
+#   - The job does not merge, tag, or deploy anything else.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_recreate:
+        description: "Drop and recreate `costing` even if it already holds rows (DESTRUCTIVE)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: deploy-costing-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: cinderhaven
+      PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          pip install psycopg2-binary
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Install flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Open proxy to production
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl proxy 5432:5432 -a cinderhaven-db &
+          for i in $(seq 1 30); do
+            (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1 && break
+            sleep 1
+          done
+          pg_isready -h localhost -p 5432
+
+      # ── STEP 0 — the guard ────────────────────────────────────────
+      # Turns the unanswerable "does costing already exist in production?"
+      # into a decision the job makes for itself, before anything destructive.
+      - name: "Step 0: pre-flight guard on costing"
+        run: |
+          TABLES=$(psql -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='costing';")
+          echo "costing tables present: $TABLES"
+
+          ROWS=$(psql -tAc "
+            SELECT COALESCE(SUM((xpath('/row/cnt/text()', x))[1]::text::bigint), 0)
+            FROM (
+              SELECT query_to_xml(
+                       format('SELECT count(*) AS cnt FROM %I.%I', table_schema, table_name),
+                       false, true, '') AS x
+              FROM information_schema.tables WHERE table_schema='costing'
+            ) t;")
+          echo "costing rows present: $ROWS"
+
+          if [ "$ROWS" -gt 0 ]; then
+            echo "--- existing costing contents ---"
+            psql -c "
+              SELECT table_name,
+                     (xpath('/row/cnt/text()',
+                       query_to_xml(format('SELECT count(*) AS cnt FROM %I.%I', table_schema, table_name),
+                       false, true, '')))[1]::text::bigint AS rows
+              FROM information_schema.tables WHERE table_schema='costing' ORDER BY table_name;"
+
+            if [ "${{ inputs.force_recreate }}" != "true" ]; then
+              echo "::error::costing already exists in production WITH ROWS ($ROWS). Refusing to drop it. Re-dispatch with force_recreate=true only if you intend to destroy and rebuild it."
+              exit 1
+            fi
+            echo "::warning::force_recreate=true — dropping and rebuilding a populated costing schema."
+          fi
+
+      # ── STEP 1 — production baseline ──────────────────────────────
+      - name: "Step 1: baseline hashes for the nine protected tables"
+        run: |
+          cat > /tmp/hashes.sql <<'SQL'
+          SELECT 'fct_scan_data',             count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_scan_data t
+          UNION ALL SELECT 'fct_distribution',          count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_distribution t
+          UNION ALL SELECT 'fct_retailer_orders',       count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_retailer_orders t
+          UNION ALL SELECT 'fct_retailer_payments',     count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_retailer_payments t
+          UNION ALL SELECT 'fct_retailer_deductions',   count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_retailer_deductions t
+          UNION ALL SELECT 'fct_dtc_orders',            count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.fct_dtc_orders t
+          UNION ALL SELECT 'raw.sku_costs',             count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM raw.sku_costs t
+          UNION ALL SELECT 'dim_products',              count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.dim_products t
+          UNION ALL SELECT 'mart_channel_contribution', count(*), md5(string_agg(t::text,'|' ORDER BY t::text)) FROM public_marts.mart_channel_contribution t;
+          SQL
+          psql -tA -F'|' -f /tmp/hashes.sql | sed 's/ *$//' > /tmp/before.txt
+          echo "=== PRODUCTION BASELINE ==="
+          cat /tmp/before.txt
+
+      # ── STEP 2 — DDL, then generator ──────────────────────────────
+      # NOTE: seed_costing.py applies costing_schema.sql itself, so the DDL is
+      # executed twice. It is idempotent (DROP IF EXISTS / CREATE), and running
+      # it explicitly first keeps the DDL visible in the job log.
+      # seed_all.py is NOT run here and must never be.
+      - name: "Step 2a: apply costing DDL"
+        run: psql -v ON_ERROR_STOP=1 -f sql/costing_schema.sql
+
+      - name: "Step 2b: run the generator"
+        env:
+          DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/cinderhaven
+        run: python scripts/seed_costing.py
+
+      # ── STEP 3 — prove the hard rule held ─────────────────────────
+      - name: "Step 3: re-hash and fail on ANY delta"
+        run: |
+          psql -tA -F'|' -f /tmp/hashes.sql | sed 's/ *$//' > /tmp/after.txt
+          echo "=== PRODUCTION AFTER ==="
+          cat /tmp/after.txt
+          if diff -u /tmp/before.txt /tmp/after.txt; then
+            echo "*** IDENTICAL — all nine protected tables byte-for-byte unchanged ***"
+          else
+            echo "::error::PROTECTED TABLE CHANGED. Diff above shows which table and how. Deploy is unsafe; investigate before any further action."
+            exit 1
+          fi
+
+      # ── STEP 4 — acceptance + integrity ───────────────────────────
+      - name: "Step 4a: acceptance queries"
+        run: |
+          psql <<'SQL'
+          \echo '=== Margin path and PPV (documented: 45.01 / 42.36 / 39.62, blended 42.31) ==='
+          WITH rev AS (
+            SELECT EXTRACT(YEAR FROM po_date)::int yr, SUM(total_value) v FROM public_staging.stg_retailer_orders GROUP BY 1
+            UNION ALL SELECT EXTRACT(YEAR FROM po_date)::int, SUM(total_value) FROM public_staging.stg_distributor_orders GROUP BY 1
+            UNION ALL SELECT EXTRACT(YEAR FROM created_at)::int, SUM(total) FROM public_staging.stg_shopify_orders GROUP BY 1
+          ), r AS (SELECT yr, SUM(v) v FROM rev GROUP BY 1 HAVING SUM(v) > 1000000),
+          c AS (SELECT EXTRACT(YEAR FROM cost_period)::int yr,
+                  SUM(units_basis*fully_loaded_cost_per_unit) act,
+                  SUM(units_basis*loaded_cost_at_standard) std,
+                  SUM(purchase_price_variance) ppv,
+                  SUM(units_basis*standard_cost_per_unit) sc
+                FROM costing.fct_product_costs GROUP BY 1)
+          SELECT r.yr,
+                 (100.0*(1-c.act/r.v))::numeric(6,2) AS margin_actual,
+                 (100.0*(1-c.std/r.v))::numeric(6,2) AS margin_standard,
+                 c.ppv::numeric(14,2) AS ppv,
+                 (100.0*c.ppv/c.sc)::numeric(6,2) AS ppv_pct
+          FROM r JOIN c USING (yr) ORDER BY 1;
+
+          \echo '=== Blended (documented: actual 42.31, standard 42.46) ==='
+          WITH tot AS (
+            SELECT (SELECT SUM(total_value) FROM public_staging.stg_retailer_orders)
+                 + (SELECT SUM(total_value) FROM public_staging.stg_distributor_orders)
+                 + (SELECT SUM(total) FROM public_staging.stg_shopify_orders) AS rev)
+          SELECT (100.0*(1-SUM(units_basis*fully_loaded_cost_per_unit)/(SELECT rev FROM tot)))::numeric(6,2) AS blended_actual,
+                 (100.0*(1-SUM(units_basis*loaded_cost_at_standard)/(SELECT rev FROM tot)))::numeric(6,2) AS blended_standard,
+                 SUM(purchase_price_variance)::numeric(14,2) AS net_ppv
+          FROM costing.fct_product_costs;
+
+          \echo '=== DIO (documented 127.3) / DPO (33.6) ==='
+          WITH inv AS (SELECT snapshot_date, SUM(value_at_actual) v FROM costing.fct_inventory_snapshot GROUP BY 1),
+               cg  AS (SELECT SUM(units_basis*fully_loaded_cost_per_unit)/3.0 a FROM costing.fct_product_costs)
+          SELECT (AVG(v)/(SELECT a FROM cg)*365)::numeric(8,1) AS dio FROM inv;
+          SELECT AVG(paid_date-invoice_date)::numeric(8,1) AS dpo FROM costing.fct_supplier_invoices;
+
+          \echo '=== Supplier invoices vs COGS (documented +1.89%) ==='
+          SELECT (100.0*((SELECT SUM(invoice_amount) FROM costing.fct_supplier_invoices)
+                - (SELECT SUM(units_basis*manufactured_cost_per_unit) FROM costing.fct_product_costs))
+                / (SELECT SUM(units_basis*manufactured_cost_per_unit) FROM costing.fct_product_costs))::numeric(6,2) AS recon_pct;
+
+          \echo '=== SKU margin spread: width >= 30 points, position inherited (documented 25.81-60.94, width 35.12) ==='
+          WITH s AS (SELECT sku, SUM(units_basis*fully_loaded_cost_per_unit) c, SUM(units_basis) u
+                     FROM costing.fct_product_costs GROUP BY 1)
+          SELECT MIN(100.0*(1-s.c/(s.u*d.wholesale_price)))::numeric(6,2) AS min_margin,
+                 MAX(100.0*(1-s.c/(s.u*d.wholesale_price)))::numeric(6,2) AS max_margin,
+                 (MAX(100.0*(1-s.c/(s.u*d.wholesale_price))) - MIN(100.0*(1-s.c/(s.u*d.wholesale_price))))::numeric(6,2) AS width
+          FROM s JOIN public_marts.dim_products d USING (sku) WHERE s.u > 0;
+
+          \echo '=== Row counts ==='
+          SELECT table_name,
+                 (xpath('/row/cnt/text()',
+                   query_to_xml(format('SELECT count(*) AS cnt FROM %I.%I', table_schema, table_name),
+                   false, true, '')))[1]::text::bigint AS rows
+          FROM information_schema.tables WHERE table_schema='costing' ORDER BY table_name;
+          SQL
+
+      - name: "Step 4b: integrity suite (zero rows = pass)"
+        run: |
+          psql -v ON_ERROR_STOP=1 -tA -f tests/test_costing_integrity.sql > /tmp/integrity.txt
+          if [ -s /tmp/integrity.txt ]; then
+            echo "::error::Integrity failures:"; cat /tmp/integrity.txt; exit 1
+          fi
+          echo "Integrity suite: no failing checks."
+
+      # ── STEP 5 — report only ──────────────────────────────────────
+      - name: "Step 5: report"
+        run: |
+          echo "Deploy complete. Protected tables unchanged; acceptance and integrity ran above."
+          echo "Compare the acceptance output against the documented figures and update"
+          echo "CINDERHAVEN_CANONICAL.md only if production differs. This job deliberately"
+          echo "does NOT merge PR #1, wire any tool to costing.*, or touch the live apps."
