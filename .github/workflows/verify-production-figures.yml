@@ -56,6 +56,12 @@ jobs:
           done
           pg_isready -h localhost -p 5432
 
+      - name: "Canonical gather — every metric by basis and period"
+        run: |
+          echo "=== BEGIN CANONICAL GATHER ==="
+          psql -tA -v ON_ERROR_STOP=1 -f sql/canonical_gather.sql
+          echo "=== END CANONICAL GATHER ==="
+
       - name: "The four figures, re-measured in production"
         run: |
           psql <<'SQL'
