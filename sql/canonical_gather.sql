@@ -254,17 +254,26 @@ SELECT 'distribution.authorized_store_skus_active.'||p.period||'|'||(
   WHERE authorized_date <= p.d1 AND (deauthorized_date IS NULL OR deauthorized_date > p.d1))::text
 FROM p
 UNION ALL
--- void = authorized at period end but no scan in the period (distribution proxy; true ACV is not derivable)
-SELECT 'distribution.voids_authorized_not_scanned.'||p.period||'|'||COUNT(*)::text
-FROM p JOIN raw.distribution_log dl
-  ON dl.authorized_date <= p.d1 AND (dl.deauthorized_date IS NULL OR dl.deauthorized_date > p.d1)
-LEFT JOIN scanned sc ON sc.period=p.period AND sc.sku=dl.sku AND sc.store_id=dl.store_id
-WHERE sc.sku IS NULL GROUP BY p.period
+-- VOID (distribution proxy; NOT ACV — true ACV needs all-commodity store volume,
+-- which is not in this warehouse). A void = a store-SKU pair authorized at any
+-- point DURING the period that recorded no scan in the period. The correlated
+-- subquery is anchored on p, so every period emits a value including 0 (absent
+-- and zero must never look alike).
+SELECT 'distribution.voids_authorized_not_scanned.'||p.period||'|'||(
+  SELECT COUNT(*) FROM raw.distribution_log dl
+  LEFT JOIN scanned sc ON sc.period=p.period AND sc.sku=dl.sku AND sc.store_id=dl.store_id
+  WHERE dl.authorized_date <= p.d1 AND (dl.deauthorized_date IS NULL OR dl.deauthorized_date >= p.d0)
+    AND sc.sku IS NULL)::text
+FROM p
 UNION ALL
+-- DEFECT FIX: denominator is now pairs authorized DURING the period (overlap),
+-- a superset of pairs that sold, so the ratio cannot exceed 100%. The previous
+-- "authorized at period end" denominator excluded pairs sold-then-deauthorized,
+-- producing 103-105% readings.
 SELECT 'distribution.pct_authorized_selling.'||p.period||'|'||ROUND(100.0*
   (SELECT COUNT(*) FROM scanned sc WHERE sc.period=p.period)
  / NULLIF((SELECT COUNT(*) FROM raw.distribution_log dl
-   WHERE dl.authorized_date <= p.d1 AND (dl.deauthorized_date IS NULL OR dl.deauthorized_date > p.d1)),0)::numeric,2)::text
+   WHERE dl.authorized_date <= p.d1 AND (dl.deauthorized_date IS NULL OR dl.deauthorized_date >= p.d0)),0)::numeric,2)::text
 FROM p
 
 ORDER BY 1;
@@ -287,4 +296,13 @@ UNION ALL SELECT 'window.retailer_disputes|'||MIN(filed_date)||'|'||MAX(filed_da
 UNION ALL SELECT 'window.costing_product_costs|'||MIN(cost_period)||'|'||MAX(cost_period)||'|'||COUNT(*) FROM costing.fct_product_costs
 UNION ALL SELECT 'window.costing_inventory_snapshot|'||MIN(snapshot_date)||'|'||MAX(snapshot_date)||'|'||COUNT(*) FROM costing.fct_inventory_snapshot
 UNION ALL SELECT 'window.costing_supplier_invoices|'||MIN(invoice_date)||'|'||MAX(invoice_date)||'|'||COUNT(*) FROM costing.fct_supplier_invoices
+-- THE THREE DATA TAILS — "end of data" is not one date. A cross-table query
+-- that assumes a single max date will silently drop whichever table extends
+-- past it. Name all three explicitly.
+UNION ALL SELECT 'window.tail_scan|'||MAX(week_ending)||'||' FROM raw.scan_data
+UNION ALL SELECT 'window.tail_orders|'||GREATEST(
+   (SELECT MAX(po_date) FROM raw.retailer_orders),
+   (SELECT MAX(po_date) FROM raw.distributor_orders),
+   (SELECT MAX(created_at::date) FROM raw.shopify_orders))||'||'
+UNION ALL SELECT 'window.tail_supplier_invoices|'||MAX(invoice_date)||'||' FROM costing.fct_supplier_invoices
 ORDER BY 1;
