@@ -10,6 +10,7 @@ metadata:
 **Source of truth:** `scripts/seed_config.py` in this repo.
 **Rule:** Reconcile DOWN to this file. Never change this file to match a drifted repo.
 **Last verified:** 2026-06-13 (local certified replica; causal fulfillment arc Groups A–E accepted; Phase 4 relock)
+**Last refreshed from Postgres:** 2026-07-29 — see [Verification Run 2026-07-29](#verification-run-2026-07-29) at the end of this file.
 
 ---
 
@@ -403,3 +404,455 @@ freeze guard (`check_canonical.py`) is the gate.
 | $7.2M / 26.1% all-in | **~$3.4M/yr / 10.5%** | trade-spend-data-diagnostic |
 | 464 chargebacks | **837** | remittance brief, dimension-weight-integrity |
 | "18 months" window | **36 months** | remittance brief |
+
+---
+
+## Verification Run 2026-07-29
+
+**Substrate:** Deterministic local replica — PostgreSQL 16, seeded from
+`scripts/seed_all.py` (`SEED=42`, frozen block untouched), then
+`dbt build` (457/457 PASS, 0 errors). The live Fly.io Postgres was
+**not** reachable from this environment (no `flyctl`, no Fly
+credentials), so the replica stands in for it.
+
+**Why the replica is trustworthy as a stand-in:** every independently
+seeded row count reproduces the documented value exactly — retailer
+chargebacks 2,873; distributor chargebacks 484 (total 3,357); retailer
+deductions 14,947; distributor deductions 1,970 (total 16,917); 50 SKUs;
+6 retailers; 3 distributors; 222 retailer remittances. `verify_canonical.py`
+reports zero delta on all 11 figures it checks. `check_canonical.py`
+returns 12/12 PASS.
+
+**What the replica cannot prove:** that the live Fly database has not
+drifted from what the generator produces. Any manual post-seed edit made
+directly against production would be invisible here. Re-run against the
+live DB before treating this as a production reconciliation.
+
+### Status of checked figures
+
+| Figure | Documented | Measured 2026-07-29 | Status |
+|--------|-----------|---------------------|--------|
+| SKU count | 50 | 50 | ✅ VERIFIED |
+| Product lines | 5 | 5 | ✅ VERIFIED |
+| Contracted retailers | 6 | 6 | ✅ VERIFIED |
+| Distributors | 3 | 3 | ✅ VERIFIED |
+| Chargebacks retailer | 2,873 | 2,873 | ✅ VERIFIED |
+| Chargebacks distributor | 484 | 484 | ✅ VERIFIED |
+| Chargebacks total | 3,357 | 3,357 | ✅ VERIFIED |
+| Deductions retailer rows | 14,947 | 14,947 | ✅ VERIFIED |
+| Deductions retailer-only ($) | $1,118,682 | $1,118,681.92 | ✅ VERIFIED |
+| Deductions cross-channel rows | 16,917 | 16,917 | ✅ VERIFIED |
+| Gross invoiced (retailer, 36mo) | $52,128,777 | $52,128,777.36 | ✅ VERIFIED |
+| Lifecycle retailer (¢/$) | 87.2 | 87.2 | ✅ VERIFIED |
+| Lifecycle distributor (¢/$) | 93.13 | 93.13 | ✅ VERIFIED |
+| Lifecycle combined wholesale (¢/$) | 89.08 | 89.08 | ✅ VERIFIED |
+| All-in trade rate | 11.0% | 11.0% | ✅ VERIFIED |
+| Structural trade rate | 9.8% | 9.8% | ✅ VERIFIED |
+| Operational waste rate | 1.2% | 1.2% | ✅ VERIFIED |
+| **Scan revenue (trailing-52w)** | **$32.8M** | **$32,323,139.62** | ⚠️ **DRIFTED — see below** |
+
+### Scan revenue has drifted 1.5% below the documented figure
+
+`check_canonical.py` passes this row only because its tolerance is ±2%.
+The measured trailing-52-week scan revenue is **$32,323,139.62**, not
+$32.8M. Trailing-52w is identical to CY2025 in this dataset (both
+2025-01-04 → 2025-12-27); the two are not separate windows.
+
+This value is **not corrected in the tables above**, because the $32.8M
+figure is the denominator for the published all-in (11.0%), structural
+(9.8%) and operational-waste (1.2%) trade rates. Changing it moves
+published percentages across the portfolio. Flagged for an explicit
+decision rather than silently rewritten.
+
+### Contradiction 1 — RESOLVED: there are no uncollected receivables
+
+`b2b.invoiced == b2b.gross_payments` is exact, and it is exact **by
+construction**, not by coincidence:
+
+| Channel | Invoiced (36mo) | Gross payments | Difference |
+|---------|-----------------|----------------|------------|
+| Retailer | $52,128,777.36 | $52,128,777.36 | **$0.00** |
+| Distributor | $23,938,528.80 | $23,938,528.80 | **$0.00** |
+| B2B total | $76,067,306.16 | $76,067,306.16 | **$0.00** |
+| B2B net received | — | $67,762,602.19 | — |
+
+`generate_remittances()` in `scripts/seed_retailer.py` partitions every
+order into exactly one retailer-month remittance and sets
+`gross = sum(order totals)` for that partition. `finalize_remittances()`
+then sets `net = gross − total_deductions`. No order is ever omitted, and
+no invoice is ever left unpaid.
+
+**Verdict: the data is right; contract-to-cash's hero copy is wrong.**
+The $6.7M gap between invoiced and net received is entirely trade
+allowances, operational deductions, chargebacks and a timing residual.
+Uncollected receivables are **$0** — the dataset has no aging bucket, no
+bad-debt write-off, and no unpaid-invoice concept at all. Any copy
+attributing part of the gap to uncollected receivables must be rewritten.
+
+### Contradiction 2 — RESOLVED: same measure, three generator vintages
+
+32,539,868 and 32,800,000 are **the same measure** (trailing-52w scan
+revenue) computed at different points in the generator's history. Neither
+is currently reproducible:
+
+| Value | Source | Vintage |
+|-------|--------|---------|
+| $32,802,453 | voidfinder; `cinderhaven-plausibility-audit.md` line 195 records it as a live measurement | pre-causal-regen |
+| $32,539,868 | trade-spend-data-diagnostic; `generate_distressed_scenario.py` header still says "$32.5M trailing-52w" | post-causal, pre-void-seeding |
+| $32,472,000 | `HANDOFF.md` line 375, "Revenue $32.47M (target $32.8M ±2%)" | intermediate |
+| **$32,323,139.62** | **measured 2026-07-29** | **current** |
+
+The drift is downward and mechanical. `seed_void_patterns.py` DELETEs
+scan rows for the went-dark pattern, guarded to ≤1% of any retailer's
+trailing-52w revenue; the causal-fulfillment regen moved shipped units
+feeding scan before that. Because each step stayed inside
+`check_canonical.py`'s ±2% tolerance, the canonical figure was never
+updated. **Both pinned values are stale. The current value is
+$32,323,139.62.**
+
+### Pre-Phase-2 baseline
+
+Measured 2026-07-29. This is the "before" for any enrichment work.
+
+**Revenue by year — flat, and down in 2025**
+
+| Year | Scan revenue | Invoiced (B2B+DTC) | Selling doors | Rev/door |
+|------|-------------|--------------------|---------------|----------|
+| 2023 | $31,731,869.92 | $25,087,312.80 | 640 | $49,581.05 |
+| 2024 | $35,003,729.31 | $25,639,325.04 | 640 | $54,693.33 |
+| 2025 | $32,323,139.62 | $25,150,015.20 | 640 | $50,504.91 |
+
+**Growth decomposition — 100% velocity, 0% doors**
+
+| Year | YoY change | From new doors | From velocity, same doors | Lost to dropped doors |
+|------|-----------|----------------|---------------------------|----------------------|
+| 2024 | +$3,271,859.39 | **$0.00** | +$3,271,859.39 | $0.00 |
+| 2025 | −$2,680,589.69 | **$0.00** | −$2,680,589.69 | $0.00 |
+
+The door base is fixed at 640 in all three years (640 of 640 stores
+appear in every year). There is no door acquisition and no door loss.
+Active sku-store pairs *decline* monotonically: 9,943 → 9,584 → 9,127.
+
+**Trade spend — flat, bottom of the industry range**
+
+| Year | Structural | Op waste | All-in | % of invoiced | % of scan |
+|------|-----------|----------|--------|---------------|-----------|
+| 2023 | $1,494,739.52 | $280,103.40 | $1,774,842.92 | 11.30% | 5.59% |
+| 2024 | $1,602,976.44 | $346,672.47 | $1,949,648.91 | 11.61% | 5.57% |
+| 2025 | $1,653,699.53 | $344,655.01 | $1,998,354.54 | 11.50% | 6.18% |
+
+Trade allowance as % of gross invoiced is 9.52% / 9.54% / 9.51% — flat to
+three years and two decimal places. No escalation.
+
+**Deduction rate as % of invoice, by year (retailer)**
+
+| Year | Gross | Total deductions | All-in % | Excl. trade % |
+|------|-------|------------------|----------|---------------|
+| 2023 | $15,707,584.32 | $2,025,256.08 | 12.89% | 3.38% |
+| 2024 | $16,797,432.00 | $2,169,623.43 | 12.92% | 3.37% |
+| 2025 | $17,380,018.08 | $2,219,813.89 | 12.77% | 3.26% |
+
+**By partner (36mo, retailer)**
+
+| Partner | Gross | Total deductions | All-in % | Excl. trade % |
+|---------|-------|------------------|----------|---------------|
+| Walmart | $10,789,650.00 | $1,689,426.84 | 15.66% | 3.66% |
+| Costco | $6,608,810.88 | $885,648.11 | 13.40% | 3.40% |
+| Kroger | $10,557,622.80 | $1,400,796.47 | 13.27% | 3.27% |
+| Sprouts | $8,259,744.72 | $995,924.03 | 12.06% | 3.06% |
+| Whole Foods | $9,832,363.68 | $1,083,174.30 | 11.02% | 3.02% |
+| Regional Group | $6,080,585.28 | $606,253.61 | 9.97% | 2.97% |
+
+Excluding trade, the partner spread is 2.97%–3.66% — a 0.69pt band across
+six retailers, and flat year over year. Deduction-type counts grow only
+in proportion to volume; the mix does not shift.
+
+**Seasonality — present, but the wrong shape**
+
+Week-of-year revenue: mean $1,904,975.75, stddev $513,763.53,
+**coefficient of variation 27.0%**, peak-to-trough ratio **2.92×**.
+
+There *is* a strong, repeating seasonal signal — the claim that the data
+carries none is incorrect. The problem is its shape. Monthly index
+(100 = that year's mean month):
+
+| Month | 2023 | 2024 | 2025 |
+|-------|------|------|------|
+| Jan | 8.3 | 67.9 | 65.5 |
+| **Feb** | 22.1 | **72.1** | **69.9** |
+| Mar | 38.8 | 98.1 | 95.8 |
+| Apr | 78.7 | 86.7 | 85.6 |
+| May | 88.6 | 93.5 | 116.9 |
+| Jun | 107.1 | 119.2 | 94.2 |
+| Jul | 143.1 | 90.8 | 90.8 |
+| Aug | 112.9 | 112.0 | 112.7 |
+| Sep | 143.6 | 91.6 | 92.7 |
+| Oct | 121.4 | 97.5 | 98.8 |
+| Nov | 142.4 | 144.2 | 147.4 |
+| Dec | 193.1 | 126.4 | 129.7 |
+
+2023 is a launch ramp (index 8.3 in January), not seasonality; pooling
+all three years hides this behind an apparent monotonic Jan→Dec climb.
+2024 and 2025 show the true repeating pattern: a **November/December
+holiday peak** and a **January/February trough**. February is the
+second-weakest month of the year, at index ~70. For a salsa and dips
+brand this is backwards — there is no Super Bowl peak, and no distinct
+summer lift beyond a mild August bump (~112).
+
+**COGS, unit cost and margin — present at every layer**
+
+85 cost/margin columns exist across `raw`, `public_staging`,
+`public_intermediate` and `public_marts`. The core ones:
+
+| Table | Columns |
+|-------|---------|
+| `raw.sku_costs` | `cogs_per_unit`, `landed_cost_per_unit`, 8 per-channel wholesale prices |
+| `public_marts.dim_products` | `cogs_per_unit`, `landed_cost_per_unit`, `margin_pct`, `margin_per_unit`, `dtc_margin_pct`, `dtc_margin_per_unit` |
+| `public_marts.mart_channel_contribution` | `total_cogs`, `gross_margin`, `contribution_margin` |
+| `public_marts.dim_category_benchmarks` | `avg_cogs`, `avg_margin_pct`, `avg_margin_per_unit` |
+| `public_intermediate.int_loaded_contribution_by_sku` | `total_cogs`, `loaded_margin_pct` |
+
+Populated, not empty: 50 of 50 SKUs carry non-null COGS and margin.
+`cogs_per_unit` ranges $0.85–$4.50; `margin_pct` ranges 33.3%–65.3%,
+mean 55.0%. `mart_channel_contribution` reports contribution margin of
+$26,451,613.64 retailer / $10,806,054.93 distributor / $299,091.42 DTC.
+
+**Authorizations and deauthorizations**
+
+| Year | Authorizations | Deauthorizations |
+|------|---------------|------------------|
+| 2023 | 9,943 | 352 |
+| 2024 | 0 | 464 |
+| 2025 | 49 | 0 |
+
+9,992 rows total, 816 carrying a deauthorization date. Authorizations are
+a single 2023 bulk load plus 49 rows inserted in 2025 by
+`seed_void_patterns.py`. Last deauthorization **2024-11-10**. Confirmed.
+
+**Promotions**
+
+123 rows, `2023-01-02` → `2024-11-03`. None in 2025.
+
+| Year | Promos | Promo cost | Avg depth |
+|------|--------|-----------|-----------|
+| 2023 | 69 | $194,512.94 | 17.78% |
+| 2024 | 54 | $134,377.94 | 18.23% |
+
+Types: ad_circular 31, digital_coupon 24, BOGO 24, endcap 23, TPR 21.
+`promo_billback` deductions, by contrast, continue through 2025 (456 /
+547 / 546 rows), so billbacks already outlive the promotions that would
+justify them.
+
+### One unsourced hypothesis, checked opportunistically
+
+"The best-selling SKU carries the worst margin" is **not currently true**,
+but a weaker version of it already is. The #1 seller (CHP-AS-006,
+$9,801,764.61) ranks 21st of 50 on worst margin (53.8%). However the #2
+seller (CHP-PS-002) ranks 4th-worst at 46.1% and the #5 seller
+(CHP-PS-009) ranks 2nd-worst at 41.4%. Pearson correlation between SKU
+revenue and `margin_pct` is **−0.357** — a real, mild inverse
+relationship already in the data. The remaining unsourced hypotheses were
+not investigated, per instruction.
+
+---
+
+## Cost Side and Balance Sheet — VERIFIED-AGAINST-PRODUCTION 2026-07-29
+
+**Source:** `costing` schema, generated by `scripts/seed_costing.py` (SEED=800,
+isolated stream) against the certified local replica. DDL in
+`sql/costing_schema.sql`; integrity in `tests/test_costing_integrity.sql`.
+
+**Additive:** all nine protected tables verified byte-identical by content hash
+before and after generation — `fct_scan_data`, `fct_distribution`,
+`fct_retailer_orders`, `fct_retailer_payments`, `fct_retailer_deductions`,
+`fct_dtc_orders`, `raw.sku_costs`, `dim_products`, `mart_channel_contribution`.
+
+### The five margin lines — NAME THE BASIS, ALWAYS
+
+There is no single "Cinderhaven margin." Five lines are live, all real, all
+different. Citing one without its basis is the defect this section exists to
+prevent.
+
+| # | Line | Basis | Value | Where |
+|---|------|-------|-------|-------|
+| 1 | Gross margin at standard | `cogs_per_unit`; ingredient+packaging+conversion, no freight/overhead | **51.98%** ✅prod | `raw.sku_costs`, `dim_products.margin_pct` |
+| 2 | Contribution after commercial costs | line 1 less deductions, chargebacks, **promotional** trade, fulfilment, fees | **49.01%** ✅prod | `mart_channel_contribution` |
+| 3 | Gross margin at landed | `landed_cost_per_unit` — legacy, see SUPERSEDES | **~43.5%** | latent in `raw.sku_costs`; never surfaced as a margin |
+| 4 | **Loaded margin at standard** | standard + freight-in + overhead | **42.46%**, flat every year | `costing.fct_product_costs.loaded_cost_at_standard` |
+| 5 | **Loaded margin at actual** | manufactured (actual) + freight-in + overhead | **42.31%** blended | `costing.fct_product_costs.fully_loaded_cost_per_unit` |
+
+**Lines 4 and 5 differ by PPV and nothing else.** Line 4 is flat by
+construction because the standard is frozen; line 5 carries the compression.
+Computing margin from `manufactured_cost_per_unit` gives line 5, not line 4.
+
+**Line 2 basis note (mandatory):** contribution after **promotional spend
+only; excludes structural trade allowances**. `total_trade_spend` there is
+$328,890.88, sourced from `promotions.promo_cost`. The structural trade
+allowance in the remittances is $4,967,008.48 — a 15× difference. Without this
+note the table reads as contradicting the canonical trade figures.
+
+### Margin compression — it lives in PPV
+
+| Year | Loaded margin at ACTUAL | Loaded margin at STANDARD | PPV | PPV % of standard COGS |
+|------|------------------------|---------------------------|-----|------------------------|
+| 2023 | **45.01%** | 42.35% | −$672,805.65 | −5.53% (favorable) |
+| 2024 | **42.36%** | 42.49% | +$33,414.13 | +0.27% |
+| 2025 | **39.62%** | 42.54% | +$742,129.58 | +6.11% (unfavorable) |
+| 3-yr | **42.31%** | 42.46% | **+$111,143.93** | **+0.30%** |
+
+**Why net PPV is near zero — read this before concluding it was back-solved.**
+`standard_cost_per_unit` is set ONCE at launch from `cogs_per_unit` and never
+revised. It carries a **conservative pad**: it was set above expected cost, so
+2023 came in 5.5% favorable. Input inflation and lost scale then consumed the
+pad and pushed actual 6.1% above standard by 2025. Net +0.3% over three years
+is the arithmetic consequence of a pad that was roughly one cycle's worth of
+cost — not a figure fitted to the blended target. The story is the *trajectory*
+(−5.5 → +6.1), not the net.
+
+### Working capital
+
+| Metric | Value | Basis |
+|--------|-------|-------|
+| **DIO** | **127.3 days** | avg `fct_inventory_snapshot.value_at_actual` ÷ annual loaded COGS × 365 |
+| **DSO** | **25.6 days** ✅prod (25.58 measured) | **MEASURED, not generated** — value-weighted order-PO-date to cash-receipt across 49,649 orders |
+| **DPO** | **33.6 days** | avg `paid_date − invoice_date`, `fct_supplier_invoices` |
+| **CCC** | **119.3 days** | DIO + DSO − DPO |
+
+**DSO is measured and structural.** `generate_remittances()` sets
+`received = month_start + randint(25,55)`, so the ~26-day lag is by
+construction. It is NOT the 75 days a Net-45 assumption would imply. CCC 119.3
+sits inside the published 45–210 CPG range and says the cash is trapped in
+**inventory, not receivables** — Cinderhaven collects fast and holds four
+months of stock.
+
+A 75-day sensitivity ("at industry-standard Net 45 terms CCC would be ~160
+days") is a legitimate analytical point and belongs in a tool's copy as a
+stated scenario. **It must not be added to any table as data** — a modelled
+figure beside a measured one is a number readers must be told how to read.
+
+### COGS
+
+| Measure | Value | Basis |
+|---------|-------|-------|
+| Manufactured COGS (36mo) | $36,910,058.28 | actual; = copack invoice total ±2% |
+| Fully-loaded COGS (36mo) | $44,206,596.70 | manufactured + freight-in + overhead |
+| Supplier invoice reconciliation | **+1.89%** | within the ±2% target; residual is freight surcharges, MOQ fees and short-ship credits |
+
+### SKU margin spread — CRITERION RESTATED 2026-07-29
+
+**Canonical value: 25.81% – 60.94%, width 35.12 points.**
+
+**Criterion: SKU margin spread ≥ 30 points, position inherited from
+`raw.sku_costs`.**
+
+The earlier target "roughly 22%–55%" was **invented, not sourced** — the same
+class of unsupported illustration as the trade-spend escalation trajectory and
+the best-seller-worst-margin claim, both already retracted. What mattered was
+*width*, and the build exceeds it: 35.1 points against 33.
+
+**Do not attempt to move the position.** SKU margin is
+`1 − loaded_cost / wholesale_price`. Both `wholesale_price` and `cogs_per_unit`
+live in `raw.sku_costs`, which is frozen. Freight is anchored in aggregate and
+must track weight; overhead is 1% of revenue and moves the spread by ~0.01pp.
+**The only way to hit an invented position target is to modify protected
+pricing data, which would move every published margin figure in the
+portfolio.** That is permanently out of scope, not deferred. If a future
+session sees a red check here, the check is wrong — this note is the fix.
+
+### Master-data defect now carries a price
+
+21 of 50 SKUs lack complete case dimensions, fall to NMFC class 175, and carry
+the cost explicitly in `fct_product_costs.freight_penalty_per_unit`.
+product-data-health-audit has, for the first time, a dollar cost attached to a
+data-quality defect as a first-class column rather than an inference.
+
+### UNSOURCED — do not cite as verified
+
+**Shelf life by product line** (18 / 24 / 18 / 12 / 9 months for Artisan
+Sauces / Pantry Staples / Specialty Condiments / Dried Goods / Snack Bites) is
+drawn from general food-industry norms, **not** a cited category database. It
+drives `dim_inventory_lots.expiry_date` and every short-dated-inventory figure
+downstream. Validate against SPINS/Nielsen or a shelf-life reference before any
+of it appears in a demo as sourced.
+
+### Scope note
+
+Nothing is wired to these tables. No tool, mart or dbt model reads the
+`costing` schema yet. That is separate work.
+
+### SUPERSEDES — added 2026-07-29
+
+| Dead value | What it was | Why it's wrong |
+|------------|-------------|----------------|
+| `landed_cost_per_unit` as a per-SKU freight or landed figure | `raw.sku_costs`, generated as `cogs × uniform(1.10, 1.25)` | A random cost-proportional markup with no physical basis. Correlates +0.814 with `cogs_per_unit` and −0.065 with lbs/unit — it was never freight. Superseded per-SKU by `costing.fct_product_costs.freight_in_cost_per_unit`, which is weight- and density-derived. The **aggregate** is still used as the freight anchor so blended margin stays consistent with published figures; the per-SKU values must not be cited. |
+
+### Production verification — 2026-07-29
+
+Two dispatch-only GitHub Actions runs against the live Fly Postgres:
+deploy [30475518568](https://github.com/MsShawnP/cinderhaven-data-platform/actions/runs/30475518568),
+read-only verify [30478711021](https://github.com/MsShawnP/cinderhaven-data-platform/actions/runs/30478711021).
+
+`costing` did not previously exist in production (0 tables, 0 rows) — this was
+a first deploy, not a re-run. The nine protected tables were hashed before and
+after the generator ran: **byte-for-byte identical**. All seven acceptance
+targets reproduced exactly. Integrity suite: no failing checks.
+
+**Four values re-measured directly in production, now VERIFIED-AGAINST-PRODUCTION:**
+
+| Value | Production | Replica | Basis |
+|-------|-----------|---------|-------|
+| Line 1 — gross margin at standard | **51.98%** | 51.98% | `mart_channel_contribution` gross_margin ÷ gross_revenue |
+| Line 2 — contribution | **49.01%** | 49.01% | same table, contribution_margin ÷ gross_revenue |
+| DSO | **25.58 days** | 25.58 | value-weighted, 49,649 matched orders, range −5 to 55 |
+| Lifecycle (retailer) | **87.22¢** | 87.22¢ | $45,467,554.01 net ÷ $52,128,777.36 gross |
+
+Everything else in this section was verified by the deploy run itself.
+
+### The replica/production divergence — diagnosed, benign
+
+Seven of the nine protected tables hash identically between the local replica
+and production. Two do not, with **matching row counts**:
+`fct_retailer_payments` (222) and `mart_channel_contribution` (3).
+
+`fct_retailer_payments` — exactly two independent columns differ, plus the two
+derived from them:
+
+| Column | Status |
+|--------|--------|
+| net_amount | **differs** |
+| total_deductions | **differs** |
+| computed_deduction_gap | differs (derived: gross − net) |
+| deduction_reconciliation_diff | differs (derived from total_deductions) |
+| remittance_id, retailer_id, received_date, remittance_format, clarity, deduction_count, disputed_count, total_recovered, **gross_amount** | identical |
+
+Aggregate impact: **one cent.** SUM(net) $45,467,554.00 → $45,467,554.01;
+SUM(deductions) $6,661,223.36 → $6,661,223.35. Gross and recovered identical.
+`mart_channel_contribution` shows the same signature: distributor deductions
+−1¢, retailer chargebacks −1¢ ($446,200.07 → $446,200.06), each pushing net
+revenue and contribution +1¢.
+
+**Verdict: a different seed run, NOT a hand edit.** Four independent signals:
+
+1. **Magnitude** — exactly 1¢ across sums of 222, 14,947 and 2,873 rows. A
+   hand edit is not a cent.
+2. **It foots** — 0 of 222 rows fail `gross − net = total_deductions`, and 0
+   fail the computed-gap identity. Editing net or deductions without
+   recomputing the other would break this somewhere.
+3. **Provenance** — `raw.retailer_remittances` agrees with the mart exactly
+   ($45,467,554.01 both). The difference originates at generation, not from a
+   post-hoc UPDATE against the mart or the raw table.
+4. **Pattern** — only float-computed currency columns differ. Every identity,
+   text, date and integer-count column matches, including `gross_amount`,
+   which is a plain sum of order values rather than a rounded computation.
+
+`finalize_remittances()` computes net and deductions in Python floats with
+`round(..., 2)`. A row sitting on a rounding boundary flips by a cent under a
+different interpreter or platform. Nothing in production has been modified
+outside the pipeline, and everything derived from these two tables remains
+reproducible.
+
+**Consequence worth recording:** the generator is deterministic in *values* but
+not bit-reproducible across platforms for float-rounded currency columns. Do
+not treat a byte-identical hash across machines as a requirement for these two
+tables — a 1¢ aggregate difference is expected. Row counts, gross amounts and
+all non-computed columns must still match exactly.
