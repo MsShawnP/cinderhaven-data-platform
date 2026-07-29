@@ -161,8 +161,9 @@ Sheet** section further down — unchanged, and still authoritative.
 | dso_days | 25.77 | 25.53 | **25.44** | 25.48 | 25.58 |
 
 **CCC (default, cy2025)** = 134.6 + 25.44 − 32.3 = **127.7 days**.
-**CCC (trailing_36m)** = 127.7 + 25.58 − 33.6 = **119.7 days** (the figure the
-Cost Side section quotes as 119.3 on the replica; production is 119.7 on t36m).
+**CCC (trailing_36m)** = 127.7 + 25.58 − 33.6 = **119.7 days**, canonical. (The
+Cost Side section's earlier replica-derived 119.3 is superseded by this
+production figure.)
 DSO is **MEASURED**, not generated (Phase 1). A 75-day-terms sensitivity is
 legitimate **tool copy only** ("at Net-45 terms CCC would be ~160 days") and
 must never be added to a table as data.
@@ -967,11 +968,14 @@ cost — not a figure fitted to the blended target. The story is the *trajectory
 | **DIO** | **127.3 days** | avg `fct_inventory_snapshot.value_at_actual` ÷ annual loaded COGS × 365 |
 | **DSO** | **25.6 days** ✅prod (25.58 measured) | **MEASURED, not generated** — value-weighted order-PO-date to cash-receipt across 49,649 orders |
 | **DPO** | **33.6 days** | avg `paid_date − invoice_date`, `fct_supplier_invoices` |
-| **CCC** | **119.3 days** | DIO + DSO − DPO |
+| **CCC** | **119.7 days** | DIO + DSO − DPO (trailing_36m, production) |
+
+**CCC supersede (2026-07-29):** the earlier **119.3** was replica-derived and
+is retired; the production trailing-36m figure is **119.7** and is canonical.
 
 **DSO is measured and structural.** `generate_remittances()` sets
 `received = month_start + randint(25,55)`, so the ~26-day lag is by
-construction. It is NOT the 75 days a Net-45 assumption would imply. CCC 119.3
+construction. It is NOT the 75 days a Net-45 assumption would imply. CCC 119.7
 sits inside the published 45–210 CPG range and says the cash is trapped in
 **inventory, not receivables** — Cinderhaven collects fast and holds four
 months of stock.
