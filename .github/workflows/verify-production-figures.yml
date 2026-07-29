@@ -1,0 +1,137 @@
+name: Verify production figures
+
+# READ-ONLY. No DDL, no writes, no generator. Opens a proxy to the production
+# Fly Postgres and re-measures the canonical figures that were originally taken
+# against a local replica.
+#
+# Why this exists: the costing deploy (run 30475518568) took a production
+# baseline and found that seven of the nine protected tables hash identically
+# to the local replica, but two do NOT -- fct_retailer_payments (222 rows) and
+# mart_channel_contribution (3 rows). Row counts match, content differs. Four
+# canonical values were derived from those two tables on the replica and are
+# therefore unverified against production:
+#     line 1  gross margin at standard    51.98%
+#     line 2  contribution                49.01%
+#     DSO                                 25.6 days
+#     lifecycle (retailer)                87.22 cents
+#
+# This job re-measures them in production and dumps enough detail to
+# characterise the divergence: per-column hashes for the 222-row table and a
+# full row dump of the 3-row table.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-production-figures
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: cinderhaven
+      PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Install flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Open proxy to production
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl proxy 5432:5432 -a cinderhaven-db &
+          for i in $(seq 1 30); do
+            (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1 && break
+            sleep 1
+          done
+          pg_isready -h localhost -p 5432
+
+      - name: "The four figures, re-measured in production"
+        run: |
+          psql <<'SQL'
+          \echo '=== Line 1 / Line 2 (replica said 51.98 / 49.01) ==='
+          SELECT (100.0*SUM(gross_margin)/SUM(gross_revenue))::numeric(6,2)       AS line1_gross_margin_pct,
+                 (100.0*SUM(contribution_margin)/SUM(gross_revenue))::numeric(6,2) AS line2_contribution_pct
+          FROM public_marts.mart_channel_contribution;
+
+          \echo '=== Lifecycle, retailer (replica said 87.22 cents) ==='
+          SELECT SUM(gross_amount)::numeric(14,2) AS gross,
+                 SUM(net_amount)::numeric(14,2)   AS net,
+                 (100.0*SUM(net_amount)/SUM(gross_amount))::numeric(6,2) AS cents_per_dollar
+          FROM public_marts.fct_retailer_payments;
+
+          \echo '=== DSO, value-weighted order PO date to cash receipt (replica said 25.6) ==='
+          WITH o AS (
+            SELECT order_id, retailer_id, po_date, total_value,
+                   EXTRACT(YEAR FROM po_date)::int y, EXTRACT(MONTH FROM po_date)::int m
+            FROM public_marts.fct_retailer_orders
+          ), r AS (
+            SELECT retailer_id, received_date FROM public_marts.fct_retailer_payments
+          ), j AS (
+            SELECT o.total_value, (r.received_date - o.po_date) AS days
+            FROM o JOIN r ON r.retailer_id = o.retailer_id
+             AND r.received_date BETWEEN (make_date(o.y,o.m,1) + 25) AND (make_date(o.y,o.m,1) + 55)
+          )
+          SELECT COUNT(*) AS matched_orders,
+                 (SUM(total_value*days)/SUM(total_value))::numeric(8,2) AS value_weighted_dso,
+                 AVG(days)::numeric(8,2) AS simple_avg_days,
+                 MIN(days) AS min_d, MAX(days) AS max_d
+          FROM j;
+          SQL
+
+      - name: "Characterise the divergence: mart_channel_contribution (3 rows, full dump)"
+        run: psql -tA -F'|' -c "SELECT * FROM public_marts.mart_channel_contribution ORDER BY channel;"
+
+      - name: "Characterise the divergence: fct_retailer_payments (per-column hashes + sums)"
+        run: |
+          psql -tA -F'|' <<'SQL'
+          SELECT 'remittance_id', md5(string_agg(remittance_id::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'retailer_id', md5(string_agg(retailer_id::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'received_date', md5(string_agg(received_date::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'remittance_format', md5(string_agg(remittance_format::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'gross_amount', md5(string_agg(gross_amount::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'net_amount', md5(string_agg(net_amount::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'total_deductions', md5(string_agg(total_deductions::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'clarity', md5(string_agg(clarity::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'deduction_count', md5(string_agg(deduction_count::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'disputed_count', md5(string_agg(disputed_count::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'total_recovered', md5(string_agg(total_recovered::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'computed_deduction_gap', md5(string_agg(computed_deduction_gap::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'deduction_reconciliation_diff', md5(string_agg(deduction_reconciliation_diff::text,'|' ORDER BY remittance_id)) FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'SUM_gross', SUM(gross_amount)::text FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'SUM_net', SUM(net_amount)::text FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'SUM_deductions', SUM(total_deductions)::text FROM public_marts.fct_retailer_payments
+          UNION ALL SELECT 'SUM_recovered', SUM(total_recovered)::text FROM public_marts.fct_retailer_payments;
+          SQL
+
+      - name: "Hand-edit vs different-seed-run signals"
+        run: |
+          psql <<'SQL'
+          \echo '=== Do the stored totals still foot? (a hand edit usually breaks one leg) ==='
+          SELECT COUNT(*) FILTER (WHERE ROUND(gross_amount - net_amount, 2) <> ROUND(total_deductions, 2)) AS gross_net_ded_mismatch,
+                 COUNT(*) FILTER (WHERE computed_deduction_gap <> gross_amount - net_amount)               AS computed_gap_mismatch,
+                 COUNT(*) AS rows
+          FROM public_marts.fct_retailer_payments;
+
+          \echo '=== Does the raw source agree with the mart? (mart is a view over raw) ==='
+          SELECT (SELECT SUM(gross_amount) FROM raw.retailer_remittances)::numeric(14,2) AS raw_gross,
+                 (SELECT SUM(gross_amount) FROM public_marts.fct_retailer_payments)::numeric(14,2) AS mart_gross,
+                 (SELECT SUM(net_amount) FROM raw.retailer_remittances)::numeric(14,2)   AS raw_net,
+                 (SELECT SUM(net_amount) FROM public_marts.fct_retailer_payments)::numeric(14,2)   AS mart_net;
+
+          \echo '=== mart_channel_contribution inputs: do they match their own sources? ==='
+          SELECT (SELECT SUM(total_value) FROM public_staging.stg_retailer_orders)::numeric(14,2) AS stg_retailer_orders,
+                 (SELECT SUM(promo_cost) FROM public_staging.stg_promotions)::numeric(14,2)       AS stg_promotions,
+                 (SELECT SUM(deduction_amount) FROM public_intermediate.int_retailer_payments)::numeric(14,2) AS int_deductions,
+                 (SELECT SUM(chargeback_amount) FROM public_staging.stg_retailer_chargebacks)::numeric(14,2)  AS stg_chargebacks;
+          SQL
