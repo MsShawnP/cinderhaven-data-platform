@@ -283,6 +283,23 @@ revenue:
     trailing_36m: 52005749.76
 
 trade:
+  # Re-rated 2026-07-30 per owner decision, measured on the certified replica
+  # (2026-07-30 production extract + deterministic seeds; check_canonical 12/12).
+  # Rates are rate-card-driven and track the denominator by construction.
+  all_in_annual:
+    trailing_52w: 3556609.29
+  all_in_rate_pct:
+    trailing_52w: 11.00
+  all_in_total:
+    trailing_36m: 10669827.88
+  structural_annual:
+    trailing_52w: 3177050.51
+  structural_rate_pct:
+    trailing_52w: 9.83
+  op_waste_annual:
+    trailing_365d: 379558.78
+  op_waste_rate_pct:
+    trailing_52w: 1.17
   promotional_spend:
     cy2023: 194512.94
     cy2024: 134377.94

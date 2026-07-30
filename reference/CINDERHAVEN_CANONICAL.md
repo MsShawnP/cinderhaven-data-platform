@@ -386,6 +386,12 @@ Phase 4 of the causal-fulfillment arc.
 
 **Source:** Current Postgres SSOT, queried 2026-06-08 via `flyctl proxy`;
 trade rows reverified 2026-06-12 on the certified local replica.
+**Re-rated 2026-07-30 on the verified denominator, per owner decision.** The
+$32.8M trade denominator (flagged as drifted in the 2026-07-29 verification)
+is retired: all dollar figures below re-measured on the certified replica
+(2026-07-30 production extract + deterministic seeds; `check_canonical.py`
+12/12 PASS). The three rates did not move — they are rate-card-driven, so
+they tracked the denominator automatically: 11.00% / 9.83% / 1.17% measured.
 **Regen commit:** `afbb7c5` (feat: expand seed config to 50 SKUs / 3yr window and scale order generation)
 **Data version:** cinderhaven-data-v2
 **Seed config:** `scripts/seed_config.py`, `SEED=42`, economic constants frozen.
@@ -395,19 +401,19 @@ trade rows reverified 2026-06-12 on the certified local replica.
 
 | Measure | Value | Definition |
 |---------|-------|------------|
-| All-in trade cost (annualized) | $3.6M/yr | Structural trade + operational waste excl promo_billback |
-| All-in trade cost (trailing-52w) | $3.6M/yr | Same methodology, trailing 52-week window |
-| All-in trade rate | 11.0% | Of trailing-52w scan revenue ($32.8M) |
-| All-in trade cost (36mo) | $10.8M | 2023-01-01 to 2026-01-02 |
-| Structural trade (36mo) | $9.6M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
+| All-in trade cost (annualized) | $3.56M/yr | Structural trade + operational waste excl promo_billback ($3,556,609.29 measured 2026-07-30) |
+| All-in trade cost (trailing-52w) | $3.56M/yr | Same methodology, trailing 52-week window |
+| All-in trade rate | 11.0% | Of trailing-52w scan revenue ($32.32M verified) |
+| All-in trade cost (36mo) | $10.7M | 2023-01-01 to 2026-01-02 ($10,669,827.88 measured 2026-07-30) |
+| Structural trade (36mo) | $9.5M | AVG(trade_spend_pct) × trailing-52w scan revenue per channel |
 | Operational waste (36mo) | $1.14M | 36mo deductions excl promo_billback |
 | Operational waste (annual) | ~$380K/yr | Recoverable via disputes |
-| Structural trade (annual) | ~$3.2M/yr | Rate × trailing-52w channel revenue |
-| Structural trade rate | 9.8% | Of trailing-52w scan revenue ($32.8M) |
-| Operational waste rate | 1.2% | Of trailing-52w scan revenue ($32.8M) |
+| Structural trade (annual) | ~$3.18M/yr | Rate × trailing-52w channel revenue ($3,177,050.51 measured) |
+| Structural trade rate | 9.8% | Of trailing-52w scan revenue ($32.32M verified) |
+| Operational waste rate | 1.2% | Of trailing-52w scan revenue ($32.32M verified) |
 | Chargebacks | 3,357 | 2,873 retailer + 484 distributor; event-driven from fulfillment data |
 | Data window | 2023-01-01 to 2026-01-02 | 36 months |
-| Scan revenue (trailing-52w) | $32.8M | |
+| Scan revenue (trailing-52w) | $32.32M | $32,323,139.62 — VERIFIED-AGAINST-PRODUCTION 2026-07-29 |
 | EBITDA check | 14.9% trade + 11% EBITDA = 25.9% | Leaves 74.1% for COGS+SGA (plausible) |
 
 ### Methodology
@@ -428,7 +434,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | Product data cost (annual) | "~$93K/yr in chargeback cost attributable to data-quality defects" |
 | Trade context (annual) | "~$3.6M/yr all-in trade spend, 11.0% of scan revenue (trailing 52 weeks)" |
 | Recoverable layer | "~$380K/yr operational deduction waste; 3,357 chargebacks over 36 months" |
-| 36-mo total (only when a real multi-year total is needed) | "$11.1M all-in trade over 36 months" |
+| 36-mo total (only when a real multi-year total is needed) | "$10.7M all-in trade over 36 months" |
 | Deduction recovery — base rate | "~15% of deduction dollars recovered — not because disputes fail, but because most are never filed" |
 | Deduction recovery — win rate | "~42% win rate per disputed dollar, but only ~35% of deductions are ever disputed" |
 | Deduction recovery — silent write-off | "~65% of deductions go uncontested — $826K in silent write-offs" |
@@ -710,11 +716,19 @@ The measured trailing-52-week scan revenue is **$32,323,139.62**, not
 $32.8M. Trailing-52w is identical to CY2025 in this dataset (both
 2025-01-04 → 2025-12-27); the two are not separate windows.
 
-This value is **not corrected in the tables above**, because the $32.8M
+~~This value is **not corrected in the tables above**, because the $32.8M
 figure is the denominator for the published all-in (11.0%), structural
 (9.8%) and operational-waste (1.2%) trade rates. Changing it moves
 published percentages across the portfolio. Flagged for an explicit
-decision rather than silently rewritten.
+decision rather than silently rewritten.~~
+
+**RESOLVED 2026-07-30 — re-rated per owner decision.** The Trade Economics
+section now carries the verified denominator ($32,323,139.62) and re-measured
+dollar figures ($3.56M/yr all-in · $3.18M structural · $379,559/yr waste ·
+$10.7M all-in 36mo). The published rates did not move: structural trade is
+rate-card × channel revenue, so the 11.0% / 9.8% / 1.2% rates track the
+denominator by construction. Measured 11.00% / 9.83% / 1.17% on the certified
+replica, `check_canonical.py` 12/12 PASS.
 
 ### Contradiction 1 — RESOLVED: there are no uncollected receivables
 
@@ -1034,6 +1048,15 @@ of it appears in a demo as sourced.
 
 Nothing is wired to these tables. No tool, mart or dbt model reads the
 `costing` schema yet. That is separate work.
+
+### SUPERSEDES — added 2026-07-30 (re-rate)
+
+| Dead value | What it was | Why it's wrong |
+|------------|-------------|----------------|
+| $32.8M as the trade-rate denominator | Pre-drift trailing-52w scan figure the 2026-06 trade block was rated on | Re-rated 2026-07-30 on the verified $32,323,139.62; rates unchanged (rate-card-driven), dollar figures re-measured |
+| $3.6M/yr all-in (as an exact figure) | Pre-re-rate all-in dollar | Measured $3,556,609.29 — "~$3.6M/yr" phrasing remains approved |
+| $11.1M all-in trade (36mo) | Pre-re-rate 36-month total | Measured $10,669,827.88 → "$10.7M" |
+| $9.6M structural (36mo) | Pre-re-rate structural total | Measured $9,531,151.53 → "$9.5M" |
 
 ### SUPERSEDES — added 2026-07-29
 
