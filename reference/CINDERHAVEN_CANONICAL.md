@@ -343,7 +343,7 @@ See each repo for derivation details.
 | Deductions — recovery per all deduction $ | ~15% | retailer-deduction-recovery | ✅ Confirmed (14.69%) |
 | Deductions — win rate per disputed $ | ~42% | retailer-deduction-recovery | ✅ Confirmed (41.80%; tier-conditioned) |
 | Deductions — dispute rate | ~35% | retailer-deduction-recovery | ✅ Confirmed (35.5%) |
-| Deductions — forward exposure | $861K | retailer-deduction-recovery | ⚠️ Awaiting regen |
+| Deductions — silent write-offs (no dispute) | $877,620 | retailer-deduction-recovery | ✅ Regenerated 2026-07-30 (10,906 of 16,917 rows undisputed = 64.5%) |
 | Fulfillment — portfolio fill rate (retailer) | 99.2% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
 | Fulfillment — portfolio fill rate (distributor) | 99.5% | cinderhaven-data-platform | ✅ Confirmed (tuned 2026-06-20; verified 2026-06-26) |
 | Short-ship — forgone revenue (3yr) | $523,326 | short-ship-cost | ✅ Confirmed (verified 2026-06-26) |
@@ -437,7 +437,7 @@ Downstream pieces copy these strings verbatim. They never re-derive.
 | 36-mo total (only when a real multi-year total is needed) | "$10.7M all-in trade over 36 months" |
 | Deduction recovery — base rate | "~15% of deduction dollars recovered — not because disputes fail, but because most are never filed" |
 | Deduction recovery — win rate | "~42% win rate per disputed dollar, but only ~35% of deductions are ever disputed" |
-| Deduction recovery — silent write-off | "~65% of deductions go uncontested — $826K in silent write-offs" |
+| Deduction recovery — silent write-off | "~65% of deductions go uncontested — $878K in silent write-offs" |
 | Deduction recovery — paired narrative | "Cinderhaven wins 42% of the disputes it files. The problem isn't winning — it's filing. Two-thirds of deductions are written off without a fight." |
 | Deduction recovery — ceiling | "~65% recovery rate on strong-evidence disputes" |
 
@@ -1053,6 +1053,8 @@ Nothing is wired to these tables. No tool, mart or dbt model reads the
 
 | Dead value | What it was | Why it's wrong |
 |------------|-------------|----------------|
+| $861K forward exposure | Deduction post-audit forward exposure, carried "awaiting regen" | No pipeline produces this figure — the 2026-07-30 regen confirmed no forward-exposure output exists in retailer-deduction-recovery. Retired; a real post-audit exposure model must exist before any figure returns |
+| $826K silent write-offs | Undisputed deduction dollars | Regenerated 2026-07-30: $877,620.27 (10,906 undisputed rows) |
 | $32.8M as the trade-rate denominator | Pre-drift trailing-52w scan figure the 2026-06 trade block was rated on | Re-rated 2026-07-30 on the verified $32,323,139.62; rates unchanged (rate-card-driven), dollar figures re-measured |
 | $3.6M/yr all-in (as an exact figure) | Pre-re-rate all-in dollar | Measured $3,556,609.29 — "~$3.6M/yr" phrasing remains approved |
 | $11.1M all-in trade (36mo) | Pre-re-rate 36-month total | Measured $10,669,827.88 → "$10.7M" |
