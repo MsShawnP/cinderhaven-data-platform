@@ -112,19 +112,24 @@ def tracked_files() -> list[str]:
 
 
 def _glob_match(path: str, glob: str) -> bool:
-    """True if `glob` matches the full posix path or its basename. fnmatch's
-    `*` spans `/`, so a path glob like 'a/research/*' also matches deeper files."""
-    name = Path(path).name
-    return fnmatch.fnmatch(path, glob) or fnmatch.fnmatch(name, glob)
+    """True if `glob` matches the full posix path or its basename, case-
+    insensitively. Uses fnmatchcase on lowercased operands so the result is the
+    SAME on Windows and Linux (bare fnmatch is case-insensitive on Windows but
+    case-sensitive on Linux — a gate that passed locally would then fail CI).
+    fnmatch's `*` spans `/`, so a path glob like 'a/research/*' also matches
+    deeper files."""
+    p, g = path.lower(), glob.lower()
+    name = Path(path).name.lower()
+    return fnmatch.fnmatchcase(p, g) or fnmatch.fnmatchcase(name, g)
 
 
 def excluded(path: str, extra_globs: list[str]) -> bool:
     if set(Path(path).parts) & SKIP_DIR_PARTS:
         return True
     name = Path(path).name
-    if name in EXCLUDE_BASENAMES:
+    if name.lower() in {b.lower() for b in EXCLUDE_BASENAMES}:
         return True
-    if any(fnmatch.fnmatch(name, g) for g in EXCLUDE_BASENAME_GLOBS):
+    if any(fnmatch.fnmatchcase(name.lower(), g.lower()) for g in EXCLUDE_BASENAME_GLOBS):
         return True
     if any(_glob_match(path, g) for g in extra_globs):
         return True
