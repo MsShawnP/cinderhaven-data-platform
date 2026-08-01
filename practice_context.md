@@ -39,9 +39,9 @@ a CI drift gate (`scripts/check_canonical_drift.py`) that fails any build citing
 a retired figure. The principle below (govern the synthetic data the way we tell
 clients to govern theirs) is the rationale; the files above are the mechanism.
 
-**Every time Cinderhaven's Postgres is regenerated, a brand-new `canonical.md` must be created — the prior one is superseded and archived, never edited in place.** This is non-negotiable. A May 2026 regen silently moved the trade figures and left every downstream piece citing stale numbers — precisely the SSOT-drift failure this practice sells against. The synthetic data must be governed the way we tell clients to govern theirs.
+**The canon is LOCKED and VERIFIED-AGAINST-PRODUCTION (2026-08-01),** recorded in `reference/canonical_values.yml` (SSOT) and its human view `reference/CINDERHAVEN_CANONICAL.md`. Every time Cinderhaven's Postgres is regenerated, re-run `scripts/verify_canonical.py` and reconcile the canon — never let a regen silently move figures. A May 2026 regen did exactly that, leaving every downstream piece citing stale numbers — precisely the SSOT-drift failure this practice sells against. The synthetic data is governed the way we tell clients to govern theirs. (The earlier "create a brand-new file each regen, never edit in place" rule is superseded by the current mechanism: `canonical_values.yml` is edited in place and git history is the archive.)
 
-`canonical.md` records every figure **with its definition attached** (a number without its definition is how the drift went undetected for weeks):
+`CINDERHAVEN_CANONICAL.md` (the human view of `canonical_values.yml`) records every figure **with its definition attached** (a number without its definition is how the drift went undetected for weeks):
 
 - Regeneration date + the `seed_config.py` params / commit that produced it
 - All-in trade cost: exact $, the period it covers (36-month total vs annual), and the component breakdown that defines it
@@ -50,7 +50,7 @@ clients to govern theirs) is the rationale; the files above are the mechanism.
 - Deduction counts, window (start–end dates), EBITDA / margin, SKU count
 - A statement that all downstream pieces must reconcile to this file
 
-After a new `canonical.md` is locked, every dependent piece is updated to match: Trade Spend Leakage, Deduction Recovery, Contract-to-Cash, Where the Money Comes From, 150 Cases, Chargeback Prediction, Remittance Stub Parsing, Item Setup Form Pre-flight, and the trade-spend diagnostic (which re-exports and re-locks). Lock `seed_config.py` alongside the figure set so a re-run can't move canonical silently again.
+After the canon is re-verified, every dependent piece is re-synced to match via `scripts/refresh_canonical.py`: Trade Spend Leakage, Deduction Recovery, Contract-to-Cash, Where the Money Comes From, 150 Cases, Chargeback Prediction, Remittance Stub Parsing, Item Setup Form Pre-flight, and the trade-spend diagnostic (which re-exports and re-locks). `seed_config.py` is locked alongside the figure set so a re-run can't move canonical silently again.
 
 ## Tool Stack
 
