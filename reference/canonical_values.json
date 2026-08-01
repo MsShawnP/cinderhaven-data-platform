@@ -2,7 +2,7 @@
  "_generated": {
   "generated": "2026-08-01",
   "generator": "scripts/verify_canonical.py",
-  "platform_head": "56a1b8b",
+  "platform_head": "b253222",
   "source": "reference/canonical_values.yml",
   "verified_against_production": "2026-07-29"
  },
@@ -22,10 +22,6 @@
   "competitive_snapshots": {
    "reason": "no table",
    "status": "absent"
-  },
-  "defect_revenue": {
-   "reason": "listed as \"defect-rev $19.5M\" in published/RE-AUDIT-2026-08-01.md and requested as canon ($19,487,913), but that exact figure has NO on-disk derivation or source anywhere in the portfolio. recall-blast-radius computes its scenario figures live server-side (the frontend fetches /scenarios), so nothing static carries it. NOT emitted to canon until a verified source or definition is supplied \u2014 do not invent.",
-   "status": "pending_source"
   },
   "households": {
    "reason": "no table, no column in the warehouse",
@@ -312,6 +308,9 @@
    "trailing_12m": 25332687.28,
    "trailing_24m": 51163522.94,
    "trailing_36m": 76440490.47
+  },
+  "defect_sku_ttm": {
+   "ttm_through_2025_12_27": 19487913.16
   },
   "dtc_gross": {
    "cy2023": 189654.73,

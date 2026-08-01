@@ -28,7 +28,6 @@ absent:
   acv: {status: not_derivable, reason: 'needs all-commodity store volume, absent. distribution.pct_authorized_selling and distribution.voids_authorized_not_scanned are proxies under their OWN names, NOT acv'}
   accounts_payable: {status: absent_structural, reason: 'all 294 supplier invoices carry a paid_date; no open payable at any snapshot. DPO is the meaningful figure. Distinct from no-column.'}
   accounts_receivable: {status: absent_structural, reason: 'schema has no aging/receivable concept; uncollected receivables are $0 by construction (Phase 1). Distinct from no-column.'}
-  defect_revenue: {status: pending_source, reason: 'listed as "defect-rev $19.5M" in published/RE-AUDIT-2026-08-01.md and requested as canon ($19,487,913), but that exact figure has NO on-disk derivation or source anywhere in the portfolio. recall-blast-radius computes its scenario figures live server-side (the frontend fetches /scenarios), so nothing static carries it. NOT emitted to canon until a verified source or definition is supplied — do not invent.'}
 
 # --- price_history: anchored 2026-08-01 (was the blind spot) ---
 # raw.price_history previously had NO entry here, and that gap made the
@@ -301,6 +300,19 @@ revenue:
     # (1,323,569 rows); independently re-derived 2026-08-01 against both the
     # RVDT and tsdd SQLite mirrors.
     ttm_through_2025_12_27: 33248389.92
+  # Defect-SKU TTM retail scan — PDHA bottom line + landing tile. The SKUs
+  # failing >=1 of PDHA's 7 data-quality checks (invalid GTIN-14 check digit,
+  # invalid UPC check digit, missing case weight, missing case dims, missing
+  # country_of_origin, missing brand_owner, case weight >20% off
+  # case_pack_qty x unit_weight_lbs) = 27 of 50, summed over the TTM window
+  # week_ending > MAX-365d (2024-12-28 … 2025-12-27 — the same 53-bucket window
+  # as retail_scan.ttm_through_2025_12_27). Basis label: "TTM retail scan on
+  # defect SKUs, through 2025-12-27". Reproduced to the penny 2026-08-01 from
+  # the resynced mirror (PDHA barcode_validators.R check-digit logic, 27 SKUs).
+  # Recall-blast-radius does NOT use this figure (its EBITDA math uses the
+  # $33.2M TTM total).
+  defect_sku_ttm:
+    ttm_through_2025_12_27: 19487913.16
   wholesale_distributor:
     cy2023: 8064242.64
     cy2024: 7950288.96
