@@ -17,15 +17,22 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
-try:
-    import psycopg2
-    import psycopg2.extras
-except ImportError:
-    print("psycopg2 not installed. pip install psycopg2-binary", file=sys.stderr)
-    sys.exit(1)
+# psycopg2 is imported lazily inside from_db() so the artifact-emit step
+# (canonical_values.json + supersedes.txt) runs on every invocation even when
+# psycopg2 is not installed or no live DB is reachable.
+
+# The summary table prints a "Δ" column header; force UTF-8 so the run completes
+# on Windows consoles (cp1252 default) — matches validate_workbook.py.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
 
 ROOT = Path(__file__).resolve().parent.parent
 # projects/ root = two levels up from the platform repo (…/projects/active datasources/cinderhaven-data-platform)
@@ -104,6 +111,12 @@ def from_db():
     url = os.environ.get("DATABASE_URL")
     if not url:
         print("DATABASE_URL not set — skipping DB queries (JSON checks only).\n")
+        return
+    try:
+        import psycopg2  # noqa: F401 — lazy so emit runs without it
+    except ImportError:
+        print("psycopg2 not installed — skipping DB queries. "
+              "pip install psycopg2-binary to enable them.\n", file=sys.stderr)
         return
     conn = psycopg2.connect(url)
     cur = conn.cursor()
@@ -190,10 +203,79 @@ def from_json():
         rec("Short-ship total 3yr ($)", round(ss.get("baseline_totals", {}).get("total", 0)))
 
 
+def _platform_head() -> str:
+    """Short git SHA of the platform repo, for JSON provenance. '' if unavailable."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return out.stdout.strip() if out.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
+def emit_artifacts() -> None:
+    """Derive the two machine-readable artifacts from the YAML SSOT.
+
+    Runs on EVERY invocation (independent of DB reachability):
+      reference/canonical_values.json — the full canon as JSON, with a
+        `_generated` provenance header. Repos vendor this via
+        scripts/refresh_canonical.py; their test_canonical_regression.* read it.
+      reference/supersedes.txt — one retired token per line (from the YAML
+        `supersedes:` block). The per-repo drift gate greps against this file.
+    """
+    generated = date.today().isoformat()
+    head = _platform_head()
+
+    payload = {
+        "_generated": {
+            "source": "reference/canonical_values.yml",
+            "generator": "scripts/verify_canonical.py",
+            "generated": generated,
+            "platform_head": head,
+            "verified_against_production": _cv.get("meta", {}).get(
+                "verified_against_production"
+            ),
+        },
+        **_cv,
+    }
+    json_path = ROOT / "reference" / "canonical_values.json"
+    json_path.write_text(
+        json.dumps(payload, indent=1, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
+
+    supersedes = _cv.get("supersedes", []) or []
+    tokens = [str(e["token"]) for e in supersedes if isinstance(e, dict) and e.get("token")]
+    if not tokens:
+        print(
+            "WARNING: canonical_values.yml has no `supersedes:` tokens — "
+            "supersedes.txt would be empty, which disables the drift gate. "
+            "Refusing to emit an empty gate file.",
+            file=sys.stderr,
+        )
+    else:
+        sup_path = ROOT / "reference" / "supersedes.txt"
+        header = (
+            "# Retired Cinderhaven figures/strings — generated from "
+            "canonical_values.yml `supersedes:` by verify_canonical.py.\n"
+            f"# generated {generated} | platform {head or 'unknown'}\n"
+            "# The drift gate fails a build on any hit (excluding history/"
+            "SUPERSEDES docs and per-repo allowlists). Do not edit by hand.\n"
+        )
+        sup_path.write_text(header + "\n".join(tokens) + "\n", encoding="utf-8")
+        print(f"  emitted {sup_path.name} ({len(tokens)} retired tokens)")
+    print(f"  emitted {json_path.name} (canon as JSON, head={head or 'unknown'})")
+
+
 def main():
     print("=" * 78)
     print("  CANONICAL vs LIVE SSOT")
     print("=" * 78)
+    print("\n  Emitting derived artifacts …")
+    emit_artifacts()
+    print()
     from_db()
     from_json()
     print(f"\n  {'Figure':<42}{'Live':>16}{'Documented':>16}  Δ")

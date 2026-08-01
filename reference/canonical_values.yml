@@ -28,6 +28,7 @@ absent:
   acv: {status: not_derivable, reason: 'needs all-commodity store volume, absent. distribution.pct_authorized_selling and distribution.voids_authorized_not_scanned are proxies under their OWN names, NOT acv'}
   accounts_payable: {status: absent_structural, reason: 'all 294 supplier invoices carry a paid_date; no open payable at any snapshot. DPO is the meaningful figure. Distinct from no-column.'}
   accounts_receivable: {status: absent_structural, reason: 'schema has no aging/receivable concept; uncollected receivables are $0 by construction (Phase 1). Distinct from no-column.'}
+  defect_revenue: {status: pending_source, reason: 'listed as "defect-rev $19.5M" in published/RE-AUDIT-2026-08-01.md and requested as canon ($19,487,913), but that exact figure has NO on-disk derivation or source anywhere in the portfolio. recall-blast-radius computes its scenario figures live server-side (the frontend fetches /scenarios), so nothing static carries it. NOT emitted to canon until a verified source or definition is supplied — do not invent.'}
 
 # --- price_history: anchored 2026-08-01 (was the blind spot) ---
 # raw.price_history previously had NO entry here, and that gap made the
@@ -288,6 +289,18 @@ revenue:
     trailing_12m: 32323139.62
     trailing_24m: 67326868.93
     trailing_36m: 99058738.85
+    # "$33.2M TTM" — the figure all 8 lailara-website work pages cite as
+    # "trailing-twelve-month retail scan revenue". It is NOT trailing_12m.
+    # trailing_12m/cy2025 = the last 52 DISTINCT scan weeks (2025-01-04 …
+    # 2025-12-27) = 32,323,139.62. This TTM is the calendar-date window
+    # 2024-12-28 … 2025-12-27 (Dec-28→Dec-27 = 364 days), which spans 53
+    # Saturday week-endings, so it adds the week ending 2024-12-28 on top of
+    # cy2025. Decomposition verified to the penny: 32,323,139.62 (cy2025) +
+    # 925,250.30 (week ending 2024-12-28) = 33,248,389.92. Provenance: retail-
+    # basis reconciliation 2026-08-01 vs the Phase-8 live-synced RVDT mirror
+    # (1,323,569 rows); independently re-derived 2026-08-01 against both the
+    # RVDT and tsdd SQLite mirrors.
+    ttm_through_2025_12_27: 33248389.92
   wholesale_distributor:
     cy2023: 8064242.64
     cy2024: 7950288.96
@@ -463,3 +476,50 @@ data_windows:  # min_date | max_date | row_count
   tail_orders: '2026-01-02||'
   tail_scan: '2025-12-27||'
   tail_supplier_invoices: '2026-01-31||'
+
+# --- SUPERSEDES: retired figures/strings that must never appear in current
+# source or rendered output. The verify run writes each `token` (one per line)
+# to reference/supersedes.txt; the per-repo drift gate greps source + rendered
+# output against that file and FAILS the build on any hit, excluding history /
+# SUPERSEDES docs and per-repo allowlisted legitimate uses.
+#
+# Tokens are the FORMATTED renderings a surface would actually emit — never a
+# bare integer. A bare "461" collides with substrings of live values (checked:
+# 461/296/430/5.4 all appear inside current canon numbers), so each retired
+# figure is retired in every rendering a repo might use (comma form, no-comma
+# form used in code, and the $X.XM/$XXXK prose form).
+#
+# The full narrative dictionary (~40 entries, with the WHY for each) lives in
+# the human view reference/CINDERHAVEN_CANONICAL.md § SUPERSEDES. This block is
+# the machine-greppable subset: high-confidence tokens safe to fail a build on.
+supersedes:
+  # Brand / entity errors
+  - {token: 'Cinderhaven Foods', reason: 'brand name error; the brand is Cinderhaven Provisions'}
+  - {token: 'Wegmans', reason: 'never a contracted retailer (roster: Walmart, Costco, Whole Foods, Sprouts, Kroger, Regional Group). Allowlist real-retailer deduction-practice research docs.'}
+  # Retail scan revenue — retired renderings (current: cy2025 $32.3M / TTM $33.2M)
+  - {token: '32,472,742', reason: 'retired pre-reseed scan revenue (the +2,225 phantom-row dataset); current cy2025 is 32,323,139.62'}
+  - {token: '32472742', reason: 'same, no-comma code form (was pinned in tsdd validate_workbook.py)'}
+  - {token: '$32.5M', reason: 'retired pre-reseed scan revenue prose form'}
+  - {token: '$32.5 million', reason: 'retired pre-reseed scan revenue prose form'}
+  - {token: '$32.8M', reason: 'retired scan denominator (pre-verification); current is $32.3M / $33.2M'}
+  - {token: '$32.8 million', reason: 'retired scan denominator prose form'}
+  - {token: '$33.4M', reason: 'retired old TTM rendering; current TTM is $33.2M ($33,248,389.92)'}
+  - {token: '$33.4 million', reason: 'retired old TTM prose form'}
+  - {token: '$25.6M', reason: 'retired combined-basis scan rendering'}
+  # Product-data-health-audit cost — retired (current $93K)
+  - {token: '$461K', reason: 'retired PDHA product-data cost (pre-date-shift); current is $93K'}
+  - {token: '$461,000', reason: 'retired PDHA product-data cost, full form'}
+  - {token: '$458K', reason: 'retired PDHA product-data cost (pre-causal placeholder); current is $93K'}
+  - {token: '$430K', reason: 'retired PDHA product-data cost (stale cache); current is $93K'}
+  - {token: '$296K', reason: 'retired PDHA product-data cost (pre-reseed calibration); current is $93K'}
+  # Panel projection factor k — absent metric, retired proxy values
+  - {token: '166.488', reason: 'retired panel projection factor k; k is absent (no table/column) — see absent.panel_projection_factor_k'}
+  - {token: '166.5', reason: 'retired panel projection factor k (rounded). Allowlist genuine $166.50 money contexts if any arise.'}
+  # OTIF / misc retired dollar figure
+  - {token: '$82,924', reason: 'retired figure (not a current canonical value)'}
+  - {token: '82,924', reason: 'retired figure, no-$ form'}
+  # Trade / all-in — retired (current ~$3.6M/yr all-in, 11.0%)
+  - {token: '$5.4M', reason: 'retired all-in trade cost (old seed rates); current ~$3.6M/yr'}
+  - {token: '$7.2M', reason: 'retired May-2026 SQLite all-in export; current ~$3.6M/yr'}
+  - {token: '7,174,939', reason: 'retired May-2026 SQLite all-in export, full form'}
+  - {token: '$7,174,939', reason: 'retired May-2026 SQLite all-in export, full $ form'}
