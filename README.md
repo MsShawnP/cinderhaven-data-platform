@@ -58,6 +58,29 @@ make check-canonical
 
 Default credentials: `postgres`/`postgres`, database `cinderhaven` (see `.env.example`).
 
+## Canonical enforcement (single-canonical program)
+
+`reference/canonical_values.yml` is the one canon. `scripts/verify_canonical.py`
+emits two derived artifacts on every run — `reference/canonical_values.json`
+(machine-readable) and `reference/supersedes.txt` (retired figures). Consuming
+repos vendor these plus the drift gate and stay in sync via
+`scripts/refresh_canonical.py`, which copies **four** synced artifacts from this
+platform: `canonical_values.json`, `supersedes.txt`, `check_canonical_drift.py`
+(the gate itself), and `refresh_canonical.py` (self-updating). A CI drift gate
+(`check_canonical_drift.py` + `.github/workflows/canonical-drift.yml`) fails any
+build that lets a retired figure reach a live surface. To change a figure: edit
+the yml → run `verify_canonical.py` → run `refresh_canonical.py` in each repo →
+commit.
+
+> **Gate-sync note (2026-08-01):** the gate script became a synced artifact on
+> this date (case-insensitive matching, portable Windows/Linux). Tool repos pull
+> the hardened gate automatically on their next `refresh_canonical.py` run;
+> until a given repo has refreshed, it carries the earlier gate. That earlier
+> gate matches allowlist/exclusion patterns **case-sensitively on Linux CI**, so
+> **do not add a mixed-case `.canonical-allowlist` pattern in a repo before it
+> has been refreshed** — write allowlist globs in the exact case of the path, or
+> refresh the repo first.
+
 ## Tech stack
 
 | Component | Tool | Version |
