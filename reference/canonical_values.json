@@ -2,7 +2,7 @@
  "_generated": {
   "generated": "2026-08-01",
   "generator": "scripts/verify_canonical.py",
-  "platform_head": "b253222",
+  "platform_head": "c94fd39",
   "source": "reference/canonical_values.yml",
   "verified_against_production": "2026-07-29"
  },
@@ -436,12 +436,8 @@
    "token": "$296K"
   },
   {
-   "reason": "retired panel projection factor k; k is absent (no table/column) \u2014 see absent.panel_projection_factor_k",
+   "reason": "retired panel projection factor k; k is absent (no table/column) \u2014 see absent.panel_projection_factor_k. NB: bare \"166.5\" is intentionally NOT a token \u2014 it collides with legitimate $166.50 money values in deduction/chargeback data.",
    "token": "166.488"
-  },
-  {
-   "reason": "retired panel projection factor k (rounded). Allowlist genuine $166.50 money contexts if any arise.",
-   "token": "166.5"
   },
   {
    "reason": "retired figure (not a current canonical value)",

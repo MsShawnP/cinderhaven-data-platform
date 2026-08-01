@@ -525,8 +525,7 @@ supersedes:
   - {token: '$430K', reason: 'retired PDHA product-data cost (stale cache); current is $93K'}
   - {token: '$296K', reason: 'retired PDHA product-data cost (pre-reseed calibration); current is $93K'}
   # Panel projection factor k — absent metric, retired proxy values
-  - {token: '166.488', reason: 'retired panel projection factor k; k is absent (no table/column) — see absent.panel_projection_factor_k'}
-  - {token: '166.5', reason: 'retired panel projection factor k (rounded). Allowlist genuine $166.50 money contexts if any arise.'}
+  - {token: '166.488', reason: 'retired panel projection factor k; k is absent (no table/column) — see absent.panel_projection_factor_k. NB: bare "166.5" is intentionally NOT a token — it collides with legitimate $166.50 money values in deduction/chargeback data.'}
   # OTIF / misc retired dollar figure
   - {token: '$82,924', reason: 'retired figure (not a current canonical value)'}
   - {token: '82,924', reason: 'retired figure, no-$ form'}

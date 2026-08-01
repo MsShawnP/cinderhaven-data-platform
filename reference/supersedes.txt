@@ -1,5 +1,5 @@
 # Retired Cinderhaven figures/strings — generated from canonical_values.yml `supersedes:` by verify_canonical.py.
-# generated 2026-08-01 | platform b253222
+# generated 2026-08-01 | platform c94fd39
 # The drift gate fails a build on any hit (excluding history/SUPERSEDES docs and per-repo allowlists). Do not edit by hand.
 Cinderhaven Foods
 Wegmans
@@ -18,7 +18,6 @@ $458K
 $430K
 $296K
 166.488
-166.5
 $82,924
 82,924
 $5.4M
