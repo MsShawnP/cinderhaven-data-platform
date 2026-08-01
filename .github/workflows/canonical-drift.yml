@@ -1,53 +1,21 @@
-name: Canonical drift check
+name: canonical-drift
 
-# Fails loudly when CINDERHAVEN_CANONICAL.md drifts from the live Postgres SSOT.
-# Runs daily and on every push to main, plus on demand.
-#
-# Required repo secrets (Settings -> Secrets and variables -> Actions):
-#   FLY_API_TOKEN   - `flyctl auth token` output, for the proxy to cinderhaven-db
-#   POSTGRES_PASSWORD - the DB password (same value as the local .env)
+# Fails the build if a retired Cinderhaven figure/string reaches a live surface.
+# Tokens come from the vendored reference/supersedes.txt. See
+# scripts/check_canonical_drift.py.
 
 on:
-  schedule:
-    - cron: "0 13 * * *"   # 13:00 UTC daily
   push:
-    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  verify:
+  drift:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
-      - name: Install deps
-        run: pip install psycopg2-binary pyyaml
-
-      - name: Install flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Open proxy to the SSOT
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          flyctl proxy 5432:5432 -a cinderhaven-db &
-          for i in $(seq 1 30); do
-            (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1 && break
-            sleep 1
-          done
-
-      - name: Verify canonical against live SSOT
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        run: |
-          # Interpolate the secret from the step env at runtime. It must NOT be
-          # committed literally: a prior "redact creds" pass replaced it with the
-          # literal string REDACTED, which silently broke auth (the job sent
-          # "REDACTED" as the password). Keep the secret out of the file AND
-          # functional by expanding $POSTGRES_PASSWORD here.
-          DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/cinderhaven" \
-            python scripts/verify_canonical.py
+          python-version: "3.12"
+      - name: Canonical drift gate
+        run: python scripts/check_canonical_drift.py

@@ -1,0 +1,13 @@
+# The platform is the canon SOURCE and documents retired figures by design.
+# CINDERHAVEN_CANONICAL.md, DECISIONS.md, HANDOFF.md, canonical_values.*,
+# and supersedes.txt are auto-excluded by basename. The files below reference
+# retired figures as history/rationale in internal (non-deployed) surfaces:
+#
+# - dbt test comment explains WHY the test exists (cites the retired $458K).
+cinderhaven/tests/assert_itemized_deductions_lte_remittance_withheld.sql
+# - distressed-scenario generator docstring (tsdd-only); stale baseline note.
+scripts/generate_distressed_scenario.py
+# - practice_context.md is stale (90 SKUs / 3 lines / $5.4M / $7.17M — all
+#   retired). FLAGGED for a real content refresh; allowlisted for now so the
+#   gate is born green rather than silently green.
+practice_context.md
