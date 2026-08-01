@@ -29,6 +29,27 @@ absent:
   accounts_payable: {status: absent_structural, reason: 'all 294 supplier invoices carry a paid_date; no open payable at any snapshot. DPO is the meaningful figure. Distinct from no-column.'}
   accounts_receivable: {status: absent_structural, reason: 'schema has no aging/receivable concept; uncollected receivables are $0 by construction (Phase 1). Distinct from no-column.'}
 
+# --- price_history: anchored 2026-08-01 (was the blind spot) ---
+# raw.price_history previously had NO entry here, and that gap made the
+# 2026-08-01 mirror-vs-live drift adjudication blind: the three other drifted
+# tables (scan_data, distribution, retailer_requirements) each had a verified
+# anchor to decide authority by, but price_history had none. Live was chosen on
+# internal coherence (2023-01-01 baseline = exactly 50 SKUs x 6 retailers, all
+# inside the 2025-12-27 data world) over the local mirror's abandoned 2024-2026
+# future-dated vintage. Values below were read from live raw.price_history via
+# the read-only Fly proxy during that audit. NOT yet emitted by
+# canonical_gather.sql — fold it in on the next production run to carry the
+# formal VERIFIED-AGAINST-PRODUCTION provenance the other metrics have.
+price_history:
+  provenance: 'observed against live raw.price_history 2026-08-01 (read-only proxy); pending canonical_gather.sql'
+  row_count: 407
+  date_span: '2023-01-01|2024-08-17'
+  baseline:
+    effective_date: '2023-01-01'
+    rows: 300
+    grain: '50 SKUs x 6 retailers'
+  grain: 'sku x retailer x effective_date (2023-01-01 baseline + subsequent price-change events)'
+
 chargebacks:
   distributor_count:
     all_time: 484

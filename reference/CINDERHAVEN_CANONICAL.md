@@ -1137,3 +1137,22 @@ not bit-reproducible across platforms for float-rounded currency columns. Do
 not treat a byte-identical hash across machines as a requirement for these two
 tables — a 1¢ aggregate difference is expected. Row counts, gross amounts and
 all non-computed columns must still match exactly.
+
+## `price_history` anchor (added 2026-08-01 — closed a blind spot)
+
+`raw.price_history` previously carried no figure in this reference or in
+`canonical_values.yml`, and that gap made the 2026-08-01 mirror-vs-live drift
+adjudication blind: the three other drifted tables (`scan_data`,
+`distribution`, `retailer_requirements`) each had a verified-against-production
+anchor to decide authority by, but `price_history` had none. Live was chosen on
+internal coherence — a `2023-01-01` baseline of exactly 50 SKUs × 6 retailers,
+entirely inside the `2025-12-27` data world — over the local mirror's abandoned
+`2024–2026` future-dated vintage.
+
+**Anchor (now recorded in `canonical_values.yml` under `price_history:`):**
+407 rows, spanning `2023-01-01` → `2024-08-17`, with a 300-row `2023-01-01`
+baseline (50 SKUs × 6 retailers) plus subsequent price-change events. These
+values were read from live via the read-only Fly proxy during the audit; they
+are **not yet emitted by `sql/canonical_gather.sql`**, so fold `price_history`
+into that query on the next production run to give it the same
+VERIFIED-AGAINST-PRODUCTION provenance as the other metrics.
