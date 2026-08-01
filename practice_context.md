@@ -23,13 +23,21 @@ This file contains the stable facts about the consulting practice. Every portfol
 ## Fictional Company
 
 - **Name:** Cinderhaven Provisions (previously referenced as "Cedar Hollow Provisions" in early briefs — Cinderhaven is the canonical name going forward)
-- **Profile:** Fictional $25M specialty food manufacturer, ~90 SKUs across three product lines (Artisan Sauces, Specialty Condiments, Pantry Staples)
-- **Retailers:** Walmart, Costco, Whole Foods, UNFI + DTC
+- **Profile:** Fictional $25M specialty food manufacturer, 50 SKUs across five product lines (Artisan Sauces, Pantry Staples, Specialty Condiments, Dried Goods, Snack Bites)
+- **Channels:** 6 retailers (Walmart, Costco, Whole Foods, Sprouts, Kroger, Regional Group), 3 distributors (UNFI, KeHE, DPI Northwest), + DTC (Shopify)
 - **Growth trajectory:** Targeting $40M–$55M
 - **Purpose:** Consistent case study subject across portfolio pieces. Allows all tools and frameworks to appear naturally without forcing them. Fabricated but realistic enough that an industry reader doesn't flinch.
-- **Dataset:** Synthetic dataset, 90 SKUs across three product lines, **36 months** of data. The **Cinderhaven Postgres SSOT** (Postgres + dbt + Dagster platform) is the single source of truth; SQLite + CSV + XLSX exports are derived artifacts. ⚠ **Canonical figures (all-in trade cost, trade rate %, chargeback count) are pending a fresh lock** — the Postgres regen of June 2026 (intentional) superseded the May 2026 export, so the all-in figure and rate must be re-read from current Postgres and recorded in `canonical.md` (see governance note below). Definitively retired figures: ~~464 chargebacks~~ (misquote from another project), ~~18 months~~ (always 36), ~~$5.4M all-in~~ (superseded May 2026), ~~$7,174,939 / 26.1%~~ (stale May 2026 SQLite export). Do not cite any of these.
+- **Dataset:** Synthetic dataset, 50 SKUs across five product lines, **36 months** of data (scan through 2025-12-27). The **Cinderhaven Postgres SSOT** (Postgres + dbt + Dagster platform) is the single source of truth; SQLite + CSV + XLSX exports are derived artifacts. **Canonical figures are LOCKED** in `reference/canonical_values.yml` (VERIFIED-AGAINST-PRODUCTION), which `scripts/verify_canonical.py` emits as `canonical_values.json` + `supersedes.txt`; every consuming repo vendors these and a CI drift gate blocks any retired figure from deploying. The full list of retired figures (do not cite) lives in `reference/supersedes.txt` — it includes the old all-in trade cost, the stale May-2026 SQLite export figures, the 464-chargeback misquote, and the "18 months" window (the window has always been 36 months).
 
 ### Canonical Figures Governance (added 2026-06-04)
+
+**Implemented 2026-08-01** as the single-canonical program: the SSOT is
+`reference/canonical_values.yml` (edited in place; git history is the archive).
+`scripts/verify_canonical.py` emits `canonical_values.json` + `supersedes.txt`;
+consuming repos vendor them via `scripts/refresh_canonical.py` and enforce with
+a CI drift gate (`scripts/check_canonical_drift.py`) that fails any build citing
+a retired figure. The principle below (govern the synthetic data the way we tell
+clients to govern theirs) is the rationale; the files above are the mechanism.
 
 **Every time Cinderhaven's Postgres is regenerated, a brand-new `canonical.md` must be created — the prior one is superseded and archived, never edited in place.** This is non-negotiable. A May 2026 regen silently moved the trade figures and left every downstream piece citing stale numbers — precisely the SSOT-drift failure this practice sells against. The synthetic data must be governed the way we tell clients to govern theirs.
 

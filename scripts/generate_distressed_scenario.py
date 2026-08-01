@@ -6,8 +6,8 @@ amounts, 30% no-PO-link), explicit double-dip injection, and low recovery
 rates (~18-20%).
 
 Baseline tables (orders, shipments, scan_data, chargebacks, etc.) are
-byte-identical. Revenue ($32.5M trailing-52w) and chargeback count (864)
-are provably unchanged.
+byte-identical from baseline; revenue and chargeback count are provably
+unchanged (see reference/canonical_values.yml for the current baseline figures).
 
 Usage:
     python scripts/generate_distressed_scenario.py --baseline <PATH> [--output <PATH>]
