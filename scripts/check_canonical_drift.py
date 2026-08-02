@@ -26,6 +26,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Hit lines can contain non-cp1252 characters (en-dashes, "≠", ¢). Force UTF-8
+# so printing the drift report doesn't crash on a Windows console (cp1252
+# default) — matches verify_canonical.py. A gate that dies mid-report exits
+# non-zero with no actionable output.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 SUPERSEDES = ROOT / "reference" / "supersedes.txt"
 ALLOWLIST = ROOT / ".canonical-allowlist"
@@ -151,13 +161,18 @@ def main() -> int:
             text = p.read_text(encoding="utf-8", errors="strict")
         except (UnicodeDecodeError, OSError):
             continue  # binary or unreadable — not a text surface
+        # Case-insensitive: EDI renders sender names uppercase ("CINDERHAVEN
+        # FOODS") and prose may lowercase a token — both must still be caught.
+        # casefold() is the aggressive-fold Unicode form; compare fold-to-fold.
+        text_cf = text.casefold()
         for tok in tokens:
-            if tok in text:
+            tok_cf = tok.casefold()
+            if tok_cf in text_cf:
                 if any(t == tok and _glob_match(rel, g)
                        for t, g in token_excepts):
                     continue
                 for i, ln in enumerate(text.splitlines(), 1):
-                    if tok in ln:
+                    if tok_cf in ln.casefold():
                         hits.append(f"  {rel}:{i}: [{tok}]  {ln.strip()[:100]}")
 
     if hits:
