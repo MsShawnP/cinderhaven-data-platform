@@ -534,3 +534,18 @@ supersedes:
   - {token: '$7.2M', reason: 'retired May-2026 SQLite all-in export; current ~$3.6M/yr'}
   - {token: '7,174,939', reason: 'retired May-2026 SQLite all-in export, full form'}
   - {token: '$7,174,939', reason: 'retired May-2026 SQLite all-in export, full $ form'}
+  # --- Red-team hardening 2026-08-01: distinctive formatted tokens that sailed
+  # through the gate. Each retires a full rendering (phrase or $-formatted
+  # figure), never a bare integer. NB: "83 cents arrived" is deliberately the
+  # full retired PHRASE, not bare "83 cents" — bare "83 cents" collides with the
+  # LIVE DTC-margin figure (82.6%) in channel-profitability-analysis. "$500 per
+  # load" is a legitimate research assumption in the-ten-decisions and is
+  # allowlisted there (research notes only), not fixed.
+  - {token: 'eight cost dimensions', reason: 'retired 8-dimension short-ship cost model (spelled-out form); replaced 2026-06-14 by the 4-dimension model'}
+  - {token: '$19.6M', reason: 'retired defect-SKU TTM rendering; current revenue.defect_sku_ttm = $19,487,913.16 ($19.5M)'}
+  - {token: '$1.4M–$3.1M', reason: 'retired thesis range (en-dash form); superseded 2026-06-14, current range $1.4M–$2.3M/yr'}
+  - {token: '$1.4M-$3.1M', reason: 'retired thesis range (ASCII-hyphen form of the same range)'}
+  - {token: '$1.65M', reason: 'retired deduction-backlog rendering (old copy → now $1.35M). NB: rounds the LIVE trade.structural_allowance.cy2025 ($1,653,699.53) — a legitimate structural-allowance rendering must use the full figure or be allowlisted.'}
+  - {token: '$228,845', reason: 'retired retailer-chargeback annual figure; current cy2025 retailer chargeback amount is $134,314.20'}
+  - {token: '83 cents arrived', reason: 'retired lifecycle rendering (the-ten-decisions/contract-to-cash "83 cents arrived"); current is 87¢. Scoped to the full phrase so it does NOT collide with the LIVE bare "83 cents" DTC-margin figure in channel-profitability-analysis.'}
+  - {token: '$500 per load', reason: 'retired per-load ASN/short-ship penalty assumption. Allowlisted in the-ten-decisions/research/cinderhaven-findings.md (research notes only) where it is a stated assumption, not a canonical figure.'}

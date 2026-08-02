@@ -2,7 +2,7 @@
  "_generated": {
   "generated": "2026-08-01",
   "generator": "scripts/verify_canonical.py",
-  "platform_head": "c94fd39",
+  "platform_head": "c4ea09e",
   "source": "reference/canonical_values.yml",
   "verified_against_production": "2026-07-29"
  },
@@ -462,6 +462,38 @@
   {
    "reason": "retired May-2026 SQLite all-in export, full $ form",
    "token": "$7,174,939"
+  },
+  {
+   "reason": "retired 8-dimension short-ship cost model (spelled-out form); replaced 2026-06-14 by the 4-dimension model",
+   "token": "eight cost dimensions"
+  },
+  {
+   "reason": "retired defect-SKU TTM rendering; current revenue.defect_sku_ttm = $19,487,913.16 ($19.5M)",
+   "token": "$19.6M"
+  },
+  {
+   "reason": "retired thesis range (en-dash form); superseded 2026-06-14, current range $1.4M\u2013$2.3M/yr",
+   "token": "$1.4M\u2013$3.1M"
+  },
+  {
+   "reason": "retired thesis range (ASCII-hyphen form of the same range)",
+   "token": "$1.4M-$3.1M"
+  },
+  {
+   "reason": "retired deduction-backlog rendering (old copy \u2192 now $1.35M). NB: rounds the LIVE trade.structural_allowance.cy2025 ($1,653,699.53) \u2014 a legitimate structural-allowance rendering must use the full figure or be allowlisted.",
+   "token": "$1.65M"
+  },
+  {
+   "reason": "retired retailer-chargeback annual figure; current cy2025 retailer chargeback amount is $134,314.20",
+   "token": "$228,845"
+  },
+  {
+   "reason": "retired lifecycle rendering (the-ten-decisions/contract-to-cash \"83 cents arrived\"); current is 87\u00a2. Scoped to the full phrase so it does NOT collide with the LIVE bare \"83 cents\" DTC-margin figure in channel-profitability-analysis.",
+   "token": "83 cents arrived"
+  },
+  {
+   "reason": "retired per-load ASN/short-ship penalty assumption. Allowlisted in the-ten-decisions/research/cinderhaven-findings.md (research notes only) where it is a stated assumption, not a canonical figure.",
+   "token": "$500 per load"
   }
  ],
  "trade": {
